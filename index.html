@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Maclawd — Reasoning Gearbox</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+        background: #f4f1ea;
+        color: #1e1e2e;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        padding: 40px 20px;
+      }
+
+      main {
+        width: min(920px, 100%);
+        display: grid;
+        grid-template-columns: minmax(320px, 1fr) minmax(260px, 360px);
+        gap: 28px;
+        align-items: center;
+      }
+
+      .stage {
+        aspect-ratio: 1;
+        border: 1px solid rgba(30, 30, 46, 0.12);
+        border-radius: 32px;
+        background:
+          linear-gradient(rgba(30, 30, 46, 0.035) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(30, 30, 46, 0.035) 1px, transparent 1px),
+          #fbfaf7;
+        background-size: 24px 24px;
+        box-shadow: 0 24px 80px rgba(30, 30, 46, 0.12);
+        overflow: hidden;
+      }
+
+      object { width: 100%; height: 100%; }
+
+      .eyebrow {
+        margin: 0 0 10px;
+        color: #c67a62;
+        font-size: 13px;
+        font-weight: 750;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      h1 { margin: 0; font-size: clamp(42px, 7vw, 72px); line-height: 0.95; }
+      h2 { margin: 16px 0 10px; font-size: 24px; }
+      p { color: #50505e; line-height: 1.6; }
+
+      .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+      .chip {
+        padding: 8px 11px;
+        border-radius: 999px;
+        background: #ffffff;
+        border: 1px solid rgba(30, 30, 46, 0.1);
+        font-size: 13px;
+        font-weight: 650;
+      }
+
+      @media (max-width: 760px) {
+        main { grid-template-columns: 1fr; }
+        .copy { order: -1; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="stage" aria-label="Animated Maclawd prototype">
+        <object data="src/animations/reasoning-gearbox.svg" type="image/svg+xml">
+          Reasoning Gearbox animated SVG
+        </object>
+      </section>
+      <section class="copy">
+        <p class="eyebrow">Maclawd · First design</p>
+        <h1>Clawd,<br>mechanized.</h1>
+        <h2>Reasoning Gearbox</h2>
+        <p>
+          A new shoulder-mounted thinking rig driven by a clutch, ratchet,
+          four-position crank, and three interlocking pixel gears.
+        </p>
+        <div class="chips" aria-label="Prototype properties">
+          <span class="chip">CSS only</span>
+          <span class="chip">2.8 second loop</span>
+          <span class="chip">Locked body geometry</span>
+          <span class="chip">Prototype 01</span>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
