@@ -1,6 +1,7 @@
 # Reasoning Gearbox
 
-Status: first visual prototype; not connected to an application state.
+Status: first visual prototype for `working.default`; not connected to the
+application state engine yet.
 
 ## Character invariants
 
@@ -21,9 +22,8 @@ soft shading, or replacement eye shapes.
 Reasoning Gearbox is a shoulder-mounted mechanical rig. Three interlocking pixel
 gears connect to a clutch and ratchet on the left and a crank on the right.
 
-The group excludes the legacy prop vocabulary: screens, keyboards, headphones,
-construction tools, books, boxes, batons, brooms, bubbles, juggling objects, and
-moving data blocks.
+Its clutch/crank operation, shoulder mounting, stepped gear cadence, and centered
+blink distinguish it from the reference project's existing work actions.
 
 ## Action
 

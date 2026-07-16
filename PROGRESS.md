@@ -1,25 +1,30 @@
 # Maclawd development progress
 
-Last updated: 2026-07-15
+Last updated: 2026-07-16
 
 ## Current checkpoint
 
 Maclawd is a new standalone project with an independent repository and Git
-history. The first original action group is ready for visual review. Application
-integration and macOS packaging have not started.
+history. The twelve primary state actions now have a shared visual language and
+implementation contract. Only `working.default` has an animated prototype;
+application integration and macOS packaging have not started.
 
 ## Completed
 
 - Chosen the **Maclawd** product name.
 - Defined the target as a complete Mac desktop application.
 - Locked the character body and eye geometry/color contract.
-- Established the rule that every state receives a newly designed accessory and
-  action.
+- Established the rule that every state receives a distinct Maclawd motion
+  treatment, with accessories added only when they improve readability.
 - Designed and implemented the first **Reasoning Gearbox** action group.
 - Produced a CSS-only animated SVG with a 2.8-second loop.
 - Produced a 1000×1000, 42-frame GIF preview and four-phase contact sheet.
 - Validated the SVG syntax and locked character values.
-- Reviewed the concept against the excluded legacy action vocabulary.
+- Reviewed the first concept against the reference action library to avoid exact
+  duplication while retaining useful state semantics.
+- Defined all 12 primary state actions, their accessories, timing, transitions,
+  reduced-motion behavior, and visual acceptance criteria.
+- Assigned Reasoning Gearbox to `working.default`.
 
 ## Locked character contract
 
@@ -37,8 +42,8 @@ integration and macOS packaging have not started.
 ### 1. Motion language
 
 - Approve or revise the Reasoning Gearbox.
-- Define the complete Maclawd state vocabulary.
-- Design work, rest, attention, success, and error action groups.
+- Review and freeze the 12-state action bible.
+- Implement and visually validate each approved primary state.
 - Establish shared pixel-grid, timing, easing, and reduced-motion rules.
 
 ### 2. Mac application
@@ -65,7 +70,7 @@ integration and macOS packaging have not started.
 
 - No running Maclawd application exists yet.
 - The first SVG is not connected to an application state.
-- No additional action groups have been approved.
+- Eleven primary action groups remain design-only and have no SVG implementation.
 - No application icon, signed binary, notarized build, or `.dmg` exists yet.
 
 The public repository is a progress checkpoint, not a release claim.

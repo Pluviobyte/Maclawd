@@ -41,6 +41,11 @@ a new mechanical reasoning rig:
 [Read the design contract](design/reasoning-gearbox.md) ·
 [View four motion phases](previews/reasoning-gearbox-contact-sheet.png)
 
+The complete twelve-state motion system is specified in
+[`design/main-state-actions.md`](design/main-state-actions.md), with a matching
+machine-readable contract in
+[`design/main-state-actions.json`](design/main-state-actions.json).
+
 ## Repository status
 
 This repository has an independent Git history and contains only Maclawd work.

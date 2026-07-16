@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "status": "design-candidate",
+  "characterContract": {
+    "bodyColor": "#DE886D",
+    "eyeColor": "#000000",
+    "torso": { "x": 2, "y": 6, "width": 11, "height": 7 },
+    "leftArm": { "x": 0, "y": 9, "width": 2, "height": 2 },
+    "rightArm": { "x": 13, "y": 9, "width": 2, "height": 2 },
+    "legsX": [3, 5, 9, 11],
+    "legsY": 13,
+    "legWidth": 1,
+    "legHeight": 2,
+    "eyesX": [4, 10],
+    "eyesY": 8,
+    "eyeWidth": 1,
+    "eyeHeight": 2
+  },
+  "palette": {
+    "structure": "#455A64",
+    "axle": "#1E1E2E",
+    "drive": "#40C4FF",
+    "driveLight": "#D7F3FF",
+    "attention": "#FFC107",
+    "attentionLight": "#FFE082",
+    "success": "#66BB6A",
+    "error": "#EF5350"
+  },
+  "states": [
+    {
+      "id": "idle",
+      "name": "Calm Calibration",
+      "mode": "loop",
+      "durationMs": 5600,
+      "accessory": "none",
+      "action": "One-pixel breathing, relaxed claws, mouse-directed gaze, one short blink.",
+      "exit": "event-driven"
+    },
+    {
+      "id": "away",
+      "name": "Power-down Stretch",
+      "mode": "oneshot",
+      "durationMs": 3200,
+      "accessory": "none",
+      "action": "Stretch both claws, retract, lower the body one pixel, narrow the eyes.",
+      "exit": "sleeping"
+    },
+    {
+      "id": "sleeping",
+      "name": "Dock Nest",
+      "mode": "loop",
+      "durationMs": 5600,
+      "accessory": "ground charging dock",
+      "action": "Settle into the dock with closed eyes and a slow attached status light.",
+      "exit": "waking"
+    },
+    {
+      "id": "waking",
+      "name": "Dock Eject",
+      "mode": "oneshot",
+      "durationMs": 1500,
+      "accessory": "ground charging dock",
+      "action": "Unlock the dock, spring upward, brace the claws, return to neutral.",
+      "exit": "idle"
+    },
+    {
+      "id": "thinking",
+      "name": "Inference Dial",
+      "mode": "loop",
+      "durationMs": 2400,
+      "accessory": "three-position shoulder dial",
+      "action": "Left claw changes three dial positions while the right claw stabilizes the axle.",
+      "exit": "event-driven"
+    },
+    {
+      "id": "working",
+      "name": "Reasoning Gearbox",
+      "mode": "loop",
+      "durationMs": 2800,
+      "accessory": "shoulder gearbox with clutch and crank",
+      "action": "Right claw pumps the crank, left claw toggles the clutch, three gears step in opposition.",
+      "source": "src/animations/reasoning-gearbox.svg",
+      "exit": "event-driven"
+    },
+    {
+      "id": "delegating",
+      "name": "Parallel Armature",
+      "mode": "loop",
+      "durationMs": 3200,
+      "accessory": "one or three rail-mounted helper arms",
+      "action": "Maclawd controls a central allocator while attached helper arms work in staggered phases.",
+      "variants": ["one-subagent", "many-subagents"],
+      "exit": "event-driven"
+    },
+    {
+      "id": "needs_owner",
+      "name": "Decision Gate",
+      "mode": "loop",
+      "durationMs": 2600,
+      "accessory": "rail-mounted decision panel",
+      "action": "Stop work, brace the panel, hover one claw before the controls without choosing.",
+      "variants": ["permission", "question", "unknown"],
+      "exit": "event-driven"
+    },
+    {
+      "id": "compacting",
+      "name": "Memory Press",
+      "mode": "loop",
+      "durationMs": 3200,
+      "accessory": "ground press with rollers, continuous ribbon, and cartridge",
+      "action": "Turn the rollers and compress a connected segmented ribbon into the cartridge.",
+      "exit": "event-driven"
+    },
+    {
+      "id": "workspace",
+      "name": "Foldout Bench",
+      "mode": "oneshot",
+      "durationMs": 2400,
+      "accessory": "folding ground workbench",
+      "action": "Release two latches, unfold the bench, tap both sides to calibrate it.",
+      "exit": "working"
+    },
+    {
+      "id": "success",
+      "name": "Completion Stamp",
+      "mode": "oneshot",
+      "durationMs": 2200,
+      "accessory": "ground-mounted completion stamp",
+      "action": "Press the stamp, reveal the attached green plate, hop two pixels, settle.",
+      "exit": "idle"
+    },
+    {
+      "id": "error",
+      "name": "Jam Recovery",
+      "mode": "loop",
+      "durationMs": 2800,
+      "accessory": "jammed drive shaft, attached red lamp, reverse reset lever",
+      "action": "Brace the frame and pull the reverse lever twice before a short failed pause.",
+      "exit": "event-driven"
+    }
+  ]
+}
