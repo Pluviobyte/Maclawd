@@ -20,7 +20,7 @@
 Maclawd is planned as a complete Mac product:
 
 - original animated actions for work, rest, attention, success, and errors
-- a new accessory for every action group
+- contextual props only when they make the character's action more expressive
 - live reactions to AI-agent activity
 - Mac desktop, menu bar, notification, and settings behavior
 - independent product identity, icon, packaging, update flow, and release system
@@ -44,6 +44,15 @@ mount, or ground base.
 
 These are static pose and accessory candidates. They do not claim that all
 twelve CSS animations are complete.
+
+### Playful v3 direction study
+
+The next direction replaces persistent machinery with temporary domestic
+metaphors and short visual gags. Its first four candidates are Shell Shuffle,
+Token Knitting, Hatchling Parade, and Stuck Jar.
+
+[Open the playful v3 review](design/concepts/playful-core-v3.html) ·
+[Read the design rationale](design/playful-motion-direction-v3.md)
 
 ## First executable motion baseline
 

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <g id="yarn-ball">
+    <rect x="-4" y="11" width="5" height="5" fill="#7BC8C4"/>
+    <rect x="-3" y="10" width="3" height="1" fill="#AEE1DE"/>
+    <rect x="-3" y="12" width="4" height="1" fill="#3E7775"/>
+    <rect x="-2" y="14" width="3" height="1" fill="#AEE1DE"/>
+  </g>
+  <path d="M 0 14 H 2 V 12 H 5 V 10 H 9 V 12 H 13 V 14 H 16" fill="none" stroke="#7BC8C4" stroke-width="1"/>
+
+  <g id="scarf">
+    <rect x="4" y="15" width="12" height="2" fill="#F6C85F"/>
+    <rect x="6" y="15" width="2" height="2" fill="#B9A1D9"/>
+    <rect x="10" y="15" width="2" height="2" fill="#7BC8C4"/>
+    <rect x="15" y="14" width="1" height="1" fill="#F6C85F"/>
+  </g>
+
+  <g id="needles" fill="#5A4A42">
+    <rect x="3" y="7" width="1" height="7" transform="rotate(-24 3.5 13.5)"/>
+    <rect x="11" y="7" width="1" height="7" transform="rotate(24 11.5 13.5)"/>
+  </g>
+
+  <g id="body-js" transform="translate(0 -1)">
+    <g id="body-color-group" fill="#DE886D">
+      <rect x="2" y="6" width="11" height="7"/>
+      <g transform="translate(2 -2)"><rect x="0" y="9" width="2" height="2"/></g>
+      <g transform="translate(-2 -2)"><rect x="13" y="9" width="2" height="2"/></g>
+      <rect x="3" y="13" width="1" height="2"/>
+      <rect x="5" y="13" width="1" height="2"/>
+      <rect x="9" y="13" width="1" height="2"/>
+      <rect x="11" y="13" width="1" height="2"/>
+    </g>
+    <g id="eyes-js" fill="#000000" transform="translate(0 1)">
+      <rect x="4" y="8" width="1" height="2"/>
+      <rect x="10" y="8" width="1" height="2"/>
+    </g>
+  </g>
+</svg>

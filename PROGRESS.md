@@ -15,6 +15,11 @@ historical prototypes. Their compact-tool v2 replacements and the other nine
 state concepts are static review candidates and have not been promoted to
 production animation sources.
 
+A new playful v3 direction study is now under review. It keeps every prior
+concept, but replaces the fixed-machine premise with character acting,
+temporary everyday props, and short visual stories. Four core Agent states have
+first-pass v3 silhouettes; no production source has been replaced.
+
 ## Completed
 
 - Chosen the **Maclawd** product name.
@@ -49,6 +54,11 @@ production animation sources.
   base, and visually secondary to the pet.
 - Produced a full twelve-state browser review board and a direct browser-rendered
   96px semantic check.
+- Studied the reference project's motion structure and extracted its reusable
+  principles: technical-to-everyday metaphor, setup/action/reaction loops, and
+  varied character-led performances.
+- Created playful v3 candidates for `thinking`, `working`, `delegating`, and
+  `needs_owner`, plus a four-state browser board and 96px check.
 
 ## Locked character contract
 
