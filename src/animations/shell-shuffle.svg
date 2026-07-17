@@ -1,6 +1,9 @@
 <?xml-stylesheet type="text/css" href="maclawd-actions.css"?>
 <svg xmlns="http://www.w3.org/2000/svg" class="state-thinking" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
-  <title>Maclawd Claw Count</title><desc>Maclawd thinks by counting with alternating claws, looking left and right, then holding a decision pose.</desc>
+  <title>Maclawd Puzzle Pause</title><desc>Maclawd leans over a floor puzzle, turns the final large piece, and pauses before placing it.</desc>
+  <g class="work-mat"><path d="M-9 12H22V20H-9Z" fill="#6F8A78"/><path d="M-8 12H21V19H-8Z" fill="#DCEBD9"/><rect x="-6" y="17" width="25" height="1" fill="#B9D2C0"/></g>
+  <g class="puzzle-board"><path d="M-6 13H4V18H-6Z" fill="#7BC8C4"/><rect x="-4" y="14" width="3" height="3" fill="#BDE7E4"/><path d="M12 13H19V18H12V16H10V14H12Z" fill="#F6C85F"/></g>
+  <g class="puzzle-piece motion"><path d="M5 13H10V14H12V17H10V18H5V17H3V14H5Z" fill="#B9A1D9"/><rect x="6" y="14" width="3" height="1" fill="#E7DCF2"/></g>
   <g class="actor motion"><g fill="#DE886D">
     <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/><rect id="inner-left-leg" x="5" y="13" width="1" height="2"/><rect id="inner-right-leg" x="9" y="13" width="1" height="2"/><rect id="outer-right-leg" x="11" y="13" width="1" height="2"/><rect id="torso" x="2" y="6" width="11" height="7"/>
     <g class="left-claw motion"><rect id="left-arm" x="0" y="9" width="2" height="2"/></g><g class="right-claw motion"><rect id="right-arm" x="13" y="9" width="2" height="2"/></g>

@@ -1,7 +1,8 @@
 <?xml-stylesheet type="text/css" href="maclawd-actions.css"?>
 <svg xmlns="http://www.w3.org/2000/svg" class="state-compacting" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
-  <title>Maclawd Pocket Fold</title><desc>Maclawd presses one large zigzag strip from full width into a pocket-size fold.</desc>
-  <g class="accordion motion"><path d="M-9 9H-6L-3 13L0 9L3 13L6 9L9 13V17H6L3 13L0 17L-3 13L-6 17H-9Z" fill="#F6C85F"/><path d="M-6 9L-3 13L0 9L3 13L6 9" fill="none" stroke="#B67B19" stroke-width="1"/><rect x="-9" y="16" width="18" height="1" fill="#FFE59A"/></g>
+  <title>Maclawd Suitcase Fold</title><desc>Maclawd folds one broad striped cloth into a large open suitcase and presses the lid shut.</desc>
+  <g class="suitcase"><path d="M-10 12H5V20H-10Z" fill="#544942"/><path d="M-9 13H4V19H-9Z" fill="#C98F78"/><rect x="-5" y="11" width="5" height="2" fill="#544942"/><rect x="-4" y="10" width="3" height="1" fill="#C98F78"/><rect x="-8" y="17" width="11" height="1" fill="#F3C9B9"/></g>
+  <g class="accordion motion"><path d="M-9 9H-6L-3 13L0 9L3 13L6 9L9 13V17H6L3 13L0 17L-3 13L-6 17H-9Z" fill="#7BC8C4"/><path d="M-6 9L-3 13L0 9L3 13L6 9" fill="none" stroke="#3E7775" stroke-width="1"/><rect x="-9" y="16" width="18" height="1" fill="#BDE7E4"/></g>
   <g class="actor motion"><g fill="#DE886D">
     <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/><rect id="inner-left-leg" x="5" y="13" width="1" height="2"/><rect id="inner-right-leg" x="9" y="13" width="1" height="2"/><rect id="outer-right-leg" x="11" y="13" width="1" height="2"/><rect id="torso" x="2" y="6" width="11" height="7"/>
     <g class="left-claw motion"><rect id="left-arm" x="0" y="9" width="2" height="2"/></g><g class="right-claw motion"><rect id="right-arm" x="13" y="9" width="2" height="2"/></g>

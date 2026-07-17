@@ -1,6 +1,7 @@
 <?xml-stylesheet type="text/css" href="maclawd-actions.css"?>
 <svg xmlns="http://www.w3.org/2000/svg" class="state-testing" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
-  <title>Maclawd Roly-poly Test</title><desc>Maclawd taps one large roly-poly toy and watches it rock back to center.</desc>
+  <title>Maclawd Toy Check</title><desc>Maclawd kneels on a play mat, taps one large roly-poly toy, and watches it return upright.</desc>
+  <g class="test-rug"><path d="M-11 14H22V20H-11Z" fill="#B96858"/><path d="M-10 14H21V19H-10Z" fill="#F3C9B9"/><rect x="-7" y="17" width="25" height="1" fill="#FBE6DE"/></g>
   <g class="toy motion"><path d="M-8 15H0V18H-8Z" fill="#72558F"/><path d="M-7 9H-1V16H-7Z" fill="#B9A1D9"/><path d="M-6 6H-2V10H-6Z" fill="#F6C85F"/><rect x="-5" y="7" width="1" height="2" fill="#000"/><rect x="-3" y="7" width="1" height="2" fill="#000"/><rect x="-6" y="12" width="4" height="1" fill="#E6D9F5"/></g>
   <g class="actor motion"><g fill="#DE886D">
     <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/><rect id="inner-left-leg" x="5" y="13" width="1" height="2"/><rect id="inner-right-leg" x="9" y="13" width="1" height="2"/><rect id="outer-right-leg" x="11" y="13" width="1" height="2"/><rect id="torso" x="2" y="6" width="11" height="7"/>

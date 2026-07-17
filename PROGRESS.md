@@ -5,7 +5,7 @@ Last updated: 2026-07-17
 ## Current checkpoint
 
 Maclawd is a standalone project with an independent repository and Git history.
-Its first body-first motion-design system is now implemented:
+Its first complete scene-first motion-design system is now implemented:
 
 - 12 primary states
 - 5 optional `working` activity modifiers
@@ -13,8 +13,9 @@ Its first body-first motion-design system is now implemented:
 - 23 active CSS/SVG animations in total
 
 The body, claws, legs, eyes, colors, and source coordinates are identical across
-the full set. Props are temporary story objects rather than permanent functional
-hardware. The macOS application runtime and event integration have not started.
+the full set. Every action now places Clawd inside one recognizable mini-scene
+instead of surrounding it with technical status objects. The macOS application
+runtime and event integration have not started.
 
 ## Completed
 
@@ -25,28 +26,28 @@ hardware. The macOS application runtime and event integration have not started.
   states into everyday metaphors, give every loop a setup/action/reaction, and
   keep the character more important than its prop.
 - Preserved earlier static concepts and mechanical prototypes in Git history.
-- Rebuilt the primary set around body-readable actions: **Calm Calibration**,
-  **Blanket Drag**, **Top-down Sleep**, **Blanket Wake**, **Claw Count**, **Busy
-  Claws**, **Helper Handoff**, **Jar Assist**, **Pocket Fold**, **Rollout Mat**,
-  **Self High-five**, and **Failed Stand**.
+- Rebuilt the primary set around scene-readable actions: **Cushion Watch**,
+  **Bedtime Pull**, **Top-down Sleep**, **Morning Stretch**, **Puzzle Pause**,
+  **Desk Shuffle**, **Parcel Parade**, **Picnic Jar**, **Suitcase Fold**, **Mat
+  Move-in**, **Cushion Cheer**, and **Basket Rescue**.
 - Made `away → sleeping → waking` a continuous story using the same blanket
   colors, patch, and fold language across all three actions.
 - Rebuilt `sleeping` as a direct overhead bed composition: Clawd lies flat on a
   pillow, keeps both closed eyes and claws visible, breathes under the blanket,
   and emits a user-approved three-step pixel `Zzz` sequence.
-- Replaced the working modifier set with five large, familiar silhouettes:
-  **Open Book**, **Big Pencil**, **Two-block Build**, **Roly-poly Test**, and
-  **Chest Relay**. `working.command` now aliases generic **Busy Claws**.
-- Added six desktop/system actions: **Click Flinch**, **Surprised Hop**, **Drag
-  Cling**, **Drop Wobble**, **Edge Peek**, and **Low Battery Droop**.
+- Replaced the working modifier set with five complete activity scenes: **Floor
+  Book**, **Letter Desk**, **Block Garden**, **Toy Check**, and **Clothesline
+  Relay**. `working.command` now aliases generic **Desk Shuffle**.
+- Added six desktop/system scenes: **Cushion Poke**, **Cushion Hop**, **Hanging
+  Cling**, **Cushion Bounce**, **Curtain Peek**, and **Cushion Curl**.
 - Defined conservative Hook behavior: detailed working modifiers require a
   reliable external event; otherwise the system falls back to generic working.
 - Added machine-readable contracts for primary states, modifiers, and
   interactions.
 - Rebuilt the browser motion lab to display all 23 actions directly from their
   production SVG sources.
-- Rendered 324 deterministic Chromium frames for 18 redesigned actions and
-  generated 18 V4 GIF previews.
+- Rendered every active action into a deterministic V5 GIF preview and generated
+  new 64px and 96px complete-set boards.
 - Fixed the deterministic preview renderer to resize the SVG root before
   pet-size capture; all 18 GIF previews now contain real animated content.
 - Verified all 26 SVG sources parse and preserve the locked source rectangles:

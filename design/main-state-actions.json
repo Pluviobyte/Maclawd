@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "status": "implemented-motion-set-v4-body-first",
+  "status": "implemented-motion-set-v5-scene-first",
   "characterContract": {
     "viewBox": "-15 -25 45 45",
     "bodyColor": "#DE886D",
@@ -18,25 +18,25 @@
     "eyeHeight": 2
   },
   "designRules": {
-    "readingOrder": ["body silhouette", "pose", "single prop when needed"],
-    "maxLargeProps": 1,
-    "propScale": "roughly 0.6x to 1.2x torso width",
+    "readingOrder": ["recognizable mini-scene", "body silhouette", "physical contact", "pose"],
+    "maxSceneFamiliesPerAction": 1,
+    "sceneScale": "roughly 1.2x to 2.5x torso width",
     "forbidden": ["text", "UI panels", "floating punctuation", "speed lines", "glows", "shadows"],
     "exceptions": ["sleeping may use the user-approved hard-edged pixel Zzz sequence"],
     "qaSizes": [64, 96]
   },
   "states": [
-    {"id":"idle","name":"Calm Calibration","mode":"loop","durationMs":5600,"accessory":"none","action":"Breathe, observe, blink once.","source":"src/animations/calm-calibration.svg","exit":"event-driven"},
-    {"id":"away","name":"Blanket Drag","mode":"oneshot","durationMs":3800,"accessory":"one large folded blanket","action":"Stretch, tire, catch the blanket, and drag it beside the body.","source":"src/animations/blanket-drag.svg","exit":"sleeping"},
+    {"id":"idle","name":"Cushion Watch","mode":"loop","durationMs":5600,"accessory":"one broad floor cushion","action":"Sit into the cushion, breathe, observe, and blink once.","source":"src/animations/calm-calibration.svg","exit":"event-driven"},
+    {"id":"away","name":"Bedtime Pull","mode":"oneshot","durationMs":3800,"accessory":"top-down bed and the shared blanket","action":"Climb beside the bed and pull the blanket onto the mattress.","source":"src/animations/blanket-drag.svg","exit":"sleeping"},
     {"id":"sleeping","name":"Top-down Sleep","mode":"loop","durationMs":6400,"accessory":"top-down mattress, pillow, the same large blanket, and user-approved pixel Zzz","action":"Lie flat on the pillow under the blanket; keep closed eyes and both claws visible while the blanket breathes and three Z shapes rise.","source":"src/animations/blanket-burrito.svg","exit":"waking"},
-    {"id":"waking","name":"Blanket Wake","mode":"oneshot","durationMs":2600,"accessory":"the same connected blanket","action":"Spring up while the whole blanket slides behind and to one side.","source":"src/animations/blanket-pop.svg","exit":"idle"},
-    {"id":"thinking","name":"Claw Count","mode":"loop","durationMs":4600,"accessory":"none","action":"Count with alternating claws, look left and right, then hold a decision pose.","source":"src/animations/shell-shuffle.svg","exit":"event-driven"},
-    {"id":"working","name":"Busy Claws","mode":"loop","durationMs":3400,"accessory":"none","action":"Alternate both claws through a fast work rhythm, then pause to inspect.","source":"src/animations/token-knitting.svg","exit":"event-driven"},
-    {"id":"delegating","name":"Helper Handoff","mode":"loop","durationMs":5000,"accessory":"two large helper crabs","action":"Greet the helpers, point out the work, and send them onward.","source":"src/animations/hatchling-parade.svg","variants":["one-subagent","two-or-more-subagents"],"exit":"event-driven"},
-    {"id":"needs_owner","name":"Jar Assist","mode":"loop","durationMs":4800,"accessory":"one large jar beside the body","action":"Twist twice, strain, then push the jar toward the owner without covering the face.","source":"src/animations/stuck-jar.svg","variants":["permission","question","unknown"],"exit":"event-driven"},
-    {"id":"compacting","name":"Pocket Fold","mode":"loop","durationMs":4800,"accessory":"one large zigzag strip","action":"Press the long strip progressively into a pocket-size fold.","source":"src/animations/accordion-fold.svg","exit":"event-driven"},
-    {"id":"workspace","name":"Rollout Mat","mode":"oneshot","durationMs":4200,"accessory":"one large striped work mat","action":"Unroll the mat across the floor and step onto the finished workspace.","source":"src/animations/pop-up-studio.svg","exit":"working"},
-    {"id":"success","name":"Self High-five","mode":"oneshot","durationMs":2900,"accessory":"none","action":"Crouch, hop, make both claws meet overhead, hold, and settle.","source":"src/animations/self-high-five.svg","exit":"idle"},
-    {"id":"error","name":"Failed Stand","mode":"loop","durationMs":4800,"accessory":"none","action":"Wobble, flop to one side, attempt to stand, and flop the other way.","source":"src/animations/yarn-tangle.svg","exit":"event-driven"}
+    {"id":"waking","name":"Morning Stretch","mode":"oneshot","durationMs":2600,"accessory":"the same top-down bed and blanket","action":"Stretch on the bed while the blanket slides toward the foot.","source":"src/animations/blanket-pop.svg","exit":"idle"},
+    {"id":"thinking","name":"Puzzle Pause","mode":"loop","durationMs":4600,"accessory":"one floor puzzle scene","action":"Turn the final large puzzle piece, compare both sides, and pause before placing it.","source":"src/animations/shell-shuffle.svg","exit":"event-driven"},
+    {"id":"working","name":"Desk Shuffle","mode":"loop","durationMs":3400,"accessory":"one broad low desk with two work tiles","action":"Alternate both claws on the tiles, then pause to inspect.","source":"src/animations/token-knitting.svg","exit":"event-driven"},
+    {"id":"delegating","name":"Parcel Parade","mode":"loop","durationMs":5000,"accessory":"one parcel, a floor path, and two helpers","action":"Pass the parcel along the path and send both helpers onward.","source":"src/animations/hatchling-parade.svg","variants":["one-subagent","two-or-more-subagents"],"exit":"event-driven"},
+    {"id":"needs_owner","name":"Picnic Jar","mode":"loop","durationMs":4800,"accessory":"one jar on a picnic mat","action":"Twist twice, strain, then push the jar toward the owner.","source":"src/animations/stuck-jar.svg","variants":["permission","question","unknown"],"exit":"event-driven"},
+    {"id":"compacting","name":"Suitcase Fold","mode":"loop","durationMs":4800,"accessory":"one open suitcase and one striped cloth","action":"Fold the cloth progressively into the suitcase.","source":"src/animations/accordion-fold.svg","exit":"event-driven"},
+    {"id":"workspace","name":"Mat Move-in","mode":"oneshot","durationMs":4200,"accessory":"one broad patchwork work mat","action":"Unroll the mat and settle into the new workspace.","source":"src/animations/pop-up-studio.svg","exit":"working"},
+    {"id":"success","name":"Cushion Cheer","mode":"oneshot","durationMs":2900,"accessory":"one floor cushion","action":"Compress the cushion, hop, make both claws meet overhead, and settle.","source":"src/animations/self-high-five.svg","exit":"idle"},
+    {"id":"error","name":"Basket Rescue","mode":"loop","durationMs":4800,"accessory":"one broad woven basket","action":"Get covered by the basket, wriggle free, stand, and get nudged again.","source":"src/animations/yarn-tangle.svg","exit":"event-driven"}
   ]
 }

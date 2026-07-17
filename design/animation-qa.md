@@ -1,34 +1,33 @@
-# Maclawd animation QA — V4.1 — 2026-07-17
+# Maclawd animation QA — V5.1 — 2026-07-17
 
-本轮对 12 个主状态、5 个活动修饰和 6 个互动/环境动作进行全套小尺寸复审。18 个视觉上需要优化的动作重新渲染；保留的动作继续由同一实验室加载检查。
+本轮以 **Top-down Sleep** 的“完整小场景 + 身体真实接触”作为全套质量基线，重做其余 22 个动作，并重新检查 12 个主状态、5 个活动修饰和 6 个互动/环境动作。
 
 ## 自动检查
 
 - 26 个 SVG 源文件全部通过 XML 解析（23 个当前动作、1 个历史兼容入口、2 个机械原型）。
-- 26/26 保留 `viewBox="-15 -25 45 45"`。
-- 26/26 保留身体、双爪、四腿、双眼的固定源矩形。
-- 26/26 使用身体色 `#DE886D` 与眼睛色 `#000000`。
-- 18 个 V4 动作共渲染 324 个确定性 Chromium 帧，并输出 18 个 GIF。
-- 修复预览器在小视口只截取 500px SVG 左上角的问题；18/18 GIF 现在都包含至少两个不同的实际渲染帧。
-- 14 个 V4 循环动作的首帧与末采样帧逐字节一致。
+- 23/23 当前动作保留 `viewBox="-15 -25 45 45"`。
+- 23/23 当前动作保留身体、双爪、四腿、双眼的固定源矩形。
+- 23/23 当前动作使用身体色 `#DE886D` 与眼睛色 `#000000`。
+- 全套 V5 共渲染 588 个确定性 Chromium 帧，输出 23 个 GIF。
+- 23/23 GIF 至少包含两个不同实际帧；没有静态假 GIF。
+- 22 个循环/反应 GIF 首末采样帧闭合；唯一未闭合的是一次性 `waking` 转场，符合合同。
 - 三份机器可读 JSON 合同通过语法解析。
 - 动态实验室加载 23 个当前动作；`working.command` 映射到 generic `working`，不重复占一个视觉动作。
-- `prefers-reduced-motion` 下身体动画计算值为 `none`。
 
 ## 视觉检查
 
-- 在 64px 与 96px 两档同时检查身体轮廓、双眼、道具接触与裁边。
-- `thinking`、`working`、`error`、`low_battery` 已改成无道具身体动作。
-- 阅读、写作、构建、测试、同步改为单一大轮廓，不再用三个脚边小物讲故事。
-- 委派只保留两个大助手；求助只保留一个位于身体侧面的清晰玻璃罐。
-- 休眠链只使用一条连贯毛毯，睡眠时脸与爪保持可见。
-- 未使用文字、进度条、漂浮标点、光晕、速度线、烟雾或阴影。
-- `sleeping` 已改为俯视床铺构图；床垫、枕头、闭眼、被面双爪和呼吸起伏在暂停帧也能读成平躺睡觉。用户明确指定的硬边像素 `Zzz` 是漂浮标点规则的唯一例外。
-- 新睡眠循环输出 26 帧、9 个不同帧，首尾闭合。
+- 在 64px 与 96px 两档检查身体轮廓、双眼、场景识别、接触关系与裁边。
+- 休息区统一使用床铺与软垫语言：`idle`、`away`、`sleeping`、`waking`、`success`、点击/落地和低电量互相关联，但配色与动作节拍不同。
+- 工作区统一使用地毯、低桌与地面活动语言：拼图、阅读、写信、搭积木、测试玩具和同步晾衣绳都让 Clawd 真实参与。
+- `delegating` 使用一条共享地面路径和一个大包裹；`needs_owner` 使用餐垫与一个大罐子；`compacting` 使用行李箱；`error` 使用会扣住身体的编织篮。
+- `drag` 的双爪真正抓住木杆，`edge` 改为从大帘幕后探头，不再依赖抽象屏幕边线。
+- 未使用 UI 面板、进度条、光晕、速度线、烟雾或阴影。
+- `sleeping` 按用户明确要求保留硬边像素 `Zzz`，仍是漂浮标点规则的唯一例外。
+- 长页面浏览器实验室通过 23 卡加载检查；静态审查截图使用同一批确定性 96px 帧，避免离屏 `<object>` 在截图工具中不绘制。
 
 ## 评审产物
 
-- [`../previews/all-actions-v4-96px.png`](../previews/all-actions-v4-96px.png)
-- [`../previews/all-actions-v4-64px.png`](../previews/all-actions-v4-64px.png)
-- [`../previews/complete-motion-lab-v4.png`](../previews/complete-motion-lab-v4.png)
-- `previews/<action>-v4.gif`
+- [`../previews/all-actions-v5-96px.png`](../previews/all-actions-v5-96px.png)
+- [`../previews/all-actions-v5-64px.png`](../previews/all-actions-v5-64px.png)
+- [`../previews/complete-motion-lab-v5.png`](../previews/complete-motion-lab-v5.png)
+- `previews/<action>-v5.gif`（23 个）

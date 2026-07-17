@@ -1,10 +1,12 @@
 <?xml-stylesheet type="text/css" href="maclawd-actions.css"?>
 <svg xmlns="http://www.w3.org/2000/svg" class="state-delegating" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
-  <title>Maclawd Helper Handoff</title><desc>Maclawd greets two clearly visible helpers, points out the job, and sends them onward.</desc>
+  <title>Maclawd Parcel Parade</title><desc>Maclawd passes one large parcel to two visible helpers walking along a shared floor path.</desc>
+  <g class="handoff-path"><path d="M-12 15H24V20H-12Z" fill="#DCEBD9"/><rect x="-10" y="17" width="32" height="1" fill="#7BC8C4"/></g>
   <g class="actor motion"><g fill="#DE886D">
     <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/><rect id="inner-left-leg" x="5" y="13" width="1" height="2"/><rect id="inner-right-leg" x="9" y="13" width="1" height="2"/><rect id="outer-right-leg" x="11" y="13" width="1" height="2"/><rect id="torso" x="2" y="6" width="11" height="7"/>
     <g class="left-claw motion"><rect id="left-arm" x="0" y="9" width="2" height="2"/></g><g class="right-claw motion"><rect id="right-arm" x="13" y="9" width="2" height="2"/></g>
   </g><g class="eyes motion blink" fill="#000"><rect id="left-eye" x="4" y="8" width="1" height="2"/><rect id="right-eye" x="10" y="8" width="1" height="2"/></g></g>
+  <g class="parcel motion"><path d="M3 10H11V16H3Z" fill="#F6C85F"/><rect x="6" y="10" width="2" height="6" fill="#B67B19"/><rect x="3" y="12" width="8" height="1" fill="#FFE59A"/></g>
   <g transform="translate(-5 11)"><g class="helper-a motion" fill="#F1A186"><rect x="0" y="0" width="6" height="4"/><rect x="-2" y="1" width="2" height="2"/><rect x="6" y="1" width="2" height="2"/><rect x="1" y="4" width="1" height="2"/><rect x="4" y="4" width="1" height="2"/><rect x="1" y="1" width="1" height="2" fill="#000"/><rect x="4" y="1" width="1" height="2" fill="#000"/></g></g>
   <g transform="translate(16 11)"><g class="helper-b motion" fill="#EAB078"><rect x="0" y="0" width="6" height="4"/><rect x="-2" y="1" width="2" height="2"/><rect x="6" y="1" width="2" height="2"/><rect x="1" y="4" width="1" height="2"/><rect x="4" y="4" width="1" height="2"/><rect x="1" y="1" width="1" height="2" fill="#000"/><rect x="4" y="1" width="1" height="2" fill="#000"/></g></g>
 </svg>

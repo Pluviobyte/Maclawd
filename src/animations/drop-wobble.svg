@@ -1,5 +1,6 @@
 <?xml-stylesheet type="text/css" href="maclawd-actions.css"?>
 <svg xmlns="http://www.w3.org/2000/svg" class="state-drop" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
-  <title>Maclawd Drop Wobble</title><desc>Maclawd lands softly, compresses, rebounds once, and steadies itself.</desc>
+  <title>Maclawd Cushion Bounce</title><desc>Maclawd lands on a broad cushion, compresses it, rebounds once, and steadies itself.</desc>
+  <g class="cushion motion"><path d="M-5 13H20V15H22V19H20V20H-5V19H-7V15H-5Z" fill="#3E7775"/><path d="M-4 13H19V15H21V18H19V19H-4V18H-6V15H-4Z" fill="#7BC8C4"/><rect x="-1" y="14" width="17" height="1" fill="#BDE7E4"/></g>
   <g class="actor motion"><g fill="#DE886D"><rect id="outer-left-leg" x="3" y="13" width="1" height="2"/><rect id="inner-left-leg" x="5" y="13" width="1" height="2"/><rect id="inner-right-leg" x="9" y="13" width="1" height="2"/><rect id="outer-right-leg" x="11" y="13" width="1" height="2"/><rect id="torso" x="2" y="6" width="11" height="7"/><g class="left-claw motion"><rect id="left-arm" x="0" y="9" width="2" height="2"/></g><g class="right-claw motion"><rect id="right-arm" x="13" y="9" width="2" height="2"/></g></g><g class="eyes motion blink" fill="#000000"><rect id="left-eye" x="4" y="8" width="1" height="2"/><rect id="right-eye" x="10" y="8" width="1" height="2"/></g></g>
 </svg>

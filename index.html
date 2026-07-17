@@ -20,7 +20,7 @@
       .motion-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:18px; }
       .motion-card { overflow:hidden; border:1px solid rgba(30,30,46,.11); border-radius:26px; background:#fbfaf7; box-shadow:0 16px 46px rgba(30,30,46,.075); }
       .stage { aspect-ratio:1; background:linear-gradient(rgba(30,30,46,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(30,30,46,.035) 1px,transparent 1px),#fbfaf7; background-size:24px 24px; }
-      object { width:100%; height:100%; }
+      object { width:100%; height:100%; image-rendering:pixelated; }
       .copy { padding:0 19px 21px; }
       .copy h3 { margin:2px 0 7px; font-size:20px; }
       .copy p { min-height:50px; margin:0; font-size:14px; }
@@ -39,7 +39,7 @@
       <header>
         <p class="eyebrow">Maclawd · Complete motion lab</p>
         <h1>状态会变化，<br>角色还是它。</h1>
-        <p>身体、眼睛、颜色与坐标保持不变；先用身体姿势讲清语义，只在必要时加入一个大而熟悉的道具。这里汇总 12 个主状态、5 个工作修饰和 6 个互动彩蛋。</p>
+        <p>身体、眼睛、颜色与坐标保持不变；每个动作都让 Clawd 真正进入一个可识别的小场景，而不是在脚边堆功能图标。这里汇总 12 个主状态、5 个工作修饰和 6 个互动彩蛋。</p>
       </header>
       <div id="lab"></div>
       <p class="note">旧的机械候选仍保留在 <a href="design/concepts/all-primary-states.html">静态概念档案</a>；当前页面展示的是新的趣味动作方向。</p>
@@ -50,41 +50,41 @@
           title: "12 个主状态",
           copy: "用于表达 owner 与 Agent 的稳定主状态；休眠链、任务链和结果链都有明确转场。",
           items: [
-            ["idle","Calm Calibration","calm-calibration.svg","5.6s loop","呼吸、观察、眨眼"],
-            ["away","Blanket Drag","blanket-drag.svg","3.8s transition","伸懒腰后拖来一条大毛毯"],
+            ["idle","Cushion Watch","calm-calibration.svg","5.6s loop","坐进软垫里呼吸、观察和眨眼"],
+            ["away","Bedtime Pull","blanket-drag.svg","3.8s transition","爬到床边，把同一条毛毯拉上床"],
             ["sleeping","Top-down Sleep","blanket-burrito.svg","6.4s loop","俯视平躺在枕头上，盖被呼吸并冒出像素 Zzz"],
-            ["waking","Blanket Wake","blanket-pop.svg","2.6s transition","弹起时整条毛毯滑到身后"],
-            ["thinking","Claw Count","shell-shuffle.svg","4.6s loop","左右数爪并停在决定姿势"],
-            ["working","Busy Claws","token-knitting.svg","3.4s loop","双爪交替忙碌后检查成果"],
-            ["delegating","Helper Handoff","hatchling-parade.svg","5.0s loop","向两个大助手交接并送它们出发"],
-            ["needs_owner","Jar Assist","stuck-jar.svg","4.8s loop","拧不开大罐子后推给主人"],
-            ["compacting","Pocket Fold","accordion-fold.svg","4.8s loop","把一条大折页压成口袋大小"],
-            ["workspace","Rollout Mat","pop-up-studio.svg","4.2s transition","展开条纹工作垫并站上去"],
-            ["success","Self High-five","self-high-five.svg","2.9s reaction","双爪在头顶真正碰到并停顿"],
-            ["error","Failed Stand","yarn-tangle.svg","4.8s loop","左右摇晃、倒下、再爬起来"]
+            ["waking","Morning Stretch","blanket-pop.svg","2.6s transition","在同一张床上伸展，被子滑向床尾"],
+            ["thinking","Puzzle Pause","shell-shuffle.svg","4.6s loop","趴在地垫前转动最后一块拼图"],
+            ["working","Desk Shuffle","token-knitting.svg","3.4s loop","伏在低桌前交替推动两块工作牌"],
+            ["delegating","Parcel Parade","hatchling-parade.svg","5.0s loop","沿地面小路把大包裹交给两位助手"],
+            ["needs_owner","Picnic Jar","stuck-jar.svg","4.8s loop","在餐垫上拧不开罐子后推给主人"],
+            ["compacting","Suitcase Fold","accordion-fold.svg","4.8s loop","把大条纹布逐折塞进行李箱"],
+            ["workspace","Mat Move-in","pop-up-studio.svg","4.2s transition","展开拼布地垫并搬进新工作位"],
+            ["success","Cushion Cheer","self-high-five.svg","2.9s reaction","踩软垫起跳，双爪在头顶碰到"],
+            ["error","Basket Rescue","yarn-tangle.svg","4.8s loop","被大篮子扣住，挣脱后又被碰倒"]
           ]
         },
         {
           title: "5 个 working 活动修饰",
-          copy: "只有拿到可靠的活动类别时才覆盖 generic working；command 不单独画一套，统一回退到 Busy Claws。",
+          copy: "只有拿到可靠的活动类别时才覆盖 generic working；command 不单独画一套，统一回退到 Desk Shuffle。",
           items: [
-            ["working.reading","Open Book","card-browsing.svg","5.0s loop","读一本身体宽度的打开书并翻页"],
-            ["working.writing","Big Pencil","note-stitching.svg","4.6s loop","用一支大铅笔在整张纸上书写"],
-            ["working.building","Two-block Build","block-tower.svg","5.0s loop","搬起大积木并叠成两层"],
-            ["working.testing","Roly-poly Test","wobble-test.svg","4.8s loop","轻推一个不倒翁并观察回正"],
-            ["working.syncing","Chest Relay","relay-bead.svg","4.4s loop","沿胸前绳索传递一颗大珠子"]
+            ["working.reading","Floor Book","card-browsing.svg","5.0s loop","坐在圆地毯上读一本身体宽度的书"],
+            ["working.writing","Letter Desk","note-stitching.svg","4.6s loop","伏在木桌前用大铅笔写一封信"],
+            ["working.building","Block Garden","block-tower.svg","5.0s loop","在游戏地毯上搬起并叠好两块积木"],
+            ["working.testing","Toy Check","wobble-test.svg","4.8s loop","跪在软垫旁推不倒翁并观察回正"],
+            ["working.syncing","Clothesline Relay","relay-bead.svg","4.4s loop","把条纹小袋沿晾衣绳送到另一边"]
           ]
         },
         {
           title: "6 个互动与环境彩蛋",
           copy: "这些动作由桌面交互或环境事件触发，不冒充 Agent 的具体任务进度。",
           items: [
-            ["interaction.click","Click Flinch","click-flinch.svg","2.2s reaction","被轻点后眯眼回望"],
-            ["interaction.double_click","Surprised Hop","surprised-hop.svg","2.4s reaction","连点触发一次惊喜小跳"],
-            ["interaction.drag","Drag Cling","drag-cling.svg","3.2s held loop","被拖动时双爪抓紧"],
-            ["interaction.drop","Drop Wobble","drop-wobble.svg","2.6s reaction","落地压扁、回弹、站稳"],
-            ["ambient.edge","Edge Peek","edge-peek.svg","4.6s loop","从屏幕边缘偷看再躲回去"],
-            ["ambient.low_battery","Low Battery Droop","low-battery-droop.svg","6.2s loop","不靠图标，只用半闭眼和长停顿"]
+            ["interaction.click","Cushion Poke","click-flinch.svg","2.2s reaction","被轻点后陷进软垫并回望"],
+            ["interaction.double_click","Cushion Hop","surprised-hop.svg","2.4s reaction","连点压缩软垫并弹起一次"],
+            ["interaction.drag","Hanging Cling","drag-cling.svg","3.2s held loop","被拖动时双爪抓住木杆悬挂"],
+            ["interaction.drop","Cushion Bounce","drop-wobble.svg","2.6s reaction","落到软垫上压扁、回弹、站稳"],
+            ["ambient.edge","Curtain Peek","edge-peek.svg","4.6s loop","从大帘幕后偷看再躲回去"],
+            ["ambient.low_battery","Cushion Curl","low-battery-droop.svg","6.2s loop","蜷进软垫，只用半闭眼和长停顿"]
           ]
         }
       ];

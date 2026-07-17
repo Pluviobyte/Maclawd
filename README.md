@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="previews/all-actions-v4-96px.png" width="1000" alt="Maclawd V4 body-first motion set at pet size">
+  <img src="previews/all-actions-v5-96px.png" width="1000" alt="Maclawd V5 scene-first motion set at pet size">
 </p>
 
 <h1 align="center">Maclawd</h1>
@@ -13,7 +13,7 @@
 
 > [!IMPORTANT]
 > Maclawd has completed its first full motion-design checkpoint. There is no downloadable macOS
-> application yet. The current V4 checkpoint is a complete body-first motion design system.
+> application yet. The current V5 checkpoint is a complete scene-first motion design system.
 
 ## What we are building
 
@@ -39,8 +39,8 @@ temporary props, and discrete animation change.
 | Interactions and ambient actions | 6 | Click, double click, drag, drop, edge peek, low battery |
 
 [Open the live motion lab](index.html) ·
-[View the complete 96px check](previews/all-actions-v4-96px.png) ·
-[View the 64px check](previews/all-actions-v4-64px.png) ·
+[View the complete 96px check](previews/all-actions-v5-96px.png) ·
+[View the 64px check](previews/all-actions-v5-64px.png) ·
 [Read the primary-state contract](design/main-state-actions.md) ·
 [Read working modifiers](design/activity-modifiers.md) ·
 [Read interactions](design/interaction-actions.md) ·
@@ -50,28 +50,28 @@ temporary props, and discrete animation change.
 
 | `away` | `sleeping` | `waking` | `success` |
 | --- | --- | --- | --- |
-| <img src="previews/blanket-drag-v4.gif" width="180" alt="Maclawd Blanket Drag animation"> | <img src="previews/blanket-burrito-v5.gif" width="180" alt="Maclawd Top-down Sleep animation"> | <img src="previews/blanket-pop-v4.gif" width="180" alt="Maclawd Blanket Wake animation"> | <img src="previews/self-high-five-v4.gif" width="180" alt="Maclawd Self High-five animation"> |
-| Blanket Drag | Top-down Sleep | Blanket Wake | Self High-five |
+| <img src="previews/blanket-drag-v5.gif" width="180" alt="Maclawd Bedtime Pull animation"> | <img src="previews/blanket-burrito-v5.gif" width="180" alt="Maclawd Top-down Sleep animation"> | <img src="previews/blanket-pop-v5.gif" width="180" alt="Maclawd Morning Stretch animation"> | <img src="previews/self-high-five-v5.gif" width="180" alt="Maclawd Cushion Cheer animation"> |
+| Bedtime Pull | Top-down Sleep | Morning Stretch | Cushion Cheer |
 
 The sleep chain deliberately reuses one blanket, so `away → sleeping → waking`
-reads as a continuous story. The sleep loop switches to a clear top-down bed,
-pillow, blanket, closed-eye, and pixel-Zzz composition. V4 replaces small functional props with body-first
-actions and a single familiar silhouette when needed: **Claw Count**, **Busy
-Claws**, **Helper Handoff**, **Jar Assist**, **Pocket Fold**, **Rollout Mat**,
-and **Failed Stand**.
+reads as a continuous story. The sleep loop uses a clear top-down bed, pillow,
+blanket, closed-eye, and pixel-Zzz composition. V5 carries that same idea into
+the full set: each action is a small recognizable scene with physical contact,
+including **Puzzle Pause**, **Desk Shuffle**, **Parcel Parade**, **Picnic Jar**,
+**Suitcase Fold**, **Mat Move-in**, and **Basket Rescue**.
 
 ### Working modifiers and interactions
 
 Detailed activities are only shown when an external event can classify them
-reliably. Generic busy activity always falls back to **Busy Claws**; `command`
+reliably. Generic busy activity always falls back to **Desk Shuffle**; `command`
 is an alias of that generic state rather than a sixth prop animation. The pet
 never invents a task from an opaque Agent state. Interaction actions are driven
 by the Mac app's own input and system events and do not require Agent internals.
 
 ## Earlier executable motion baseline
 
-These sources remain available for design history. `idle` stays current;
-Inference Dial and Reasoning Gearbox have been superseded by the playful group:
+These previews remain available for design history. The old accessory-free idle,
+Inference Dial, and Reasoning Gearbox have all been superseded by V5:
 
 - `idle` — **Calm Calibration**, a 5.6-second accessory-free breathing loop
 - `thinking` — **Inference Dial**, a 2.4-second three-position selector loop
@@ -81,7 +81,7 @@ Inference Dial and Reasoning Gearbox have been superseded by the playful group:
 | --- | --- | --- |
 | <img src="previews/calm-calibration.gif" width="220" alt="Maclawd Calm Calibration animation"> | <img src="previews/inference-dial.gif" width="220" alt="Maclawd Inference Dial animation"> | <img src="previews/reasoning-gearbox.gif" width="220" alt="Maclawd Reasoning Gearbox animation"> |
 
-[Open Idle](src/animations/calm-calibration.svg) ·
+[Open current Cushion Watch](src/animations/calm-calibration.svg) ·
 [Open Thinking](src/animations/inference-dial.svg) ·
 [Open Working](src/animations/reasoning-gearbox.svg) ·
 [Read the design contract](design/reasoning-gearbox.md) ·
