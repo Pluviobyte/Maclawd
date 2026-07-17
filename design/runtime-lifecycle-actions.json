@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "implemented-motion-set-v5.4-runtime-complete",
+  "priority": [
+    "interaction reaction",
+    "terminal transition",
+    "owner attention",
+    "runtime lifecycle",
+    "working modifier",
+    "primary state",
+    "idle variant"
+  ],
+  "truthPolicy": "Only select a state from a reliable app, owner, system, or event-adapter signal. Opaque Agent work falls back to thinking or working.",
+  "lifecycle": [
+    {"id":"launching","name":"Hello Unfold","mode":"oneshot","durationMs":2800,"source":"src/animations/hello-unfold.svg","trigger":"Maclawd window becomes ready","exit":"idle"},
+    {"id":"quitting","name":"Goodbye Tuck","mode":"oneshot","durationMs":2800,"source":"src/animations/goodbye-tuck.svg","trigger":"graceful app termination begins","exit":"hidden"},
+    {"id":"moving","name":"Sideways Scuttle","mode":"loop","durationMs":1800,"source":"src/animations/sideways-scuttle.svg","trigger":"pet changes desktop position","variants":["screen-left","screen-right"],"exit":"previous stable state"},
+    {"id":"waiting","name":"Claw Tap Wait","mode":"loop","durationMs":4200,"source":"src/animations/claw-tap-wait.svg","trigger":"a reliable external wait signal is active","exit":"event-driven"},
+    {"id":"paused","name":"Statue Pause","mode":"loop","durationMs":6000,"source":"src/animations/statue-pause.svg","trigger":"owner or runtime explicitly pauses work","exit":"event-driven"},
+    {"id":"cancelled","name":"Tiny Shrug","mode":"oneshot","durationMs":2800,"source":"src/animations/tiny-shrug.svg","trigger":"a reliable cancellation event is received","exit":"idle"},
+    {"id":"owner_resolved","name":"Jar Click","mode":"oneshot","durationMs":3200,"source":"src/animations/jar-click.svg","trigger":"owner completes a pending permission or answer","entry":"needs_owner","exit":"previous stable state"},
+    {"id":"recovering","name":"Basket Breakout","mode":"oneshot","durationMs":3400,"source":"src/animations/basket-breakout.svg","trigger":"runtime begins recovery after error","entry":"error","exit":"working or idle"}
+  ],
+  "idleVariants": [
+    {"id":"idle.grooming","name":"Claw Groom","mode":"loop","durationMs":5200,"source":"src/animations/idle-claw-groom.svg","trigger":"weighted idle scheduler after quiet threshold"},
+    {"id":"idle.leg_shuffle","name":"Leg Shuffle","mode":"loop","durationMs":4800,"source":"src/animations/idle-leg-shuffle.svg","trigger":"weighted idle scheduler after quiet threshold"},
+    {"id":"idle.drowsy","name":"Drowsy Nod","mode":"loop","durationMs":6000,"source":"src/animations/idle-drowsy-nod.svg","trigger":"weighted long-idle scheduler; disabled before away transition"}
+  ],
+  "environment": [
+    {"id":"interaction.hover","name":"Cursor Gaze","mode":"held","durationMs":3000,"source":"src/animations/hover-gaze.svg","trigger":"pointer enters pet attention radius"},
+    {"id":"ambient.notification","name":"Attention Turn","mode":"oneshot","durationMs":2600,"source":"src/animations/attention-turn.svg","trigger":"Maclawd notification is delivered"},
+    {"id":"ambient.offline","name":"Signal Listen","mode":"loop","durationMs":5200,"source":"src/animations/signal-listen.svg","trigger":"configured service connection is unavailable"},
+    {"id":"ambient.reconnecting","name":"Ready Wiggle","mode":"oneshot","durationMs":3000,"source":"src/animations/ready-wiggle.svg","trigger":"configured service connection is restored","exit":"previous stable state"}
+  ],
+  "aliases": [
+    {"id":"ambient.power_connected","mapsTo":"waking","source":"src/animations/blanket-pop.svg","reason":"Morning Stretch already communicates energy returning without adding a charger prop."}
+  ]
+}

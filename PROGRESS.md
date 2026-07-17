@@ -10,10 +10,12 @@ Its first complete body-first motion-design system is now implemented:
 - 12 primary states
 - 5 optional `working` activity modifiers
 - 6 interaction and ambient actions
-- 23 active CSS/SVG animations in total
+- 8 runtime lifecycle actions
+- 3 idle variants and 4 additional interaction/environment actions
+- 38 active CSS/SVG animations in total, plus one deliberate power-connected alias
 
 The body, claws, legs, eyes, colors, and source coordinates are identical across
-the full set. V5.3 removes every horizontal stage, including the sleeping
+the full set. V5.4 keeps the V5.3 body-first rule that removes every horizontal stage, including the sleeping
 mattress. Props overlap the body, sit to one side, or stack vertically. The
 macOS application runtime and event integration have
 not started.
@@ -41,22 +43,33 @@ not started.
   `working.command` now aliases generic **Tile Stack**.
 - Added six desktop/system actions: **Poke Squish**, **Surprised Hop**, **Hanging
   Loop**, **Drop Wobble**, **Curtain Peek**, and **Low Battery Droop**.
+- Added eight runtime lifecycle actions: **Hello Unfold**, **Goodbye Tuck**,
+  **Sideways Scuttle**, **Claw Tap Wait**, **Statue Pause**, **Tiny Shrug**,
+  **Jar Click**, and **Basket Breakout**.
+- Closed two incomplete state stories: `needs_owner → owner_resolved` keeps the
+  same jar family, while `error → recovering` keeps the same basket family.
+- Added three weighted idle variants—**Claw Groom**, **Leg Shuffle**, and
+  **Drowsy Nod**—while keeping **Quiet Watch** as the required default between
+  variants.
+- Added four observable environment reactions: **Cursor Gaze**, **Attention
+  Turn**, **Signal Listen**, and **Ready Wiggle**. Power connected deliberately
+  aliases **Morning Stretch** instead of adding a charger or battery prop.
 - Defined conservative Hook behavior: detailed working modifiers require a
   reliable external event; otherwise the system falls back to generic working.
 - Added machine-readable contracts for primary states, modifiers, and
   interactions.
-- Rebuilt the browser motion lab to display all 23 actions directly from their
+- Rebuilt the browser motion lab to display all 38 actions directly from their
   production SVG sources.
 - Rendered every active action into a deterministic V5 GIF preview and generated
   new 64px and 96px complete-set boards.
 - Removed 15 horizontal base constructions: rugs, desks, paths, cushions,
   floor strips, the clothesline, the hanging bar, and the sleeping mattress. The current
-  23-action set stays within 16–48px horizontally at the 96px QA size.
+  38-action set stays within the compact pet-size envelope at the 96px QA size.
 - Fixed the deterministic preview renderer to resize the SVG root before
-  pet-size capture; all 23 GIF previews now contain real animated content.
-- Verified all 26 SVG sources parse and preserve the locked source rectangles:
-  23 current actions, one historical command entry, and two mechanical prototypes.
-- Produced browser-rendered 64px and 96px boards covering all 23 active actions.
+  pet-size capture; all 38 GIF previews now contain real animated content.
+- Verified all 41 SVG sources parse and preserve the locked source rectangles:
+  38 current actions, one historical command entry, and two mechanical prototypes.
+- Produced browser-rendered 64px and 96px boards covering all 38 active actions.
 - Added shared reduced-motion behavior: props and body motion stop, with only a
   low-frequency blink permitted.
 

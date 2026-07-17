@@ -39,7 +39,7 @@
       <header>
         <p class="eyebrow">Maclawd · Complete motion lab</p>
         <h1>状态会变化，<br>角色还是它。</h1>
-        <p>身体、眼睛、颜色与坐标保持不变；动作以身体表演为主，道具只贴身出现或纵向叠放，不再为每个状态铺一块横向舞台。这里汇总 12 个主状态、5 个工作修饰和 6 个互动彩蛋。</p>
+        <p>身体、眼睛、颜色与坐标保持不变；动作以身体表演为主，道具只贴身出现或纵向叠放，不再为每个状态铺一块横向舞台。这里汇总 38 个动作：主状态、工作修饰、运行时生命周期，以及让桌宠更像活物的互动和环境反应。</p>
       </header>
       <div id="lab"></div>
       <p class="note">旧的机械候选仍保留在 <a href="design/concepts/all-primary-states.html">静态概念档案</a>；当前页面展示的是新的趣味动作方向。</p>
@@ -85,6 +85,33 @@
             ["interaction.drop","Drop Wobble","drop-wobble.svg","2.6s reaction","落地后压扁、回弹、站稳"],
             ["ambient.edge","Curtain Peek","edge-peek.svg","4.6s loop","从大帘幕后偷看再躲回去"],
             ["ambient.low_battery","Low Battery Droop","low-battery-droop.svg","6.2s loop","身体下沉、双爪内卷并半闭眼"]
+          ]
+        },
+        {
+          title: "8 个运行时补全动作",
+          copy: "补齐启动、退出、移动、等待和状态收尾；只响应可靠事件，不根据不可见推理猜任务。",
+          items: [
+            ["launching","Hello Unfold","hello-unfold.svg","2.8s transition","从压扁小团展开，双爪打开后站稳"],
+            ["quitting","Goodbye Tuck","goodbye-tuck.svg","2.8s transition","挥一次小爪，闭眼并把身体收回小团"],
+            ["moving","Sideways Scuttle","sideways-scuttle.svg","1.8s loop","四条腿交替横移，眼睛先看向移动方向"],
+            ["waiting","Claw Tap Wait","claw-tap-wait.svg","4.2s loop","身体保持原位，一只爪连续轻点三次"],
+            ["paused","Statue Pause","statue-pause.svg","6.0s loop","双爪内收，几乎静止，只留下慢呼吸和眨眼"],
+            ["cancelled","Tiny Shrug","tiny-shrug.svg","2.8s reaction","双爪一摊、身体左右轻晃，然后安静复位"],
+            ["owner_resolved","Jar Click","jar-click.svg","3.2s transition","罐盖咔哒松开，扶稳罐子并放心眨眼"],
+            ["recovering","Basket Breakout","basket-breakout.svg","3.4s transition","把篮子从身上推开，抖一抖重新站稳"]
+          ]
+        },
+        {
+          title: "7 个生命感与环境动作",
+          copy: "低频 idle 彩蛋和 Mac 自己能观察到的环境事件；不绘制光标、通知图标或网络图标。",
+          items: [
+            ["idle.grooming","Claw Groom","idle-claw-groom.svg","5.2s idle variant","低头用一只爪仔细擦另一只爪"],
+            ["idle.leg_shuffle","Leg Shuffle","idle-leg-shuffle.svg","4.8s idle variant","四条小腿依次挪动，重新找舒服站姿"],
+            ["idle.drowsy","Drowsy Nod","idle-drowsy-nod.svg","6.0s idle variant","慢慢打瞌睡，忽然点醒再恢复站姿"],
+            ["interaction.hover","Cursor Gaze","hover-gaze.svg","3.0s held loop","不画光标，只用眼神、重心和一只爪跟随"],
+            ["ambient.notification","Attention Turn","attention-turn.svg","2.6s reaction","突然转向声音来源，抬爪确认后放松"],
+            ["ambient.offline","Signal Listen","signal-listen.svg","5.2s loop","没有信号图标，停下来向左右仔细听"],
+            ["ambient.reconnecting","Ready Wiggle","ready-wiggle.svg","3.0s reaction","连接恢复后左右摆动，双爪重新打开"]
           ]
         }
       ];

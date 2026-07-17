@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="previews/all-actions-v5-96px.png" width="1000" alt="Maclawd V5.3 body-first motion set at pet size">
+  <img src="previews/all-actions-v5-96px.png" width="1000" alt="Maclawd V5.4 complete 38-action motion set at pet size">
 </p>
 
 <h1 align="center">Maclawd</h1>
@@ -13,7 +13,7 @@
 
 > [!IMPORTANT]
 > Maclawd has completed its first full motion-design checkpoint. There is no downloadable macOS
-> application yet. The current V5.3 checkpoint is a complete body-first motion design system.
+> application yet. The current V5.4 checkpoint is a complete body-first motion design system.
 
 ## What we are building
 
@@ -26,7 +26,7 @@ Maclawd is planned as a complete Mac product:
 - independent product identity, icon, packaging, update flow, and release system
 - a signed and notarized universal macOS application
 
-## Complete 23-action motion set
+## Complete 38-action motion set
 
 The first full SVG/CSS action system is implemented. The body, claws, legs,
 eyes, coordinates, and base colors remain identical in every file; only poses,
@@ -37,6 +37,8 @@ temporary props, and discrete animation change.
 | Primary states | 12 | Rest, Agent activity, owner attention, system feedback |
 | Working modifiers | 5 | Reading, writing, building, testing, syncing |
 | Interactions and ambient actions | 6 | Click, double click, drag, drop, edge peek, low battery |
+| Runtime lifecycle | 8 | Launch, quit, move, wait, pause, cancel, resolve, recover |
+| Idle and environment additions | 7 | Groom, shuffle, drowse, hover, notification, offline, reconnect |
 
 [Open the live motion lab](index.html) ·
 [View the complete 96px check](previews/all-actions-v5-96px.png) ·
@@ -44,6 +46,7 @@ temporary props, and discrete animation change.
 [Read the primary-state contract](design/main-state-actions.md) ·
 [Read working modifiers](design/activity-modifiers.md) ·
 [Read interactions](design/interaction-actions.md) ·
+[Read lifecycle and ambient actions](design/runtime-lifecycle-actions.md) ·
 [Read animation QA](design/animation-qa.md)
 
 ### Primary states
@@ -68,6 +71,21 @@ reliably. Generic busy activity always falls back to **Tile Stack**; `command`
 is an alias of that generic state rather than a sixth prop animation. The pet
 never invents a task from an opaque Agent state. Interaction actions are driven
 by the Mac app's own input and system events and do not require Agent internals.
+
+### Runtime lifecycle and a more alive idle
+
+Eight body-led actions now cover the product lifecycle: **Hello Unfold**,
+**Goodbye Tuck**, **Sideways Scuttle**, **Claw Tap Wait**, **Statue Pause**,
+**Tiny Shrug**, **Jar Click**, and **Basket Breakout**. The last two deliberately
+close the stories begun by `needs_owner` and `error` instead of cutting straight
+back to idle.
+
+Three low-frequency idle variants—**Claw Groom**, **Leg Shuffle**, and **Drowsy
+Nod**—keep Quiet Watch as the default while preventing the pet from feeling
+mechanically repetitive. **Cursor Gaze**, **Attention Turn**, **Signal Listen**,
+and **Ready Wiggle** respond only to events the Mac app can actually observe.
+`ambient.power_connected` reuses **Morning Stretch**, because energy returning is
+already readable without adding a charger prop.
 
 ## Earlier executable motion baseline
 
@@ -96,7 +114,7 @@ machine-readable contract in
 ## Repository status
 
 This repository has an independent Git history and contains only Maclawd work.
-The current checkpoint includes 23 active animations, one historical command
+The current checkpoint includes 38 active animations, one historical command
 compatibility entry, two retained mechanical prototypes, individual GIF previews,
 64px and 96px review boards,
 machine-readable state maps, the browser motion lab, and the development roadmap.
