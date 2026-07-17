@@ -1,11 +1,9 @@
 <?xml-stylesheet type="text/css" href="maclawd-actions.css"?>
 <svg xmlns="http://www.w3.org/2000/svg" class="state-sleeping" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
   <title>Maclawd Top-down Sleep</title>
-  <desc>Seen from directly above, Maclawd lies flat on a pillow under a blanket while three pixel Z shapes rise beside the bed.</desc>
+  <desc>Seen from directly above, Maclawd lies flat on a pillow under a blanket while three pixel Z shapes rise beside it.</desc>
 
-  <g class="bed" transform="translate(1.875 0) scale(.75 1)">
-    <path d="M-4 1H18V2H20V19H18V20H-4V19H-6V2H-4Z" fill="#D9C79F"/>
-    <path d="M-3 2H17V3H19V18H17V19H-3V18H-5V3H-3Z" fill="#FFF4D7"/>
+  <g transform="translate(1.875 0) scale(.75 1)">
     <g class="pillow motion">
       <path d="M-1 3H15V4H17V10H15V11H-1V10H-3V4H-1Z" fill="#F7E7C4"/>
       <rect x="0" y="4" width="14" height="1" fill="#FFFFFF"/>

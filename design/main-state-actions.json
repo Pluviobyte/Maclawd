@@ -20,8 +20,8 @@
   "designRules": {
     "readingOrder": ["body silhouette", "physical action", "one attached prop when needed", "scene context"],
     "maxSceneFamiliesPerAction": 1,
-    "sceneScale": "body-first; props overlap the actor or stack vertically; only sleeping keeps a full scene",
-    "horizontalBasePolicy": "No rugs, desks, paths, cushions, floor strips, or bars. The approved top-down sleeping bed is the only full base scene.",
+    "sceneScale": "body-first; props overlap the actor or stack vertically; no action keeps a full base scene",
+    "horizontalBasePolicy": "No rugs, desks, paths, cushions, floor strips, bars, mattresses, or full-scene bases.",
     "forbidden": ["text", "UI panels", "floating punctuation", "speed lines", "glows", "shadows"],
     "exceptions": ["sleeping may use the user-approved hard-edged pixel Zzz sequence"],
     "qaSizes": [64, 96]
@@ -29,7 +29,7 @@
   "states": [
     {"id":"idle","name":"Quiet Watch","mode":"loop","durationMs":5600,"accessory":"none","action":"Breathe, observe, and blink once.","source":"src/animations/calm-calibration.svg","exit":"event-driven"},
     {"id":"away","name":"Blanket Tug","mode":"oneshot","durationMs":3800,"accessory":"one small attached blanket","action":"Grow drowsy and pull the blanket against the body.","source":"src/animations/blanket-drag.svg","exit":"sleeping"},
-    {"id":"sleeping","name":"Top-down Sleep","mode":"loop","durationMs":6400,"accessory":"top-down mattress, pillow, the same large blanket, and user-approved pixel Zzz","action":"Lie flat on the pillow under the blanket; keep closed eyes and both claws visible while the blanket breathes and three Z shapes rise.","source":"src/animations/blanket-burrito.svg","exit":"waking"},
+    {"id":"sleeping","name":"Top-down Sleep","mode":"loop","durationMs":6400,"accessory":"one pillow, the same large blanket, and user-approved pixel Zzz; no mattress or bottom pad","action":"Lie flat on the pillow under the blanket; keep closed eyes and both claws visible while the blanket breathes and three Z shapes rise.","source":"src/animations/blanket-burrito.svg","exit":"waking"},
     {"id":"waking","name":"Morning Stretch","mode":"oneshot","durationMs":2600,"accessory":"one small attached blanket","action":"Spring upright, stretch, and let the blanket slip away.","source":"src/animations/blanket-pop.svg","exit":"idle"},
     {"id":"thinking","name":"Puzzle Turn","mode":"loop","durationMs":4600,"accessory":"one puzzle piece between both claws","action":"Turn the piece, compare both sides, and pause.","source":"src/animations/shell-shuffle.svg","exit":"event-driven"},
     {"id":"working","name":"Tile Stack","mode":"loop","durationMs":3400,"accessory":"two overlapping work tiles","action":"Alternate both claws on the compact stack, then inspect.","source":"src/animations/token-knitting.svg","exit":"event-driven"},

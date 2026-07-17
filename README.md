@@ -54,11 +54,11 @@ temporary props, and discrete animation change.
 | Blanket Tug | Top-down Sleep | Morning Stretch | Self High-five |
 
 The sleep chain deliberately reuses one blanket, so `away → sleeping → waking`
-reads as a continuous story. The sleep loop uses a clear top-down bed, pillow,
-blanket, closed-eye, and pixel-Zzz composition. V5.3 keeps that full scene only
-where it is necessary. The rest is body-first: no rugs, desks, paths, cushions,
-floor strips, or hanging bars. Small props overlap the body, attach to one side,
-or stack vertically in **Puzzle Turn**, **Tile Stack**, **Parcel Stack**,
+reads as a continuous story. The sleep loop uses a top-down pillow, blanket,
+closed-eye, and pixel-Zzz composition with no mattress or bottom pad. V5.3 is
+body-first throughout: no rugs, desks, paths, cushions, floor strips, hanging
+bars, mattresses, or full-scene bases. Small props overlap the body, attach to
+one side, or stack vertically in **Puzzle Turn**, **Tile Stack**, **Parcel Stack**,
 **Stuck Jar**, **Suitcase Fold**, **Workspace Folder**, and **Basket Rescue**.
 
 ### Working modifiers and interactions

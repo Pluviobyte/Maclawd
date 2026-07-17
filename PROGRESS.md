@@ -13,9 +13,9 @@ Its first complete body-first motion-design system is now implemented:
 - 23 active CSS/SVG animations in total
 
 The body, claws, legs, eyes, colors, and source coordinates are identical across
-the full set. V5.3 removes repeated horizontal stages: only top-down sleeping
-keeps a full scene, while every other prop overlaps the body, sits to one side,
-or stacks vertically. The macOS application runtime and event integration have
+the full set. V5.3 removes every horizontal stage, including the sleeping
+mattress. Props overlap the body, sit to one side, or stack vertically. The
+macOS application runtime and event integration have
 not started.
 
 ## Completed
@@ -33,9 +33,9 @@ not started.
   Folder**, **Self High-five**, and **Basket Rescue**.
 - Made `away → sleeping → waking` a continuous story using the same blanket
   colors, patch, and fold language across all three actions.
-- Rebuilt `sleeping` as a direct overhead bed composition: Clawd lies flat on a
-  pillow, keeps both closed eyes and claws visible, breathes under the blanket,
-  and emits a user-approved three-step pixel `Zzz` sequence.
+- Rebuilt `sleeping` as a direct overhead pose without a mattress or bottom pad:
+  Clawd lies flat on a pillow, keeps both closed eyes and claws visible, breathes
+  under the blanket, and emits a user-approved three-step pixel `Zzz` sequence.
 - Replaced the working modifier set with five compact actions: **Pocket Book**,
   **Letter Note**, **Block Stack**, **Toy Check**, and **Spool Sync**.
   `working.command` now aliases generic **Tile Stack**.
@@ -49,8 +49,8 @@ not started.
   production SVG sources.
 - Rendered every active action into a deterministic V5 GIF preview and generated
   new 64px and 96px complete-set boards.
-- Removed 14 repeated horizontal base constructions: rugs, desks, paths,
-  cushions, floor strips, the clothesline, and the hanging bar. The current
+- Removed 15 horizontal base constructions: rugs, desks, paths, cushions,
+  floor strips, the clothesline, the hanging bar, and the sleeping mattress. The current
   23-action set stays within 16–48px horizontally at the 96px QA size.
 - Fixed the deterministic preview renderer to resize the SVG root before
   pet-size capture; all 23 GIF previews now contain real animated content.
