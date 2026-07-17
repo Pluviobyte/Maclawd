@@ -1,36 +1,31 @@
-# Maclawd animation QA — 2026-07-17
+# Maclawd animation QA — V4 — 2026-07-17
 
-本轮覆盖 19 个新增动作：7 个剩余主状态、6 个 `working` 修饰和 6 个互动/
-环境动作。此前已经验证的 5 个主状态保持不变。
+本轮对 12 个主状态、5 个活动修饰和 6 个互动/环境动作进行全套小尺寸复审。18 个视觉上需要优化的动作重新渲染；保留的动作继续由同一实验室加载检查。
 
 ## 自动检查
 
-- 19/19 SVG 通过 XML 解析。
-- 19/19 保留固定 `viewBox="-15 -25 45 45"`。
-- 19/19 保留身体、双爪、四腿、双眼的固定源矩形。
-- 19/19 使用身体色 `#DE886D` 与眼睛色 `#000000`。
-- 742 帧以 10 fps、1000×1000 QA 分辨率完成渲染。
-- 每个动作至少包含 4 个不同的实际渲染帧，不存在伪动态。
-- 12/12 新增循环动作首帧与末帧字节一致。
-- 所有透明像素边界均留在 1000×1000 画布内。
-- 19/19 GIF 输出为 500×500。
-- 机器可读 JSON 合同通过语法检查。
-- 动态实验室加载 24 个 SVG object，浏览器没有资源失败。
+- 26 个 SVG 源文件全部通过 XML 解析（23 个当前动作、1 个历史兼容入口、2 个机械原型）。
+- 26/26 保留 `viewBox="-15 -25 45 45"`。
+- 26/26 保留身体、双爪、四腿、双眼的固定源矩形。
+- 26/26 使用身体色 `#DE886D` 与眼睛色 `#000000`。
+- 18 个 V4 动作共渲染 324 个确定性 Chromium 帧，并输出 18 个 GIF。
+- 14 个 V4 循环动作的首帧与末采样帧逐字节一致。
+- 三份机器可读 JSON 合同通过语法解析。
+- 动态实验室加载 23 个当前动作；`working.command` 映射到 generic `working`，不重复占一个视觉动作。
+- `prefers-reduced-motion` 下身体动画计算值为 `none`。
 
 ## 视觉检查
 
-- 休眠三连使用同一条紫色毛毯，并保留头部/闭眼可读性。
-- 毛线错误动作由规则方框改为曲折连续线，避免读成 UI 面板。
-- Blanket Pop、Wind-up Command 与 Edge Peek 的极限帧已内收，避免裁边。
-- 24 个动作均在 96px 动态评审板检查轮廓与道具辨认度。
-- 未使用文字、进度条、漂浮标点、光晕、速度线、烟雾或阴影来解释状态。
+- 在 64px 与 96px 两档同时检查身体轮廓、双眼、道具接触与裁边。
+- `thinking`、`working`、`error`、`low_battery` 已改成无道具身体动作。
+- 阅读、写作、构建、测试、同步改为单一大轮廓，不再用三个脚边小物讲故事。
+- 委派只保留两个大助手；求助只保留一个位于身体侧面的清晰玻璃罐。
+- 休眠链只使用一条连贯毛毯，睡眠时脸与爪保持可见。
+- 未使用文字、进度条、漂浮标点、光晕、速度线、烟雾或阴影。
 
 ## 评审产物
 
-- [`../previews/all-actions-96px.png`](../previews/all-actions-96px.png)
-- [`../previews/complete-motion-lab.png`](../previews/complete-motion-lab.png)
-- [`../previews/primary-phases.png`](../previews/primary-phases.png)
-- [`../previews/modifier-phases.png`](../previews/modifier-phases.png)
-- [`../previews/interaction-phases.png`](../previews/interaction-phases.png)
-- `previews/<action>.gif`
-- `previews/<action>-contact-sheet.png`
+- [`../previews/all-actions-v4-96px.png`](../previews/all-actions-v4-96px.png)
+- [`../previews/all-actions-v4-64px.png`](../previews/all-actions-v4-64px.png)
+- [`../previews/complete-motion-lab-v4.png`](../previews/complete-motion-lab-v4.png)
+- `previews/<action>-v4.gif`

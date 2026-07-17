@@ -1,7 +1,10 @@
 <?xml-stylesheet type="text/css" href="maclawd-actions.css"?>
 <svg xmlns="http://www.w3.org/2000/svg" class="state-writing" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
-  <title>Maclawd Note Stitching</title><desc>Maclawd stitches colorful marks across a small note, then lifts it to inspect the result.</desc>
-  <g class="note motion"><rect x="2" y="13" width="11" height="4" fill="#FFF3C4"/><rect x="3" y="14" width="2" height="1" fill="#7BC8C4"/><rect x="6" y="14" width="2" height="1" fill="#B9A1D9"/><rect x="9" y="14" width="2" height="1" fill="#F6C85F"/></g>
-  <g class="pencil motion"><rect x="10" y="8" width="1" height="7" fill="#5A4A42"/><rect x="10" y="7" width="1" height="1" fill="#E27676"/></g>
-  <g class="actor motion"><g fill="#DE886D"><rect id="outer-left-leg" x="3" y="13" width="1" height="2"/><rect id="inner-left-leg" x="5" y="13" width="1" height="2"/><rect id="inner-right-leg" x="9" y="13" width="1" height="2"/><rect id="outer-right-leg" x="11" y="13" width="1" height="2"/><rect id="torso" x="2" y="6" width="11" height="7"/><g class="left-claw motion"><rect id="left-arm" x="0" y="9" width="2" height="2"/></g><g class="right-claw motion"><rect id="right-arm" x="13" y="9" width="2" height="2"/></g></g><g class="eyes motion blink" fill="#000000"><rect id="left-eye" x="4" y="8" width="1" height="2"/><rect id="right-eye" x="10" y="8" width="1" height="2"/></g></g>
+  <title>Maclawd Big Pencil</title><desc>Maclawd writes across one clear sheet with a diagonal body-length pencil, then lifts it to review.</desc>
+  <g class="sheet motion"><path d="M-1 12H12V18H-1Z" fill="#FFF4D7"/><rect x="1" y="14" width="8" height="1" fill="#D9C79F"/><rect x="1" y="16" width="6" height="1" fill="#D9C79F"/></g>
+  <g class="pencil motion"><rect x="10" y="3" width="3" height="12" fill="#F6C85F"/><rect x="10" y="3" width="3" height="2" fill="#C98FBA"/><path d="M10 15H13L11 18Z" fill="#D8B07C"/><rect x="11" y="16" width="1" height="2" fill="#544942"/></g>
+  <g class="actor motion"><g fill="#DE886D">
+    <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/><rect id="inner-left-leg" x="5" y="13" width="1" height="2"/><rect id="inner-right-leg" x="9" y="13" width="1" height="2"/><rect id="outer-right-leg" x="11" y="13" width="1" height="2"/><rect id="torso" x="2" y="6" width="11" height="7"/>
+    <g class="left-claw motion"><rect id="left-arm" x="0" y="9" width="2" height="2"/></g><g class="right-claw motion"><rect id="right-arm" x="13" y="9" width="2" height="2"/></g>
+  </g><g class="eyes motion blink" fill="#000"><rect id="left-eye" x="4" y="8" width="1" height="2"/><rect id="right-eye" x="10" y="8" width="1" height="2"/></g></g>
 </svg>

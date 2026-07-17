@@ -1,15 +1,8 @@
 <?xml-stylesheet type="text/css" href="maclawd-actions.css"?>
 <svg xmlns="http://www.w3.org/2000/svg" class="state-error" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
-  <title>Maclawd Yarn Tangle</title>
-  <desc>Maclawd pulls a connected yarn loop, gets tangled, pauses, and tries again.</desc>
-  <g class="yarn-ball motion"><rect x="-6" y="11" width="5" height="5" fill="#E27676"/><rect x="-5" y="10" width="3" height="1" fill="#F5B0B0"/><rect x="-5" y="13" width="4" height="1" fill="#A94343"/></g>
-  <path d="M-1 14 H2 V11 H6 V14 H10 V10 H14 V14 H17" fill="none" stroke="#E27676" stroke-width="1"/>
-  <g class="yarn-loop motion" fill="none" stroke="#E27676" stroke-width="1"><path d="M2 7 H11 V9 H14 V13 H10 V15 H5 V13 H1 V9 H2 Z"/></g>
-  <g class="actor motion">
-    <g fill="#DE886D">
-      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/><rect id="inner-left-leg" x="5" y="13" width="1" height="2"/><rect id="inner-right-leg" x="9" y="13" width="1" height="2"/><rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
-      <rect id="torso" x="2" y="6" width="11" height="7"/><g class="left-claw motion"><rect id="left-arm" x="0" y="9" width="2" height="2"/></g><g class="right-claw motion"><rect id="right-arm" x="13" y="9" width="2" height="2"/></g>
-    </g>
-    <g class="eyes motion blink" fill="#000000"><rect id="left-eye" x="4" y="8" width="1" height="2"/><rect id="right-eye" x="10" y="8" width="1" height="2"/></g>
-  </g>
+  <title>Maclawd Failed Stand</title><desc>Maclawd wobbles, flops sideways, tries to stand, and flops the other way.</desc>
+  <g class="actor motion"><g fill="#DE886D">
+    <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/><rect id="inner-left-leg" x="5" y="13" width="1" height="2"/><rect id="inner-right-leg" x="9" y="13" width="1" height="2"/><rect id="outer-right-leg" x="11" y="13" width="1" height="2"/><rect id="torso" x="2" y="6" width="11" height="7"/>
+    <g class="left-claw motion"><rect id="left-arm" x="0" y="9" width="2" height="2"/></g><g class="right-claw motion"><rect id="right-arm" x="13" y="9" width="2" height="2"/></g>
+  </g><g class="eyes motion blink" fill="#000"><rect id="left-eye" x="4" y="8" width="1" height="2"/><rect id="right-eye" x="10" y="8" width="1" height="2"/></g></g>
 </svg>

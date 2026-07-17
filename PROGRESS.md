@@ -5,12 +5,12 @@ Last updated: 2026-07-17
 ## Current checkpoint
 
 Maclawd is a standalone project with an independent repository and Git history.
-Its first complete motion-design system is now implemented:
+Its first body-first motion-design system is now implemented:
 
 - 12 primary states
-- 6 optional `working` activity modifiers
+- 5 optional `working` activity modifiers
 - 6 interaction and ambient actions
-- 24 active CSS/SVG animations in total
+- 23 active CSS/SVG animations in total
 
 The body, claws, legs, eyes, colors, and source coordinates are identical across
 the full set. Props are temporary story objects rather than permanent functional
@@ -24,32 +24,29 @@ hardware. The macOS application runtime and event integration have not started.
 - Studied the reference project's useful design principles: turn technical
   states into everyday metaphors, give every loop a setup/action/reaction, and
   keep the character more important than its prop.
-- Preserved all earlier static concepts and mechanical prototypes as design
-  history instead of deleting them.
-- Implemented the first active group: **Calm Calibration**, **Shell Shuffle**,
-  **Token Knitting**, **Hatchling Parade**, and **Stuck Jar**.
-- Replaced the seven remaining mechanical candidates with playful actions:
-  **Blanket Drag**, **Blanket Burrito**, **Blanket Pop**, **Accordion Fold**,
-  **Pop-up Studio**, **Self High-five**, and **Yarn Tangle**.
+- Preserved earlier static concepts and mechanical prototypes in Git history.
+- Rebuilt the primary set around body-readable actions: **Calm Calibration**,
+  **Blanket Drag**, **Blanket Rest**, **Blanket Wake**, **Claw Count**, **Busy
+  Claws**, **Helper Handoff**, **Jar Assist**, **Pocket Fold**, **Rollout Mat**,
+  **Self High-five**, and **Failed Stand**.
 - Made `away → sleeping → waking` a continuous story using the same blanket
   colors, patch, and fold language across all three actions.
-- Added six working modifiers: **Card Browsing**, **Note Stitching**, **Wind-up
-  Command**, **Block Tower**, **Wobble Test**, and **Relay Bead**.
+- Replaced the working modifier set with five large, familiar silhouettes:
+  **Open Book**, **Big Pencil**, **Two-block Build**, **Roly-poly Test**, and
+  **Chest Relay**. `working.command` now aliases generic **Busy Claws**.
 - Added six desktop/system actions: **Click Flinch**, **Surprised Hop**, **Drag
   Cling**, **Drop Wobble**, **Edge Peek**, and **Low Battery Droop**.
 - Defined conservative Hook behavior: detailed working modifiers require a
   reliable external event; otherwise the system falls back to generic working.
 - Added machine-readable contracts for primary states, modifiers, and
   interactions.
-- Rebuilt the browser motion lab to display all 24 actions directly from their
+- Rebuilt the browser motion lab to display all 23 actions directly from their
   production SVG sources.
-- Rendered 742 new frames at 10 fps and generated 19 new GIF previews plus 19
-  four-phase contact sheets.
-- Verified all 19 new SVG files parse, preserve the locked source rectangles,
-  contain visible multi-frame motion, and remain inside the render bounds.
-- Verified all 12 loop actions in the new set return byte-for-byte to their
-  first rendered frame; reaction/transition actions are reviewed as one cycles.
-- Produced a browser-rendered 96px board covering all 24 actions.
+- Rendered 324 deterministic Chromium frames for 18 redesigned actions and
+  generated 18 V4 GIF previews.
+- Verified all 26 SVG sources parse and preserve the locked source rectangles:
+  23 current actions, one historical command entry, and two mechanical prototypes.
+- Produced browser-rendered 64px and 96px boards covering all 23 active actions.
 - Added shared reduced-motion behavior: props and body motion stop, with only a
   low-frequency blink permitted.
 

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="previews/all-actions-96px.png" width="1000" alt="Maclawd complete 24-action motion set at pet size">
+  <img src="previews/all-actions-v4-96px.png" width="1000" alt="Maclawd V4 body-first motion set at pet size">
 </p>
 
 <h1 align="center">Maclawd</h1>
@@ -13,7 +13,7 @@
 
 > [!IMPORTANT]
 > Maclawd has completed its first full motion-design checkpoint. There is no downloadable macOS
-> application yet.
+> application yet. The current V4 checkpoint is a complete body-first motion design system.
 
 ## What we are building
 
@@ -26,7 +26,7 @@ Maclawd is planned as a complete Mac product:
 - independent product identity, icon, packaging, update flow, and release system
 - a signed and notarized universal macOS application
 
-## Complete 24-action motion set
+## Complete 23-action motion set
 
 The first full SVG/CSS action system is implemented. The body, claws, legs,
 eyes, coordinates, and base colors remain identical in every file; only poses,
@@ -35,11 +35,12 @@ temporary props, and discrete animation change.
 | Layer | Count | Purpose |
 | --- | ---: | --- |
 | Primary states | 12 | Rest, Agent activity, owner attention, system feedback |
-| Working modifiers | 6 | Reading, writing, command, building, testing, syncing |
+| Working modifiers | 5 | Reading, writing, building, testing, syncing |
 | Interactions and ambient actions | 6 | Click, double click, drag, drop, edge peek, low battery |
 
 [Open the live motion lab](index.html) ·
-[View the complete 96px check](previews/all-actions-96px.png) ·
+[View the complete 96px check](previews/all-actions-v4-96px.png) ·
+[View the 64px check](previews/all-actions-v4-64px.png) ·
 [Read the primary-state contract](design/main-state-actions.md) ·
 [Read working modifiers](design/activity-modifiers.md) ·
 [Read interactions](design/interaction-actions.md) ·
@@ -49,19 +50,20 @@ temporary props, and discrete animation change.
 
 | `away` | `sleeping` | `waking` | `success` |
 | --- | --- | --- | --- |
-| <img src="previews/blanket-drag.gif" width="180" alt="Maclawd Blanket Drag animation"> | <img src="previews/blanket-burrito.gif" width="180" alt="Maclawd Blanket Burrito animation"> | <img src="previews/blanket-pop.gif" width="180" alt="Maclawd Blanket Pop animation"> | <img src="previews/self-high-five.gif" width="180" alt="Maclawd Self High-five animation"> |
-| Blanket Drag | Blanket Burrito | Blanket Pop | Self High-five |
+| <img src="previews/blanket-drag-v4.gif" width="180" alt="Maclawd Blanket Drag animation"> | <img src="previews/blanket-burrito-v4.gif" width="180" alt="Maclawd Blanket Rest animation"> | <img src="previews/blanket-pop-v4.gif" width="180" alt="Maclawd Blanket Wake animation"> | <img src="previews/self-high-five-v4.gif" width="180" alt="Maclawd Self High-five animation"> |
+| Blanket Drag | Blanket Rest | Blanket Wake | Self High-five |
 
 The sleep chain deliberately reuses one blanket, so `away → sleeping → waking`
-reads as a continuous story. The other new primary actions are **Accordion
-Fold**, **Pop-up Studio**, and **Yarn Tangle**. The approved earlier actions—
-**Calm Calibration**, **Shell Shuffle**, **Token Knitting**, **Hatchling
-Parade**, and **Stuck Jar**—remain unchanged.
+reads as a continuous story. V4 replaces small functional props with body-first
+actions and a single familiar silhouette when needed: **Claw Count**, **Busy
+Claws**, **Helper Handoff**, **Jar Assist**, **Pocket Fold**, **Rollout Mat**,
+and **Failed Stand**.
 
 ### Working modifiers and interactions
 
 Detailed activities are only shown when an external event can classify them
-reliably. Generic busy activity always falls back to **Token Knitting**; the pet
+reliably. Generic busy activity always falls back to **Busy Claws**; `command`
+is an alias of that generic state rather than a sixth prop animation. The pet
 never invents a task from an opaque Agent state. Interaction actions are driven
 by the Mac app's own input and system events and do not require Agent internals.
 
@@ -92,8 +94,9 @@ machine-readable contract in
 ## Repository status
 
 This repository has an independent Git history and contains only Maclawd work.
-The current checkpoint includes 24 active animations, two retained mechanical
-prototypes, individual GIF/contact-sheet previews, a complete 96px review board,
+The current checkpoint includes 23 active animations, one historical command
+compatibility entry, two retained mechanical prototypes, individual GIF previews,
+64px and 96px review boards,
 machine-readable state maps, the browser motion lab, and the development roadmap.
 
 See [`PROGRESS.md`](PROGRESS.md) for completed work and the full build sequence.

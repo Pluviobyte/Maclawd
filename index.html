@@ -39,7 +39,7 @@
       <header>
         <p class="eyebrow">Maclawd · Complete motion lab</p>
         <h1>状态会变化，<br>角色还是它。</h1>
-        <p>身体、眼睛、颜色与坐标保持不变；动作靠姿势、视线和临时小道具讲故事。这里汇总 12 个主状态、6 个工作修饰和 6 个互动彩蛋。</p>
+        <p>身体、眼睛、颜色与坐标保持不变；先用身体姿势讲清语义，只在必要时加入一个大而熟悉的道具。这里汇总 12 个主状态、5 个工作修饰和 6 个互动彩蛋。</p>
       </header>
       <div id="lab"></div>
       <p class="note">旧的机械候选仍保留在 <a href="design/concepts/all-primary-states.html">静态概念档案</a>；当前页面展示的是新的趣味动作方向。</p>
@@ -51,29 +51,28 @@
           copy: "用于表达 owner 与 Agent 的稳定主状态；休眠链、任务链和结果链都有明确转场。",
           items: [
             ["idle","Calm Calibration","calm-calibration.svg","5.6s loop","呼吸、观察、眨眼"],
-            ["away","Blanket Drag","blanket-drag.svg","3.6s transition","伸懒腰后把毛毯拖来"],
-            ["sleeping","Blanket Burrito","blanket-burrito.svg","5.6s loop","裹着同一条毛毯缓慢呼吸"],
-            ["waking","Blanket Pop","blanket-pop.svg","2.2s transition","从毛毯中弹起并站稳"],
-            ["thinking","Shell Shuffle","shell-shuffle.svg","5.6s loop","逐个比较贝壳再做选择"],
-            ["working","Token Knitting","token-knitting.svg","4.8s loop","持续编织并检查成果"],
-            ["delegating","Hatchling Parade","hatchling-parade.svg","4.8s loop","唤醒小助手并依次出发"],
-            ["needs_owner","Stuck Jar","stuck-jar.svg","4.2s loop","尝试后把难题递给主人"],
-            ["compacting","Accordion Fold","accordion-fold.svg","4.8s loop","把长纸带折成小纸包"],
-            ["workspace","Pop-up Studio","pop-up-studio.svg","3.4s transition","从平纸包展开小工作间"],
-            ["success","Self High-five","self-high-five.svg","2.8s reaction","自己和自己击掌庆祝"],
-            ["error","Yarn Tangle","yarn-tangle.svg","4.4s loop","拉毛线、缠住、停顿再试"]
+            ["away","Blanket Drag","blanket-drag.svg","3.8s transition","伸懒腰后拖来一条大毛毯"],
+            ["sleeping","Blanket Rest","blanket-burrito.svg","5.8s loop","脸和爪露在毛毯外缓慢呼吸"],
+            ["waking","Blanket Wake","blanket-pop.svg","2.6s transition","弹起时整条毛毯滑到身后"],
+            ["thinking","Claw Count","shell-shuffle.svg","4.6s loop","左右数爪并停在决定姿势"],
+            ["working","Busy Claws","token-knitting.svg","3.4s loop","双爪交替忙碌后检查成果"],
+            ["delegating","Helper Handoff","hatchling-parade.svg","5.0s loop","向两个大助手交接并送它们出发"],
+            ["needs_owner","Jar Assist","stuck-jar.svg","4.8s loop","拧不开大罐子后推给主人"],
+            ["compacting","Pocket Fold","accordion-fold.svg","4.8s loop","把一条大折页压成口袋大小"],
+            ["workspace","Rollout Mat","pop-up-studio.svg","4.2s transition","展开条纹工作垫并站上去"],
+            ["success","Self High-five","self-high-five.svg","2.9s reaction","双爪在头顶真正碰到并停顿"],
+            ["error","Failed Stand","yarn-tangle.svg","4.8s loop","左右摇晃、倒下、再爬起来"]
           ]
         },
         {
-          title: "6 个 working 活动修饰",
-          copy: "只有拿到可靠的活动类别时才覆盖 generic working；没有明确信号时仍回退到 Token Knitting。",
+          title: "5 个 working 活动修饰",
+          copy: "只有拿到可靠的活动类别时才覆盖 generic working；command 不单独画一套，统一回退到 Busy Claws。",
           items: [
-            ["working.reading","Card Browsing","card-browsing.svg","4.8s loop","按顺序阅读三张连页卡片"],
-            ["working.writing","Note Stitching","note-stitching.svg","4.4s loop","把彩色记录缝进纸条"],
-            ["working.command","Wind-up Command","wind-up-command.svg","4.0s loop","拧紧发条后放玩具执行"],
-            ["working.building","Block Tower","block-tower.svg","4.8s loop","逐块搭起并扶稳积木塔"],
-            ["working.testing","Wobble Test","wobble-test.svg","4.4s loop","逐个轻敲摇摆玩具检查"],
-            ["working.syncing","Relay Bead","relay-bead.svg","4.2s loop","把珠子从一只爪传到另一只"]
+            ["working.reading","Open Book","card-browsing.svg","5.0s loop","读一本身体宽度的打开书并翻页"],
+            ["working.writing","Big Pencil","note-stitching.svg","4.6s loop","用一支大铅笔在整张纸上书写"],
+            ["working.building","Two-block Build","block-tower.svg","5.0s loop","搬起大积木并叠成两层"],
+            ["working.testing","Roly-poly Test","wobble-test.svg","4.8s loop","轻推一个不倒翁并观察回正"],
+            ["working.syncing","Chest Relay","relay-bead.svg","4.4s loop","沿胸前绳索传递一颗大珠子"]
           ]
         },
         {
@@ -85,7 +84,7 @@
             ["interaction.drag","Drag Cling","drag-cling.svg","3.2s held loop","被拖动时双爪抓紧"],
             ["interaction.drop","Drop Wobble","drop-wobble.svg","2.6s reaction","落地压扁、回弹、站稳"],
             ["ambient.edge","Edge Peek","edge-peek.svg","4.6s loop","从屏幕边缘偷看再躲回去"],
-            ["ambient.low_battery","Low Battery Droop","low-battery-droop.svg","5.8s loop","抱着小布慢慢没精神"]
+            ["ambient.low_battery","Low Battery Droop","low-battery-droop.svg","6.2s loop","不靠图标，只用半闭眼和长停顿"]
           ]
         }
       ];

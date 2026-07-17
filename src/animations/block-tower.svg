@@ -1,8 +1,10 @@
 <?xml-stylesheet type="text/css" href="maclawd-actions.css"?>
 <svg xmlns="http://www.w3.org/2000/svg" class="state-building" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
-  <title>Maclawd Block Tower</title><desc>Maclawd stacks three toy blocks into a tiny tower and steadies the top.</desc>
-  <g class="block-a motion"><rect x="-2" y="13" width="4" height="4" fill="#7BC8C4"/><rect x="-1" y="14" width="2" height="2" fill="#DDF3F1"/></g>
-  <g class="block-b motion"><rect x="13" y="13" width="4" height="4" fill="#F6C85F"/><rect x="14" y="14" width="2" height="2" fill="#FFF3C4"/></g>
-  <g class="block-c motion"><rect x="6" y="13" width="4" height="4" fill="#B9A1D9"/><rect x="7" y="14" width="2" height="2" fill="#E7DCF2"/></g>
-  <g class="actor motion"><g fill="#DE886D"><rect id="outer-left-leg" x="3" y="13" width="1" height="2"/><rect id="inner-left-leg" x="5" y="13" width="1" height="2"/><rect id="inner-right-leg" x="9" y="13" width="1" height="2"/><rect id="outer-right-leg" x="11" y="13" width="1" height="2"/><rect id="torso" x="2" y="6" width="11" height="7"/><g class="left-claw motion"><rect id="left-arm" x="0" y="9" width="2" height="2"/></g><g class="right-claw motion"><rect id="right-arm" x="13" y="9" width="2" height="2"/></g></g><g class="eyes motion blink" fill="#000000"><rect id="left-eye" x="4" y="8" width="1" height="2"/><rect id="right-eye" x="10" y="8" width="1" height="2"/></g></g>
+  <title>Maclawd Two-block Build</title><desc>Maclawd carries one large block and sets it on another to make a clear two-block tower.</desc>
+  <g><rect x="-8" y="12" width="7" height="6" fill="#7BC8C4"/><rect x="-7" y="13" width="5" height="1" fill="#BDE7E4"/><rect x="-7" y="15" width="2" height="2" fill="#3E7775"/></g>
+  <g class="block-top motion"><rect x="-8" y="12" width="7" height="6" fill="#F6C85F"/><rect x="-7" y="13" width="5" height="1" fill="#FFE59A"/><rect x="-4" y="15" width="2" height="2" fill="#B67B19"/></g>
+  <g class="actor motion"><g fill="#DE886D">
+    <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/><rect id="inner-left-leg" x="5" y="13" width="1" height="2"/><rect id="inner-right-leg" x="9" y="13" width="1" height="2"/><rect id="outer-right-leg" x="11" y="13" width="1" height="2"/><rect id="torso" x="2" y="6" width="11" height="7"/>
+    <g class="left-claw motion"><rect id="left-arm" x="0" y="9" width="2" height="2"/></g><g class="right-claw motion"><rect id="right-arm" x="13" y="9" width="2" height="2"/></g>
+  </g><g class="eyes motion blink" fill="#000"><rect id="left-eye" x="4" y="8" width="1" height="2"/><rect id="right-eye" x="10" y="8" width="1" height="2"/></g></g>
 </svg>

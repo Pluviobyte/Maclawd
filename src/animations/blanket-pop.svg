@@ -1,16 +1,9 @@
 <?xml-stylesheet type="text/css" href="maclawd-actions.css"?>
 <svg xmlns="http://www.w3.org/2000/svg" class="state-waking" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
-  <title>Maclawd Blanket Pop</title>
-  <desc>Maclawd springs awake and the blanket opens to either side like curtains.</desc>
-  <g class="blanket-left motion"><rect x="0" y="9" width="7" height="7" fill="#B9A1D9"/><rect x="1" y="9" width="6" height="1" fill="#E7DCF2"/><rect x="1" y="14" width="2" height="1" fill="#F6C85F"/></g>
-  <g class="blanket-right motion"><rect x="8" y="9" width="7" height="7" fill="#B9A1D9"/><rect x="8" y="9" width="6" height="1" fill="#E7DCF2"/><rect x="12" y="14" width="2" height="1" fill="#F6C85F"/></g>
-  <g class="actor motion">
-    <g fill="#DE886D">
-      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/><rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
-      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/><rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
-      <rect id="torso" x="2" y="6" width="11" height="7"/>
-      <g class="left-claw motion"><rect id="left-arm" x="0" y="9" width="2" height="2"/></g><g class="right-claw motion"><rect id="right-arm" x="13" y="9" width="2" height="2"/></g>
-    </g>
-    <g class="eyes motion blink" fill="#000000"><rect id="left-eye" x="4" y="8" width="1" height="2"/><rect id="right-eye" x="10" y="8" width="1" height="2"/></g>
-  </g>
+  <title>Maclawd Blanket Wake</title><desc>Maclawd springs awake while one connected blanket slides away behind it.</desc>
+  <g class="blanket motion"><path d="M0 10H15V17H13V19H10V18H6V19H3V18H0Z" fill="#B9A1D9"/><rect x="1" y="10" width="13" height="1" fill="#E7DCF2"/><rect x="2" y="14" width="11" height="1" fill="#8B73B3"/></g>
+  <g class="actor motion"><g fill="#DE886D">
+    <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/><rect id="inner-left-leg" x="5" y="13" width="1" height="2"/><rect id="inner-right-leg" x="9" y="13" width="1" height="2"/><rect id="outer-right-leg" x="11" y="13" width="1" height="2"/><rect id="torso" x="2" y="6" width="11" height="7"/>
+    <g class="left-claw motion"><rect id="left-arm" x="0" y="9" width="2" height="2"/></g><g class="right-claw motion"><rect id="right-arm" x="13" y="9" width="2" height="2"/></g>
+  </g><g class="eyes motion blink" fill="#000"><rect id="left-eye" x="4" y="8" width="1" height="2"/><rect id="right-eye" x="10" y="8" width="1" height="2"/></g></g>
 </svg>

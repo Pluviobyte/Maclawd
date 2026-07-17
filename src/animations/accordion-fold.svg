@@ -1,18 +1,9 @@
 <?xml-stylesheet type="text/css" href="maclawd-actions.css"?>
 <svg xmlns="http://www.w3.org/2000/svg" class="state-compacting" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
-  <title>Maclawd Accordion Fold</title>
-  <desc>Maclawd folds a long connected paper strip into one compact packet.</desc>
-  <g fill="#FFF3C4">
-    <g class="paper-a motion"><rect x="-5" y="13" width="5" height="3"/><rect x="-4" y="14" width="3" height="1" fill="#F6C85F"/></g>
-    <g class="paper-b motion"><rect x="0" y="13" width="5" height="3"/><rect x="1" y="14" width="3" height="1" fill="#7BC8C4"/></g>
-    <g class="paper-c motion"><rect x="5" y="13" width="5" height="3"/><rect x="6" y="14" width="3" height="1" fill="#B9A1D9"/></g>
-    <g class="paper-d motion"><rect x="10" y="13" width="5" height="3"/><rect x="11" y="14" width="3" height="1" fill="#F6C85F"/></g>
-  </g>
-  <g class="actor motion">
-    <g fill="#DE886D">
-      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/><rect id="inner-left-leg" x="5" y="13" width="1" height="2"/><rect id="inner-right-leg" x="9" y="13" width="1" height="2"/><rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
-      <rect id="torso" x="2" y="6" width="11" height="7"/><g class="left-claw motion"><rect id="left-arm" x="0" y="9" width="2" height="2"/></g><g class="right-claw motion"><rect id="right-arm" x="13" y="9" width="2" height="2"/></g>
-    </g>
-    <g class="eyes motion blink" fill="#000000"><rect id="left-eye" x="4" y="8" width="1" height="2"/><rect id="right-eye" x="10" y="8" width="1" height="2"/></g>
-  </g>
+  <title>Maclawd Pocket Fold</title><desc>Maclawd presses one large zigzag strip from full width into a pocket-size fold.</desc>
+  <g class="accordion motion"><path d="M-9 9H-6L-3 13L0 9L3 13L6 9L9 13V17H6L3 13L0 17L-3 13L-6 17H-9Z" fill="#F6C85F"/><path d="M-6 9L-3 13L0 9L3 13L6 9" fill="none" stroke="#B67B19" stroke-width="1"/><rect x="-9" y="16" width="18" height="1" fill="#FFE59A"/></g>
+  <g class="actor motion"><g fill="#DE886D">
+    <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/><rect id="inner-left-leg" x="5" y="13" width="1" height="2"/><rect id="inner-right-leg" x="9" y="13" width="1" height="2"/><rect id="outer-right-leg" x="11" y="13" width="1" height="2"/><rect id="torso" x="2" y="6" width="11" height="7"/>
+    <g class="left-claw motion"><rect id="left-arm" x="0" y="9" width="2" height="2"/></g><g class="right-claw motion"><rect id="right-arm" x="13" y="9" width="2" height="2"/></g>
+  </g><g class="eyes motion blink" fill="#000"><rect id="left-eye" x="4" y="8" width="1" height="2"/><rect id="right-eye" x="10" y="8" width="1" height="2"/></g></g>
 </svg>
