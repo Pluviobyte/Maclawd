@@ -42,6 +42,21 @@ def main() -> None:
         for frame in range(frame_count):
             seconds = frame / args.fps
             page.goto(svg.as_uri(), wait_until="load")
+            # Direct SVG documents keep their authored width/height (500px in
+            # Maclawd) even when the browser viewport is smaller. Resize the
+            # root SVG to the requested capture size so a 96px QA render does
+            # not capture only the transparent top-left corner.
+            page.evaluate(
+                """(size) => {
+                    const svg = document.documentElement;
+                    svg.setAttribute('width', String(size));
+                    svg.setAttribute('height', String(size));
+                    svg.style.width = `${size}px`;
+                    svg.style.height = `${size}px`;
+                    svg.style.display = 'block';
+                }""",
+                args.size,
+            )
             page.evaluate(
                 """(seconds) => {
                     const style = document.createElementNS(

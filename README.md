@@ -50,11 +50,12 @@ temporary props, and discrete animation change.
 
 | `away` | `sleeping` | `waking` | `success` |
 | --- | --- | --- | --- |
-| <img src="previews/blanket-drag-v4.gif" width="180" alt="Maclawd Blanket Drag animation"> | <img src="previews/blanket-burrito-v4.gif" width="180" alt="Maclawd Blanket Rest animation"> | <img src="previews/blanket-pop-v4.gif" width="180" alt="Maclawd Blanket Wake animation"> | <img src="previews/self-high-five-v4.gif" width="180" alt="Maclawd Self High-five animation"> |
-| Blanket Drag | Blanket Rest | Blanket Wake | Self High-five |
+| <img src="previews/blanket-drag-v4.gif" width="180" alt="Maclawd Blanket Drag animation"> | <img src="previews/blanket-burrito-v5.gif" width="180" alt="Maclawd Top-down Sleep animation"> | <img src="previews/blanket-pop-v4.gif" width="180" alt="Maclawd Blanket Wake animation"> | <img src="previews/self-high-five-v4.gif" width="180" alt="Maclawd Self High-five animation"> |
+| Blanket Drag | Top-down Sleep | Blanket Wake | Self High-five |
 
 The sleep chain deliberately reuses one blanket, so `away → sleeping → waking`
-reads as a continuous story. V4 replaces small functional props with body-first
+reads as a continuous story. The sleep loop switches to a clear top-down bed,
+pillow, blanket, closed-eye, and pixel-Zzz composition. V4 replaces small functional props with body-first
 actions and a single familiar silhouette when needed: **Claw Count**, **Busy
 Claws**, **Helper Handoff**, **Jar Assist**, **Pocket Fold**, **Rollout Mat**,
 and **Failed Stand**.

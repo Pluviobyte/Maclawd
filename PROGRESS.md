@@ -26,11 +26,14 @@ hardware. The macOS application runtime and event integration have not started.
   keep the character more important than its prop.
 - Preserved earlier static concepts and mechanical prototypes in Git history.
 - Rebuilt the primary set around body-readable actions: **Calm Calibration**,
-  **Blanket Drag**, **Blanket Rest**, **Blanket Wake**, **Claw Count**, **Busy
+  **Blanket Drag**, **Top-down Sleep**, **Blanket Wake**, **Claw Count**, **Busy
   Claws**, **Helper Handoff**, **Jar Assist**, **Pocket Fold**, **Rollout Mat**,
   **Self High-five**, and **Failed Stand**.
 - Made `away → sleeping → waking` a continuous story using the same blanket
   colors, patch, and fold language across all three actions.
+- Rebuilt `sleeping` as a direct overhead bed composition: Clawd lies flat on a
+  pillow, keeps both closed eyes and claws visible, breathes under the blanket,
+  and emits a user-approved three-step pixel `Zzz` sequence.
 - Replaced the working modifier set with five large, familiar silhouettes:
   **Open Book**, **Big Pencil**, **Two-block Build**, **Roly-poly Test**, and
   **Chest Relay**. `working.command` now aliases generic **Busy Claws**.
@@ -44,6 +47,8 @@ hardware. The macOS application runtime and event integration have not started.
   production SVG sources.
 - Rendered 324 deterministic Chromium frames for 18 redesigned actions and
   generated 18 V4 GIF previews.
+- Fixed the deterministic preview renderer to resize the SVG root before
+  pet-size capture; all 18 GIF previews now contain real animated content.
 - Verified all 26 SVG sources parse and preserve the locked source rectangles:
   23 current actions, one historical command entry, and two mechanical prototypes.
 - Produced browser-rendered 64px and 96px boards covering all 23 active actions.
