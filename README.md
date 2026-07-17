@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="previews/reasoning-gearbox.gif" width="520" alt="Maclawd operating a pixel reasoning gearbox">
+  <img src="previews/primary-motion-baseline.png" width="860" alt="Maclawd idle, thinking, and working motion baseline">
 </p>
 
 <h1 align="center">Maclawd</h1>
@@ -26,20 +26,24 @@ Maclawd is planned as a complete Mac product:
 - independent product identity, icon, packaging, update flow, and release system
 - a signed and notarized universal macOS application
 
-## First action group — Reasoning Gearbox
+## First executable motion baseline
 
-The first action keeps the locked Clawd body and eye geometry while introducing
-a new mechanical reasoning rig:
+The first three implemented states keep the locked Clawd body and eye geometry
+while changing posture, rhythm, and connected machinery:
 
-- three interlocking pixel gears
-- a left-side clutch and ratchet
-- a right-side four-position crank
-- paired claw operation and restrained mechanical recoil
-- one short blink during a 2.8-second CSS-only loop
+- `idle` — **Calm Calibration**, a 5.6-second accessory-free breathing loop
+- `thinking` — **Inference Dial**, a 2.4-second three-position selector loop
+- `working.default` — **Reasoning Gearbox**, a 2.8-second clutch-and-crank loop
 
-[Open the standalone animated SVG](src/animations/reasoning-gearbox.svg) ·
+| `idle` | `thinking` | `working.default` |
+| --- | --- | --- |
+| <img src="previews/calm-calibration.gif" width="220" alt="Maclawd Calm Calibration animation"> | <img src="previews/inference-dial.gif" width="220" alt="Maclawd Inference Dial animation"> | <img src="previews/reasoning-gearbox.gif" width="220" alt="Maclawd Reasoning Gearbox animation"> |
+
+[Open Idle](src/animations/calm-calibration.svg) ·
+[Open Thinking](src/animations/inference-dial.svg) ·
+[Open Working](src/animations/reasoning-gearbox.svg) ·
 [Read the design contract](design/reasoning-gearbox.md) ·
-[View four motion phases](previews/reasoning-gearbox-contact-sheet.png)
+[View the 96px identity check](previews/primary-motion-96px.png)
 
 The complete twelve-state motion system is specified in
 [`design/main-state-actions.md`](design/main-state-actions.md), with a matching
@@ -49,8 +53,8 @@ machine-readable contract in
 ## Repository status
 
 This repository has an independent Git history and contains only Maclawd work.
-The current checkpoint includes the first animation source, previews, design
-contract, browser review page, and development roadmap.
+The current checkpoint includes three animation sources, previews, the full
+twelve-state design contract, browser motion lab, and development roadmap.
 
 See [`PROGRESS.md`](PROGRESS.md) for completed work and the full build sequence.
 

@@ -59,6 +59,7 @@ Maclawd 的动作配件属于同一个「像素机械工坊」系统：
 - **眼睛动作**：保留鼠标追踪能力；无鼠标目标时回到固定坐标；循环后段短眨眼一次。
 - **节奏**：5.6 秒 `step-end` 循环，至少包含呼吸、停顿和眨眼三段可见变化。
 - **验收读法**：缩到约 96px 时应读作“清醒但不打扰”，不能读成思考、挥手或工作。
+- **现有实现**：[`src/animations/calm-calibration.svg`](../src/animations/calm-calibration.svg)。
 
 ### `away` — Power-down Stretch
 
@@ -94,6 +95,7 @@ Maclawd 的动作配件属于同一个「像素机械工坊」系统：
 - **眼睛动作**：视线在三个刻度之间切换，循环末短眨眼一次。
 - **节奏**：2.4 秒循环，三次换档后回到起始位。
 - **验收读法**：必须读成“比较与选择”，不能像普通转齿轮工作。
+- **现有实现**：[`src/animations/inference-dial.svg`](../src/animations/inference-dial.svg)。
 
 ### `working` — Reasoning Gearbox
 

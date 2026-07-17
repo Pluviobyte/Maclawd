@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Maclawd — Reasoning Gearbox</title>
+    <title>Maclawd — Primary Motion Lab</title>
     <style>
       :root {
         color-scheme: light;
@@ -17,33 +17,12 @@
       body {
         min-height: 100vh;
         margin: 0;
-        display: grid;
-        place-items: center;
-        padding: 40px 20px;
+        padding: 48px 24px 64px;
       }
 
-      main {
-        width: min(920px, 100%);
-        display: grid;
-        grid-template-columns: minmax(320px, 1fr) minmax(260px, 360px);
-        gap: 28px;
-        align-items: center;
-      }
+      main { width: min(1180px, 100%); margin: 0 auto; }
 
-      .stage {
-        aspect-ratio: 1;
-        border: 1px solid rgba(30, 30, 46, 0.12);
-        border-radius: 32px;
-        background:
-          linear-gradient(rgba(30, 30, 46, 0.035) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(30, 30, 46, 0.035) 1px, transparent 1px),
-          #fbfaf7;
-        background-size: 24px 24px;
-        box-shadow: 0 24px 80px rgba(30, 30, 46, 0.12);
-        overflow: hidden;
-      }
-
-      object { width: 100%; height: 100%; }
+      header { max-width: 720px; margin-bottom: 32px; }
 
       .eyebrow {
         margin: 0 0 10px;
@@ -54,47 +33,112 @@
         text-transform: uppercase;
       }
 
-      h1 { margin: 0; font-size: clamp(42px, 7vw, 72px); line-height: 0.95; }
-      h2 { margin: 16px 0 10px; font-size: 24px; }
-      p { color: #50505e; line-height: 1.6; }
+      h1 { margin: 0; font-size: clamp(42px, 7vw, 78px); line-height: 0.95; }
+      header p, .copy p { color: #50505e; line-height: 1.6; }
 
-      .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+      .motion-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 20px;
+      }
+
+      .motion-card {
+        overflow: hidden;
+        border: 1px solid rgba(30, 30, 46, 0.12);
+        border-radius: 28px;
+        background: #fbfaf7;
+        box-shadow: 0 18px 54px rgba(30, 30, 46, 0.09);
+      }
+
+      .stage {
+        aspect-ratio: 1;
+        background:
+          linear-gradient(rgba(30, 30, 46, 0.035) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(30, 30, 46, 0.035) 1px, transparent 1px),
+          #fbfaf7;
+        background-size: 24px 24px;
+      }
+
+      object { width: 100%; height: 100%; }
+
+      .copy { padding: 0 22px 24px; }
+      h2 { margin: 0 0 8px; font-size: 22px; }
+      .state-id { color: #c67a62; font-family: ui-monospace, monospace; font-size: 13px; }
+      .chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 18px; }
       .chip {
-        padding: 8px 11px;
+        padding: 7px 10px;
         border-radius: 999px;
         background: #ffffff;
         border: 1px solid rgba(30, 30, 46, 0.1);
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 650;
       }
 
-      @media (max-width: 760px) {
-        main { grid-template-columns: 1fr; }
-        .copy { order: -1; }
+      @media (max-width: 900px) {
+        .motion-grid { grid-template-columns: 1fr; }
+        .motion-card { display: grid; grid-template-columns: minmax(260px, 1fr) 1fr; align-items: center; }
+        .copy { padding: 24px; }
+      }
+
+      @media (max-width: 620px) {
+        body { padding: 32px 16px 48px; }
+        .motion-card { display: block; }
       }
     </style>
   </head>
   <body>
     <main>
-      <section class="stage" aria-label="Animated Maclawd prototype">
-        <object data="src/animations/reasoning-gearbox.svg" type="image/svg+xml">
-          Reasoning Gearbox animated SVG
-        </object>
-      </section>
-      <section class="copy">
-        <p class="eyebrow">Maclawd · First design</p>
-        <h1>Clawd,<br>mechanized.</h1>
-        <h2>Reasoning Gearbox</h2>
+      <header>
+        <p class="eyebrow">Maclawd · Primary motion lab</p>
+        <h1>Three states.<br>One character.</h1>
         <p>
-          A new shoulder-mounted thinking rig driven by a clutch, ratchet,
-          four-position crank, and three interlocking pixel gears.
+          The first executable motion baseline keeps the same body and eye
+          geometry while changing posture, rhythm, and connected machinery.
         </p>
-        <div class="chips" aria-label="Prototype properties">
-          <span class="chip">CSS only</span>
-          <span class="chip">2.8 second loop</span>
-          <span class="chip">Locked body geometry</span>
-          <span class="chip">Prototype 01</span>
-        </div>
+      </header>
+
+      <section class="motion-grid" aria-label="Maclawd primary motion previews">
+        <article class="motion-card">
+          <div class="stage">
+            <object data="src/animations/calm-calibration.svg" type="image/svg+xml">
+              Calm Calibration animated SVG
+            </object>
+          </div>
+          <div class="copy">
+            <span class="state-id">idle</span>
+            <h2>Calm Calibration</h2>
+            <p>Grounded breathing, one small glance, and a single quiet blink. No accessory.</p>
+            <div class="chips"><span class="chip">5.6s loop</span><span class="chip">No prop</span></div>
+          </div>
+        </article>
+
+        <article class="motion-card">
+          <div class="stage">
+            <object data="src/animations/inference-dial.svg" type="image/svg+xml">
+              Inference Dial animated SVG
+            </object>
+          </div>
+          <div class="copy">
+            <span class="state-id">thinking</span>
+            <h2>Inference Dial</h2>
+            <p>A left-shoulder selector compares three physical positions before work begins.</p>
+            <div class="chips"><span class="chip">2.4s loop</span><span class="chip">3 positions</span></div>
+          </div>
+        </article>
+
+        <article class="motion-card">
+          <div class="stage">
+            <object data="src/animations/reasoning-gearbox.svg" type="image/svg+xml">
+              Reasoning Gearbox animated SVG
+            </object>
+          </div>
+          <div class="copy">
+            <span class="state-id">working.default</span>
+            <h2>Reasoning Gearbox</h2>
+            <p>Clutch, crank, and three interlocking gears communicate sustained tool activity.</p>
+            <div class="chips"><span class="chip">2.8s loop</span><span class="chip">Continuous work</span></div>
+          </div>
+        </article>
       </section>
     </main>
   </body>

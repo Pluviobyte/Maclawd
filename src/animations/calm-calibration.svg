@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="-15 -25 45 45"
+     width="500"
+     height="500"
+     shape-rendering="crispEdges">
+  <title>Maclawd Calm Calibration</title>
+  <desc>Maclawd waits calmly with grounded breathing, a small glance, and one blink.</desc>
+  <defs>
+    <style>
+      .idle-body {
+        transform-box: view-box;
+        transform-origin: 7.5px 15px;
+        animation: idle-breathe 5.6s infinite step-end;
+      }
+
+      .idle-left-claw {
+        transform-box: view-box;
+        transform-origin: 2px 10px;
+        animation: idle-left-claw 5.6s infinite step-end;
+      }
+
+      .idle-right-claw {
+        transform-box: view-box;
+        transform-origin: 13px 10px;
+        animation: idle-right-claw 5.6s infinite step-end;
+      }
+
+      .idle-gaze {
+        animation: idle-gaze 5.6s infinite step-end;
+      }
+
+      .idle-blink {
+        transform-box: view-box;
+        transform-origin: 7.5px 9px;
+        animation: idle-blink 5.6s infinite step-end;
+      }
+
+      @keyframes idle-breathe {
+        0%, 17%, 54%, 100% { transform: scaleY(1); }
+        18%, 35% { transform: scaleY(1.08); }
+        36%, 53% { transform: scaleY(1.04); }
+      }
+
+      @keyframes idle-left-claw {
+        0%, 17%, 54%, 100% { transform: rotate(0deg); }
+        18%, 35% { transform: rotate(-4deg); }
+        36%, 53% { transform: rotate(-2deg); }
+      }
+
+      @keyframes idle-right-claw {
+        0%, 17%, 54%, 100% { transform: rotate(0deg); }
+        18%, 35% { transform: rotate(4deg); }
+        36%, 53% { transform: rotate(2deg); }
+      }
+
+      @keyframes idle-gaze {
+        0%, 63%, 76%, 100% { transform: translateX(0); }
+        64%, 75% { transform: translateX(1px); }
+      }
+
+      @keyframes idle-blink {
+        0%, 84%, 91%, 100% { transform: scaleY(1); }
+        85%, 90% { transform: scaleY(0.1); }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .idle-body,
+        .idle-left-claw,
+        .idle-right-claw,
+        .idle-gaze {
+          animation: none;
+        }
+
+        .idle-blink {
+          animation: idle-reduced-blink 8s 1 step-end;
+        }
+      }
+
+      @keyframes idle-reduced-blink {
+        0%, 72%, 82%, 100% { transform: scaleY(1); }
+        73%, 81% { transform: scaleY(0.1); }
+      }
+    </style>
+  </defs>
+
+  <g id="maclawd-body" class="idle-body">
+    <g id="body-color-group" fill="#DE886D">
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+      <rect id="torso" x="2" y="6" width="11" height="7"/>
+
+      <g id="left-relaxed-claw" class="idle-left-claw">
+        <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+      </g>
+      <g id="right-relaxed-claw" class="idle-right-claw">
+        <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+      </g>
+    </g>
+
+    <g id="eyes-js" class="idle-gaze" fill="#000000">
+      <g class="idle-blink">
+        <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+        <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+      </g>
+    </g>
+  </g>
+</svg>

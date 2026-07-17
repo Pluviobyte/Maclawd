@@ -1,13 +1,14 @@
 # Maclawd development progress
 
-Last updated: 2026-07-16
+Last updated: 2026-07-17
 
 ## Current checkpoint
 
 Maclawd is a new standalone project with an independent repository and Git
 history. The twelve primary state actions now have a shared visual language and
-implementation contract. Only `working.default` has an animated prototype;
-application integration and macOS packaging have not started.
+implementation contract. The `idle`, `thinking`, and `working.default` states
+now have animated SVG implementations; application integration and macOS
+packaging have not started.
 
 ## Completed
 
@@ -25,6 +26,17 @@ application integration and macOS packaging have not started.
 - Defined all 12 primary state actions, their accessories, timing, transitions,
   reduced-motion behavior, and visual acceptance criteria.
 - Assigned Reasoning Gearbox to `working.default`.
+- Implemented **Calm Calibration** for `idle` with grounded breathing, a small
+  glance, and one blink during a 5.6-second loop.
+- Implemented **Inference Dial** for `thinking` with three physical selector
+  positions, synchronized gaze, and a 2.4-second loop.
+- Added reduced-motion behavior to both new animation sources.
+- Expanded the browser motion lab to compare `idle`, `thinking`, and
+  `working.default` side by side.
+- Produced 1000×1000 GIF previews, four-phase contact sheets, and a shared
+  96px identity check for the new motion baseline.
+- Standardized all implemented states on the same 45×45 view box so state
+  changes preserve character scale.
 
 ## Locked character contract
 
@@ -69,8 +81,8 @@ application integration and macOS packaging have not started.
 ## Not implemented yet
 
 - No running Maclawd application exists yet.
-- The first SVG is not connected to an application state.
-- Eleven primary action groups remain design-only and have no SVG implementation.
+- The animation SVGs are not connected to an application runtime yet.
+- Nine primary action groups remain design-only and have no SVG implementation.
 - No application icon, signed binary, notarized build, or `.dmg` exists yet.
 
 The public repository is a progress checkpoint, not a release claim.
