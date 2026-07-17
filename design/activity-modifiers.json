@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "parentState": "working",
+  "fallback": "working",
+  "rule": "Apply only when a reliable external event maps to one category; never infer a detailed task from generic busy state.",
+  "modifiers": [
+    {"id":"working.reading","name":"Card Browsing","durationMs":4800,"source":"src/animations/card-browsing.svg","signalExamples":["file_read","web_open","search_result_read"]},
+    {"id":"working.writing","name":"Note Stitching","durationMs":4400,"source":"src/animations/note-stitching.svg","signalExamples":["file_write","patch_apply","document_edit"]},
+    {"id":"working.command","name":"Wind-up Command","durationMs":4000,"source":"src/animations/wind-up-command.svg","signalExamples":["command_start","terminal_exec"]},
+    {"id":"working.building","name":"Block Tower","durationMs":4800,"source":"src/animations/block-tower.svg","signalExamples":["build_start","compile_start","bundle_start"]},
+    {"id":"working.testing","name":"Wobble Test","durationMs":4400,"source":"src/animations/wobble-test.svg","signalExamples":["test_start","qa_start","validation_start"]},
+    {"id":"working.syncing","name":"Relay Bead","durationMs":4200,"source":"src/animations/relay-bead.svg","signalExamples":["git_fetch","git_pull","git_push","remote_sync"]}
+  ]
+}

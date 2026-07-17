@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>Maclawd 96px QA</title>
+<style>
+  :root{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f4f1ea;color:#1e1e2e}*{box-sizing:border-box}body{margin:0;padding:28px}main{width:1180px;margin:auto}h1{font-size:38px;margin:0 0 8px}p{color:#626271;margin:0 0 24px}.grid{display:grid;grid-template-columns:repeat(8,1fr);gap:12px}.card{border:1px solid #ded8cc;border-radius:16px;background:#fbfaf7;padding:12px;text-align:center}.stage{width:96px;height:96px;margin:auto;background:#fff;border-radius:12px}object{width:96px;height:96px}.id{display:block;margin-top:8px;font:10px ui-monospace,monospace;color:#a55f4c;white-space:nowrap}.name{font-size:12px;font-weight:700;margin-top:3px}
+</style></head><body><main><h1>Maclawd · 96px 动态可读性</h1><p>所有动作在桌宠实际尺寸附近同时播放，用于检查轮廓、道具和语义是否仍可辨认。</p><div class="grid" id="grid"></div></main>
+<script>
+const items=[
+["idle","Calm Calibration","calm-calibration.svg"],["away","Blanket Drag","blanket-drag.svg"],["sleeping","Blanket Burrito","blanket-burrito.svg"],["waking","Blanket Pop","blanket-pop.svg"],["thinking","Shell Shuffle","shell-shuffle.svg"],["working","Token Knitting","token-knitting.svg"],["delegating","Hatchling Parade","hatchling-parade.svg"],["needs_owner","Stuck Jar","stuck-jar.svg"],["compacting","Accordion Fold","accordion-fold.svg"],["workspace","Pop-up Studio","pop-up-studio.svg"],["success","Self High-five","self-high-five.svg"],["error","Yarn Tangle","yarn-tangle.svg"],
+["working.reading","Card Browsing","card-browsing.svg"],["working.writing","Note Stitching","note-stitching.svg"],["working.command","Wind-up Command","wind-up-command.svg"],["working.building","Block Tower","block-tower.svg"],["working.testing","Wobble Test","wobble-test.svg"],["working.syncing","Relay Bead","relay-bead.svg"],
+["click","Click Flinch","click-flinch.svg"],["double_click","Surprised Hop","surprised-hop.svg"],["drag","Drag Cling","drag-cling.svg"],["drop","Drop Wobble","drop-wobble.svg"],["edge","Edge Peek","edge-peek.svg"],["low_battery","Low Battery Droop","low-battery-droop.svg"]];
+for(const [id,name,file] of items){const card=document.createElement("div");card.className="card";card.innerHTML=`<div class="stage"><object data="../src/animations/${file}" type="image/svg+xml"></object></div><span class="id">${id}</span><div class="name">${name}</div>`;grid.append(card)}
+</script></body></html>

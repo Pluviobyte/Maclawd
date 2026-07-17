@@ -4,66 +4,54 @@ Last updated: 2026-07-17
 
 ## Current checkpoint
 
-Maclawd is a new standalone project with an independent repository and Git
-history. The twelve primary state actions have a shared implementation contract
-and complete static silhouette review set. Five states now have active CSS/SVG
-animations: `idle`, `thinking`, `working`, `delegating`, and `needs_owner`.
-Application integration and macOS packaging have not started.
+Maclawd is a standalone project with an independent repository and Git history.
+Its first complete motion-design system is now implemented:
 
-The earlier `thinking` and `working` mechanical animations remain available as
-historical prototypes. Their active sources now use the playful v3 direction.
+- 12 primary states
+- 6 optional `working` activity modifiers
+- 6 interaction and ambient actions
+- 24 active CSS/SVG animations in total
 
-The playful v3 direction replaces the fixed-machine premise with character
-acting, temporary everyday props, and short visual stories. The first four core
-Agent states are implemented and visually validated without deleting any prior
-concept work.
+The body, claws, legs, eyes, colors, and source coordinates are identical across
+the full set. Props are temporary story objects rather than permanent functional
+hardware. The macOS application runtime and event integration have not started.
 
 ## Completed
 
-- Chosen the **Maclawd** product name.
-- Defined the target as a complete Mac desktop application.
-- Locked the character body and eye geometry/color contract.
-- Established the rule that every state receives a distinct Maclawd motion
-  treatment, with accessories added only when they improve readability.
-- Designed and implemented the first **Reasoning Gearbox** action group.
-- Produced a CSS-only animated SVG with a 2.8-second loop.
-- Produced a 1000×1000, 42-frame GIF preview and four-phase contact sheet.
-- Validated the SVG syntax and locked character values.
-- Reviewed the first concept against the reference action library to avoid exact
-  duplication while retaining useful state semantics.
-- Defined all 12 primary state actions, their accessories, timing, transitions,
-  reduced-motion behavior, and visual acceptance criteria.
-- Assigned Reasoning Gearbox to `working.default`.
-- Implemented **Calm Calibration** for `idle` with grounded breathing, a small
-  glance, and one blink during a 5.6-second loop.
-- Implemented **Inference Dial** for `thinking` with three physical selector
-  positions, synchronized gaze, and a 2.4-second loop.
-- Added reduced-motion behavior to both new animation sources.
-- Expanded the browser motion lab to compare `idle`, `thinking`, and
-  `working.default` side by side.
-- Produced 1000×1000 GIF previews, four-phase contact sheets, and a shared
-  96px identity check for the new motion baseline.
-- Standardized all implemented states on the same 45×45 view box so state
-  changes preserve character scale.
-- Completed a static concept for every primary state: `idle`, `away`,
-  `sleeping`, `waking`, `thinking`, `working`, `delegating`, `needs_owner`,
-  `compacting`, `workspace`, `success`, and `error`.
-- Kept accessories compact, physically connected to a claw, shoulder, or ground
-  base, and visually secondary to the pet.
-- Produced a full twelve-state browser review board and a direct browser-rendered
-  96px semantic check.
-- Studied the reference project's motion structure and extracted its reusable
-  principles: technical-to-everyday metaphor, setup/action/reaction loops, and
-  varied character-led performances.
-- Created playful v3 candidates for `thinking`, `working`, `delegating`, and
-  `needs_owner`, plus a four-state browser board and 96px check.
-- Implemented **Shell Shuffle**, **Token Knitting**, **Hatchling Parade**, and
-  **Stuck Jar** as CSS-only animated SVG loops with reduced-motion behavior.
-- Rendered all 194 animation frames at 10 fps, generated four GIF previews and
-  four-phase contact sheets, and verified that every loop returns to its first
-  rendered frame without a visible seam.
-- Rebuilt the browser motion lab around the playful core group and produced a
-  four-state, four-phase 96px semantic review matrix.
+- Chosen the **Maclawd** product name and defined it as a complete Mac desktop
+  companion rather than an extension of another repository.
+- Locked the character geometry/color contract and a shared 45×45 view box.
+- Studied the reference project's useful design principles: turn technical
+  states into everyday metaphors, give every loop a setup/action/reaction, and
+  keep the character more important than its prop.
+- Preserved all earlier static concepts and mechanical prototypes as design
+  history instead of deleting them.
+- Implemented the first active group: **Calm Calibration**, **Shell Shuffle**,
+  **Token Knitting**, **Hatchling Parade**, and **Stuck Jar**.
+- Replaced the seven remaining mechanical candidates with playful actions:
+  **Blanket Drag**, **Blanket Burrito**, **Blanket Pop**, **Accordion Fold**,
+  **Pop-up Studio**, **Self High-five**, and **Yarn Tangle**.
+- Made `away → sleeping → waking` a continuous story using the same blanket
+  colors, patch, and fold language across all three actions.
+- Added six working modifiers: **Card Browsing**, **Note Stitching**, **Wind-up
+  Command**, **Block Tower**, **Wobble Test**, and **Relay Bead**.
+- Added six desktop/system actions: **Click Flinch**, **Surprised Hop**, **Drag
+  Cling**, **Drop Wobble**, **Edge Peek**, and **Low Battery Droop**.
+- Defined conservative Hook behavior: detailed working modifiers require a
+  reliable external event; otherwise the system falls back to generic working.
+- Added machine-readable contracts for primary states, modifiers, and
+  interactions.
+- Rebuilt the browser motion lab to display all 24 actions directly from their
+  production SVG sources.
+- Rendered 742 new frames at 10 fps and generated 19 new GIF previews plus 19
+  four-phase contact sheets.
+- Verified all 19 new SVG files parse, preserve the locked source rectangles,
+  contain visible multi-frame motion, and remain inside the render bounds.
+- Verified all 12 loop actions in the new set return byte-for-byte to their
+  first rendered frame; reaction/transition actions are reviewed as one cycles.
+- Produced a browser-rendered 96px board covering all 24 actions.
+- Added shared reduced-motion behavior: props and body motion stop, with only a
+  low-frequency blink permitted.
 
 ## Locked character contract
 
@@ -76,27 +64,28 @@ concept work.
 | Body color | `#DE886D` |
 | Eye color | `#000000` |
 
-## Full-build roadmap
+## Next build phases
 
-### 1. Motion language
+### 1. Runtime state engine
 
-- Review and freeze the remaining playful state metaphors.
-- Redraw the seven remaining static states in the approved playful language.
-- Implement and visually validate each approved primary state.
-- Establish shared pixel-grid, timing, easing, and reduced-motion rules.
+- Implement state priority, interruption, transition, and fallback rules.
+- Define the public event adapter and map reliable Codex/Claude/tool events.
+- Keep opaque Agent work on generic `thinking` or `working`; never fabricate a
+  detailed task status.
+- Add a local animation harness that can replay real event traces.
 
 ### 2. Mac application
 
-- Build the desktop pet window and transparent interaction region.
-- Add drag, click, wake, sleep, and screen-edge behavior.
+- Build the transparent desktop-pet window and click-through regions.
+- Add drag, click, drop, wake, sleep, screen-edge, and low-battery behavior.
 - Build the menu bar controller, preferences, and notification layer.
-- Connect AI-agent events to the Maclawd state system.
+- Connect the event adapter to the Maclawd state system.
 
 ### 3. Product identity
 
 - Create the Maclawd app icon and visual identity.
-- Define product identifiers, local storage, and update channels.
-- Complete accessibility, localization, and onboarding.
+- Define bundle identifiers, local storage, privacy controls, and updates.
+- Complete accessibility, localization, onboarding, and reduced-motion settings.
 
 ### 4. Distribution
 
@@ -108,9 +97,8 @@ concept work.
 ## Not implemented yet
 
 - No running Maclawd application exists yet.
-- The animation SVGs are not connected to an application runtime yet.
-- Seven primary state concepts remain static and require playful redesign plus
-  CSS animation work.
+- SVG animations are not connected to a runtime state engine yet.
+- No Agent event adapter or real event trace playback exists yet.
 - No application icon, signed binary, notarized build, or `.dmg` exists yet.
 
-The public repository is a progress checkpoint, not a release claim.
+The public repository is a validated motion-system checkpoint, not a release claim.

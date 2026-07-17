@@ -1,0 +1,7 @@
+<?xml-stylesheet type="text/css" href="maclawd-actions.css"?>
+<svg xmlns="http://www.w3.org/2000/svg" class="state-syncing" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <title>Maclawd Relay Bead</title><desc>Maclawd slides one bead along a cord from one claw to the other and checks the handoff.</desc>
+  <g class="cord motion"><path d="M0 13 H15" stroke="#5A4A42" stroke-width="1" fill="none"/><rect x="0" y="12" width="1" height="3" fill="#5A4A42"/><rect x="14" y="12" width="1" height="3" fill="#5A4A42"/></g>
+  <g class="bead motion"><rect x="5" y="10" width="4" height="4" fill="#7BC8C4"/><rect x="6" y="11" width="2" height="2" fill="#DDF3F1"/></g>
+  <g class="actor motion"><g fill="#DE886D"><rect id="outer-left-leg" x="3" y="13" width="1" height="2"/><rect id="inner-left-leg" x="5" y="13" width="1" height="2"/><rect id="inner-right-leg" x="9" y="13" width="1" height="2"/><rect id="outer-right-leg" x="11" y="13" width="1" height="2"/><rect id="torso" x="2" y="6" width="11" height="7"/><g class="left-claw motion"><rect id="left-arm" x="0" y="9" width="2" height="2"/></g><g class="right-claw motion"><rect id="right-arm" x="13" y="9" width="2" height="2"/></g></g><g class="eyes motion blink" fill="#000000"><rect id="left-eye" x="4" y="8" width="1" height="2"/><rect id="right-eye" x="10" y="8" width="1" height="2"/></g></g>
+</svg>

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="previews/playful-core-motion.png" width="860" alt="Maclawd playful core motion group">
+  <img src="previews/all-actions-96px.png" width="1000" alt="Maclawd complete 24-action motion set at pet size">
 </p>
 
 <h1 align="center">Maclawd</h1>
@@ -12,7 +12,7 @@
 </p>
 
 > [!IMPORTANT]
-> Maclawd is at the first-design checkpoint. There is no downloadable macOS
+> Maclawd has completed its first full motion-design checkpoint. There is no downloadable macOS
 > application yet.
 
 ## What we are building
@@ -26,38 +26,44 @@ Maclawd is planned as a complete Mac product:
 - independent product identity, icon, packaging, update flow, and release system
 - a signed and notarized universal macOS application
 
-## Twelve-state static concept set
+## Complete 24-action motion set
 
-All primary states now have a compact action silhouette for review. The pet
-remains the visual subject; every accessory is attached to a claw, shoulder
-mount, or ground base.
+The first full SVG/CSS action system is implemented. The body, claws, legs,
+eyes, coordinates, and base colors remain identical in every file; only poses,
+temporary props, and discrete animation change.
 
-| Row | States |
-| --- | --- |
-| Rest chain | `idle`, `away`, `sleeping`, `waking` |
-| Agent activity | `thinking`, `working`, `delegating`, `needs_owner` |
-| System feedback | `compacting`, `workspace`, `success`, `error` |
-
-[Open the local review board](design/concepts/all-primary-states.html) ·
-[View the 96px semantic check](previews/all-primary-states-96px.png) ·
-[Read the concept notes](design/main-state-concepts.md)
-
-These are static pose and accessory candidates. They do not claim that all
-twelve CSS animations are complete.
-
-### Playful core motion group
-
-The first approved playful group replaces persistent machinery with temporary
-domestic metaphors and short visual gags:
-
-| `thinking` | `working` | `delegating` | `needs_owner` |
-| --- | --- | --- | --- |
-| <img src="previews/shell-shuffle.gif" width="180" alt="Maclawd Shell Shuffle animation"> | <img src="previews/token-knitting.gif" width="180" alt="Maclawd Token Knitting animation"> | <img src="previews/hatchling-parade.gif" width="180" alt="Maclawd Hatchling Parade animation"> | <img src="previews/stuck-jar.gif" width="180" alt="Maclawd Stuck Jar animation"> |
-| Shell Shuffle | Token Knitting | Hatchling Parade | Stuck Jar |
+| Layer | Count | Purpose |
+| --- | ---: | --- |
+| Primary states | 12 | Rest, Agent activity, owner attention, system feedback |
+| Working modifiers | 6 | Reading, writing, command, building, testing, syncing |
+| Interactions and ambient actions | 6 | Click, double click, drag, drop, edge peek, low battery |
 
 [Open the live motion lab](index.html) ·
-[View the four-phase 96px check](previews/playful-core-motion-96px.png) ·
-[Read the design rationale](design/playful-motion-direction-v3.md)
+[View the complete 96px check](previews/all-actions-96px.png) ·
+[Read the primary-state contract](design/main-state-actions.md) ·
+[Read working modifiers](design/activity-modifiers.md) ·
+[Read interactions](design/interaction-actions.md) ·
+[Read animation QA](design/animation-qa.md)
+
+### Primary states
+
+| `away` | `sleeping` | `waking` | `success` |
+| --- | --- | --- | --- |
+| <img src="previews/blanket-drag.gif" width="180" alt="Maclawd Blanket Drag animation"> | <img src="previews/blanket-burrito.gif" width="180" alt="Maclawd Blanket Burrito animation"> | <img src="previews/blanket-pop.gif" width="180" alt="Maclawd Blanket Pop animation"> | <img src="previews/self-high-five.gif" width="180" alt="Maclawd Self High-five animation"> |
+| Blanket Drag | Blanket Burrito | Blanket Pop | Self High-five |
+
+The sleep chain deliberately reuses one blanket, so `away → sleeping → waking`
+reads as a continuous story. The other new primary actions are **Accordion
+Fold**, **Pop-up Studio**, and **Yarn Tangle**. The approved earlier actions—
+**Calm Calibration**, **Shell Shuffle**, **Token Knitting**, **Hatchling
+Parade**, and **Stuck Jar**—remain unchanged.
+
+### Working modifiers and interactions
+
+Detailed activities are only shown when an external event can classify them
+reliably. Generic busy activity always falls back to **Token Knitting**; the pet
+never invents a task from an opaque Agent state. Interaction actions are driven
+by the Mac app's own input and system events and do not require Agent internals.
 
 ## Earlier executable motion baseline
 
@@ -86,9 +92,9 @@ machine-readable contract in
 ## Repository status
 
 This repository has an independent Git history and contains only Maclawd work.
-The current checkpoint includes five active animations, two retained mechanical
-prototypes, the complete twelve-state static concept set, previews, the full
-design contract, browser motion lab, and development roadmap.
+The current checkpoint includes 24 active animations, two retained mechanical
+prototypes, individual GIF/contact-sheet previews, a complete 96px review board,
+machine-readable state maps, the browser motion lab, and the development roadmap.
 
 See [`PROGRESS.md`](PROGRESS.md) for completed work and the full build sequence.
 

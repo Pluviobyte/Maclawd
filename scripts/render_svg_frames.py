@@ -56,6 +56,14 @@ def main() -> None:
                 }""",
                 seconds,
             )
+            # External stylesheets and stepped SVG transforms may update their
+            # computed style before Chromium repaints the SVG surface. Two
+            # animation frames make the captured pixels match that style.
+            page.evaluate(
+                """() => new Promise((resolve) => {
+                    requestAnimationFrame(() => requestAnimationFrame(resolve));
+                })"""
+            )
             page.screenshot(
                 path=output_dir / f"{frame:03d}.png",
                 omit_background=True,
