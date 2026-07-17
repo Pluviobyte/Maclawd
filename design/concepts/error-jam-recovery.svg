@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <title>Maclawd Error Jam Recovery</title>
+  <desc>A compact attached drive jams while Maclawd reaches for its reverse reset lever.</desc>
+  <defs>
+    <g id="jam-gear">
+      <g fill="#EF5350">
+        <rect x="-2" y="-1" width="5" height="3"/>
+        <rect x="-1" y="-2" width="3" height="5"/>
+        <rect x="0" y="-3" width="1" height="1"/>
+        <rect x="0" y="3" width="1" height="1"/>
+        <rect x="-3" y="0" width="1" height="1"/>
+        <rect x="3" y="0" width="1" height="1"/>
+      </g>
+      <rect x="0" y="0" width="1" height="1" fill="#1E1E2E"/>
+    </g>
+  </defs>
+  <g id="maclawd-body">
+    <g id="body-color-group" fill="#DE886D">
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+      <rect id="torso" x="2" y="6" width="11" height="7"/>
+      <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+      <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+    </g>
+    <g id="eyes-js" fill="#000000" transform="translate(0 4.5) scale(1 .5) translate(0 -4.5)">
+      <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+      <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+    </g>
+  </g>
+  <g id="jam-frame">
+    <rect x="13" y="9" width="3" height="1" fill="#455A64"/>
+    <rect x="15" y="7" width="6" height="6" fill="#455A64"/>
+    <g transform="translate(18 10)"><use href="#jam-gear"/></g>
+    <rect x="19" y="6" width="2" height="2" fill="#EF5350"/>
+    <rect x="20" y="8" width="1" height="6" fill="#1E1E2E"/>
+    <rect x="19" y="14" width="3" height="1" fill="#FFC107"/>
+  </g>
+</svg>

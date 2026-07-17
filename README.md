@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="previews/primary-motion-baseline.png" width="860" alt="Maclawd idle, thinking, and working motion baseline">
+  <img src="previews/all-primary-states.png" width="860" alt="Maclawd twelve primary state concepts">
 </p>
 
 <h1 align="center">Maclawd</h1>
@@ -25,6 +25,25 @@ Maclawd is planned as a complete Mac product:
 - Mac desktop, menu bar, notification, and settings behavior
 - independent product identity, icon, packaging, update flow, and release system
 - a signed and notarized universal macOS application
+
+## Twelve-state static concept set
+
+All primary states now have a compact action silhouette for review. The pet
+remains the visual subject; every accessory is attached to a claw, shoulder
+mount, or ground base.
+
+| Row | States |
+| --- | --- |
+| Rest chain | `idle`, `away`, `sleeping`, `waking` |
+| Agent activity | `thinking`, `working`, `delegating`, `needs_owner` |
+| System feedback | `compacting`, `workspace`, `success`, `error` |
+
+[Open the local review board](design/concepts/all-primary-states.html) ·
+[View the 96px semantic check](previews/all-primary-states-96px.png) ·
+[Read the concept notes](design/main-state-concepts.md)
+
+These are static pose and accessory candidates. They do not claim that all
+twelve CSS animations are complete.
 
 ## First executable motion baseline
 
@@ -53,8 +72,9 @@ machine-readable contract in
 ## Repository status
 
 This repository has an independent Git history and contains only Maclawd work.
-The current checkpoint includes three animation sources, previews, the full
-twelve-state design contract, browser motion lab, and development roadmap.
+The current checkpoint includes three earlier animation sources, the complete
+twelve-state static concept set, previews, the full design contract, browser
+motion lab, and development roadmap.
 
 See [`PROGRESS.md`](PROGRESS.md) for completed work and the full build sequence.
 

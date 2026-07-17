@@ -5,14 +5,15 @@ Last updated: 2026-07-17
 ## Current checkpoint
 
 Maclawd is a new standalone project with an independent repository and Git
-history. The twelve primary state actions now have a shared visual language and
-implementation contract. The `idle`, `thinking`, and `working.default` states
-now have animated SVG implementations; application integration and macOS
-packaging have not started.
+history. The twelve primary state actions now have a shared visual language,
+implementation contract, and complete static silhouette review set. The
+`idle`, `thinking`, and `working.default` states have animated SVG
+implementations; application integration and macOS packaging have not started.
 
-The first `thinking` and `working.default` visual treatments are under review.
-Two compact-tool v2 static candidates have been added without replacing the
-current animated sources.
+The current `thinking` and `working.default` animations remain available as
+historical prototypes. Their compact-tool v2 replacements and the other nine
+state concepts are static review candidates and have not been promoted to
+production animation sources.
 
 ## Completed
 
@@ -41,6 +42,13 @@ current animated sources.
   96px identity check for the new motion baseline.
 - Standardized all implemented states on the same 45×45 view box so state
   changes preserve character scale.
+- Completed a static concept for every primary state: `idle`, `away`,
+  `sleeping`, `waking`, `thinking`, `working`, `delegating`, `needs_owner`,
+  `compacting`, `workspace`, `success`, and `error`.
+- Kept accessories compact, physically connected to a claw, shoulder, or ground
+  base, and visually secondary to the pet.
+- Produced a full twelve-state browser review board and a direct browser-rendered
+  96px semantic check.
 
 ## Locked character contract
 
@@ -86,7 +94,8 @@ current animated sources.
 
 - No running Maclawd application exists yet.
 - The animation SVGs are not connected to an application runtime yet.
-- Nine primary action groups remain design-only and have no SVG implementation.
+- Eleven state concepts remain static and require approved CSS animation work;
+  `idle` is the only approved production motion in the new compact direction.
 - The compact `thinking` and `working.default` v2 candidates are not animated or
   assigned as production sources yet.
 - No application icon, signed binary, notarized build, or `.dmg` exists yet.

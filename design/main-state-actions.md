@@ -1,6 +1,9 @@
 # Maclawd 主状态动作圣经 v1
 
 状态：设计冻结候选稿。用于逐状态 SVG/CSS 实现与视觉审查，尚未全部制作。
+完整的紧凑版静态外形评审集见
+[`design/main-state-concepts.md`](main-state-concepts.md)；其中 `thinking` 与
+`working` 的 v2 静态方案保留了旧动画原型，尚未替换生产源。
 
 ## 1. 角色不可变合同
 

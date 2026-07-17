@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Maclawd — All Primary State Concepts</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+        background: #f4f1ea;
+        color: #1e1e2e;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 48px 28px 72px; }
+      main { width: min(1460px, 100%); margin: 0 auto; }
+      header { max-width: 800px; margin-bottom: 32px; }
+      .eyebrow {
+        margin: 0 0 10px;
+        color: #c67a62;
+        font-size: 13px;
+        font-weight: 760;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      h1 { margin: 0; font-size: clamp(48px, 6vw, 78px); line-height: .95; }
+      header p, .card p { color: #575765; line-height: 1.5; }
+      .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
+      .card {
+        overflow: hidden;
+        border: 1px solid rgba(30, 30, 46, .12);
+        border-radius: 24px;
+        background: #fbfaf7;
+        box-shadow: 0 16px 45px rgba(30, 30, 46, .075);
+      }
+      .stage {
+        aspect-ratio: 1;
+        background:
+          linear-gradient(rgba(30, 30, 46, .035) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(30, 30, 46, .035) 1px, transparent 1px),
+          #fbfaf7;
+        background-size: 22px 22px;
+      }
+      object { width: 100%; height: 100%; }
+      .copy { min-height: 150px; padding: 0 20px 22px; }
+      .state { color: #c67a62; font: 12px ui-monospace, monospace; }
+      h2 { margin: 2px 0 7px; font-size: 20px; }
+      .card p { min-height: 44px; margin: 0 0 12px; font-size: 14px; }
+      .tag { color: #777785; font: 11px ui-monospace, monospace; }
+      @media (max-width: 1050px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+      @media (max-width: 760px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+      @media (max-width: 500px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">Maclawd · Primary state system</p>
+        <h1>One character.<br>Twelve readable states.</h1>
+        <p>Static action and silhouette review. Accessories remain compact, connected, and secondary to the pet.</p>
+      </header>
+      <section class="grid">
+        <article class="card"><div class="stage"><object data="../../src/animations/calm-calibration.svg" type="image/svg+xml"></object></div><div class="copy"><span class="state">idle</span><h2>Calm Calibration</h2><p>Quiet breathing, relaxed claws, and one small glance.</p><span class="tag">no accessory</span></div></article>
+        <article class="card"><div class="stage"><object data="away-power-down-stretch.svg" type="image/svg+xml"></object></div><div class="copy"><span class="state">away</span><h2>Power-down Stretch</h2><p>Wide stretch, lowered body, and tired half-closed eyes.</p><span class="tag">pose only</span></div></article>
+        <article class="card"><div class="stage"><object data="sleeping-dock-nest.svg" type="image/svg+xml"></object></div><div class="copy"><span class="state">sleeping</span><h2>Dock Nest</h2><p>Settled into a low charging dock with a connected light.</p><span class="tag">shared sleep dock</span></div></article>
+        <article class="card"><div class="stage"><object data="waking-dock-eject.svg" type="image/svg+xml"></object></div><div class="copy"><span class="state">waking</span><h2>Dock Eject</h2><p>The same dock unlocks while Maclawd springs upward.</p><span class="tag">shared sleep dock</span></div></article>
+        <article class="card"><div class="stage"><object data="thinking-compact-dial-v2.svg" type="image/svg+xml"></object></div><div class="copy"><span class="state">thinking</span><h2>Compact Dial</h2><p>A small shoulder selector compares three positions.</p><span class="tag">retained v2 candidate</span></div></article>
+        <article class="card"><div class="stage"><object data="working-twin-drive-core-v2.svg" type="image/svg+xml"></object></div><div class="copy"><span class="state">working</span><h2>Twin Drive Core</h2><p>Two claws hold one compact processing core.</p><span class="tag">retained v2 candidate</span></div></article>
+        <article class="card"><div class="stage"><object data="delegating-parallel-armature.svg" type="image/svg+xml"></object></div><div class="copy"><span class="state">delegating</span><h2>Parallel Armature</h2><p>Three short connected arms branch from one allocator.</p><span class="tag">one connected tool</span></div></article>
+        <article class="card"><div class="stage"><object data="needs-owner-decision-gate.svg" type="image/svg+xml"></object></div><div class="copy"><span class="state">needs_owner</span><h2>Decision Gate</h2><p>A fixed panel waits for the owner to choose.</p><span class="tag">right-claw anchor</span></div></article>
+        <article class="card"><div class="stage"><object data="compacting-memory-press.svg" type="image/svg+xml"></object></div><div class="copy"><span class="state">compacting</span><h2>Memory Press</h2><p>A segmented ribbon feeds through rollers into a cartridge.</p><span class="tag">ground press</span></div></article>
+        <article class="card"><div class="stage"><object data="workspace-foldout-bench.svg" type="image/svg+xml"></object></div><div class="copy"><span class="state">workspace</span><h2>Foldout Bench</h2><p>Two connected wings unfold into a calibrated work surface.</p><span class="tag">ground bench</span></div></article>
+        <article class="card"><div class="stage"><object data="success-completion-stamp.svg" type="image/svg+xml"></object></div><div class="copy"><span class="state">success</span><h2>Completion Stamp</h2><p>A lever reveals one attached green completion plate.</p><span class="tag">right-side base</span></div></article>
+        <article class="card"><div class="stage"><object data="error-jam-recovery.svg" type="image/svg+xml"></object></div><div class="copy"><span class="state">error</span><h2>Jam Recovery</h2><p>A compact drive jams beside its reverse reset lever.</p><span class="tag">right-claw anchor</span></div></article>
+      </section>
+    </main>
+  </body>
+</html>

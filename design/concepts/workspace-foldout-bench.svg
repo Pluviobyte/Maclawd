@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <title>Maclawd Workspace Foldout Bench</title>
+  <desc>A compact ground bench unfolds into two connected wings beneath Maclawd.</desc>
+  <g id="maclawd-body">
+    <g id="body-color-group" fill="#DE886D">
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+      <rect id="torso" x="2" y="6" width="11" height="7"/>
+      <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+      <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+    </g>
+    <g id="eyes-js" fill="#000000">
+      <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+      <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+    </g>
+  </g>
+  <g id="bench-connectors" fill="#455A64">
+    <rect x="1" y="11" width="1" height="4"/>
+    <rect x="13" y="11" width="1" height="4"/>
+  </g>
+  <g id="foldout-bench">
+    <rect x="-3" y="14" width="21" height="2" fill="#455A64"/>
+    <rect x="-3" y="14" width="3" height="1" fill="#FFC107"/>
+    <rect x="15" y="14" width="3" height="1" fill="#FFC107"/>
+    <rect x="2" y="14" width="1" height="2" fill="#40C4FF"/>
+    <rect x="6" y="14" width="1" height="2" fill="#40C4FF"/>
+    <rect x="10" y="14" width="1" height="2" fill="#40C4FF"/>
+    <rect x="14" y="14" width="1" height="2" fill="#40C4FF"/>
+    <rect x="0" y="16" width="2" height="2" fill="#1E1E2E"/>
+    <rect x="13" y="16" width="2" height="2" fill="#1E1E2E"/>
+  </g>
+</svg>
