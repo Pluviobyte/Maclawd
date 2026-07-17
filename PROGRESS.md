@@ -10,6 +10,10 @@ implementation contract. The `idle`, `thinking`, and `working.default` states
 now have animated SVG implementations; application integration and macOS
 packaging have not started.
 
+The first `thinking` and `working.default` visual treatments are under review.
+Two compact-tool v2 static candidates have been added without replacing the
+current animated sources.
+
 ## Completed
 
 - Chosen the **Maclawd** product name.
@@ -83,6 +87,8 @@ packaging have not started.
 - No running Maclawd application exists yet.
 - The animation SVGs are not connected to an application runtime yet.
 - Nine primary action groups remain design-only and have no SVG implementation.
+- The compact `thinking` and `working.default` v2 candidates are not animated or
+  assigned as production sources yet.
 - No application icon, signed binary, notarized build, or `.dmg` exists yet.
 
 The public repository is a progress checkpoint, not a release claim.

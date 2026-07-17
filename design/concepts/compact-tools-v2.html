@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Maclawd Compact Tools V2</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+        background: #f4f1ea;
+        color: #1e1e2e;
+      }
+
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 54px; }
+      main { width: min(1180px, 100%); margin: 0 auto; }
+      header { max-width: 740px; margin-bottom: 34px; }
+      .eyebrow {
+        margin: 0 0 10px;
+        color: #c67a62;
+        font-size: 13px;
+        font-weight: 760;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      h1 { margin: 0; font-size: 64px; line-height: 0.96; }
+      header p, .card p { color: #575765; line-height: 1.55; }
+      .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+      .card {
+        overflow: hidden;
+        border: 1px solid rgba(30, 30, 46, 0.12);
+        border-radius: 26px;
+        background: #fbfaf7;
+        box-shadow: 0 18px 50px rgba(30, 30, 46, 0.08);
+      }
+      .stage {
+        aspect-ratio: 1;
+        background:
+          linear-gradient(rgba(30, 30, 46, 0.035) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(30, 30, 46, 0.035) 1px, transparent 1px),
+          #fbfaf7;
+        background-size: 24px 24px;
+      }
+      object { width: 100%; height: 100%; }
+      .copy { padding: 0 22px 24px; }
+      .state { color: #c67a62; font: 13px ui-monospace, monospace; }
+      h2 { margin: 2px 0 8px; font-size: 22px; }
+      .measure { font: 12px ui-monospace, monospace; color: #777785; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">Maclawd · Compact tools study</p>
+        <h1>The pet stays<br>in charge.</h1>
+        <p>Static silhouette review. The existing animation sources are unchanged.</p>
+      </header>
+
+      <section class="grid">
+        <article class="card">
+          <div class="stage">
+            <object data="../../src/animations/calm-calibration.svg" type="image/svg+xml"></object>
+          </div>
+          <div class="copy">
+            <span class="state">idle · scale reference</span>
+            <h2>Calm Calibration</h2>
+            <p>Unmodified body reference for visual weight and scale.</p>
+            <div class="measure">body remains the focal point</div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="stage">
+            <object data="thinking-compact-dial-v2.svg" type="image/svg+xml"></object>
+          </div>
+          <div class="copy">
+            <span class="state">thinking · v2 candidate</span>
+            <h2>Compact Dial</h2>
+            <p>A six-pixel selector mounted directly against the left shoulder.</p>
+            <div class="measure">single tool · no surrounding rail</div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="stage">
+            <object data="working-twin-drive-core-v2.svg" type="image/svg+xml"></object>
+          </div>
+          <div class="copy">
+            <span class="state">working · v2 candidate</span>
+            <h2>Twin Drive Core</h2>
+            <p>One compact work core held directly between both claws.</p>
+            <div class="measure">two gears · no overhead machinery</div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>
