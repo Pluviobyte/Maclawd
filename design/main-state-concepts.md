@@ -1,9 +1,9 @@
 # Maclawd primary-state static concepts
 
-Status: complete static review set. These concepts define pose, silhouette, and
-accessory placement; only `idle` currently points to an approved production
-animation. The retained `thinking` and `working` v2 concepts and the other nine
-states remain unanimated review candidates.
+Status: archived complete static review set. These concepts preserve the first
+twelve-state silhouette checkpoint. `thinking`, `working`, `delegating`, and
+`needs_owner` have since moved to the playful v3 motion group; `idle` remains
+active, and the other seven states still await playful redesign.
 
 ## Design rule
 
@@ -40,5 +40,5 @@ states remain unanimated review candidates.
 - [`../previews/all-primary-states-96px.png`](../previews/all-primary-states-96px.png)
   — semantic check at pet size.
 
-Approval of this sheet freezes the accessory silhouettes before CSS animation
-work begins.
+This sheet remains available for comparison and does not override the active
+sources in [`main-state-actions.json`](main-state-actions.json).

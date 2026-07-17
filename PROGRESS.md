@@ -5,20 +5,18 @@ Last updated: 2026-07-17
 ## Current checkpoint
 
 Maclawd is a new standalone project with an independent repository and Git
-history. The twelve primary state actions now have a shared visual language,
-implementation contract, and complete static silhouette review set. The
-`idle`, `thinking`, and `working.default` states have animated SVG
-implementations; application integration and macOS packaging have not started.
+history. The twelve primary state actions have a shared implementation contract
+and complete static silhouette review set. Five states now have active CSS/SVG
+animations: `idle`, `thinking`, `working`, `delegating`, and `needs_owner`.
+Application integration and macOS packaging have not started.
 
-The current `thinking` and `working.default` animations remain available as
-historical prototypes. Their compact-tool v2 replacements and the other nine
-state concepts are static review candidates and have not been promoted to
-production animation sources.
+The earlier `thinking` and `working` mechanical animations remain available as
+historical prototypes. Their active sources now use the playful v3 direction.
 
-A new playful v3 direction study is now under review. It keeps every prior
-concept, but replaces the fixed-machine premise with character acting,
-temporary everyday props, and short visual stories. Four core Agent states have
-first-pass v3 silhouettes; no production source has been replaced.
+The playful v3 direction replaces the fixed-machine premise with character
+acting, temporary everyday props, and short visual stories. The first four core
+Agent states are implemented and visually validated without deleting any prior
+concept work.
 
 ## Completed
 
@@ -59,6 +57,13 @@ first-pass v3 silhouettes; no production source has been replaced.
   varied character-led performances.
 - Created playful v3 candidates for `thinking`, `working`, `delegating`, and
   `needs_owner`, plus a four-state browser board and 96px check.
+- Implemented **Shell Shuffle**, **Token Knitting**, **Hatchling Parade**, and
+  **Stuck Jar** as CSS-only animated SVG loops with reduced-motion behavior.
+- Rendered all 194 animation frames at 10 fps, generated four GIF previews and
+  four-phase contact sheets, and verified that every loop returns to its first
+  rendered frame without a visible seam.
+- Rebuilt the browser motion lab around the playful core group and produced a
+  four-state, four-phase 96px semantic review matrix.
 
 ## Locked character contract
 
@@ -75,8 +80,8 @@ first-pass v3 silhouettes; no production source has been replaced.
 
 ### 1. Motion language
 
-- Approve or revise the Reasoning Gearbox.
-- Review and freeze the 12-state action bible.
+- Review and freeze the remaining playful state metaphors.
+- Redraw the seven remaining static states in the approved playful language.
 - Implement and visually validate each approved primary state.
 - Establish shared pixel-grid, timing, easing, and reduced-motion rules.
 
@@ -104,10 +109,8 @@ first-pass v3 silhouettes; no production source has been replaced.
 
 - No running Maclawd application exists yet.
 - The animation SVGs are not connected to an application runtime yet.
-- Eleven state concepts remain static and require approved CSS animation work;
-  `idle` is the only approved production motion in the new compact direction.
-- The compact `thinking` and `working.default` v2 candidates are not animated or
-  assigned as production sources yet.
+- Seven primary state concepts remain static and require playful redesign plus
+  CSS animation work.
 - No application icon, signed binary, notarized build, or `.dmg` exists yet.
 
 The public repository is a progress checkpoint, not a release claim.

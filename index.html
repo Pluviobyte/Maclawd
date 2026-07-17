@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Maclawd — Primary Motion Lab</title>
+    <title>Maclawd — Playful Core Motion Lab</title>
     <style>
       :root {
         color-scheme: light;
@@ -20,7 +20,7 @@
         padding: 48px 24px 64px;
       }
 
-      main { width: min(1180px, 100%); margin: 0 auto; }
+      main { width: min(1380px, 100%); margin: 0 auto; }
 
       header { max-width: 720px; margin-bottom: 32px; }
 
@@ -38,7 +38,7 @@
 
       .motion-grid {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 20px;
       }
 
@@ -74,72 +74,102 @@
         font-weight: 650;
       }
 
-      @media (max-width: 900px) {
-        .motion-grid { grid-template-columns: 1fr; }
-        .motion-card { display: grid; grid-template-columns: minmax(260px, 1fr) 1fr; align-items: center; }
-        .copy { padding: 24px; }
+      .archive {
+        margin-top: 28px;
+        padding: 18px 20px;
+        border: 1px solid rgba(30, 30, 46, 0.1);
+        border-radius: 18px;
+        color: #626271;
+        background: rgba(255, 255, 255, 0.45);
+        font-size: 14px;
+      }
+
+      .archive a { color: #a55f4c; }
+
+      @media (max-width: 1080px) {
+        .motion-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       }
 
       @media (max-width: 620px) {
         body { padding: 32px 16px 48px; }
-        .motion-card { display: block; }
+        .motion-grid { grid-template-columns: 1fr; }
       }
     </style>
   </head>
   <body>
     <main>
       <header>
-        <p class="eyebrow">Maclawd · Primary motion lab</p>
-        <h1>Three states.<br>One character.</h1>
+        <p class="eyebrow">Maclawd · Playful core motion lab</p>
+        <h1>Four tiny stories.<br>One character.</h1>
         <p>
-          The first executable motion baseline keeps the same body and eye
-          geometry while changing posture, rhythm, and connected machinery.
+          Technical states become small character performances. Every loop has
+          an attempt, a reaction, and a clean return to its first frame.
         </p>
       </header>
 
       <section class="motion-grid" aria-label="Maclawd primary motion previews">
         <article class="motion-card">
           <div class="stage">
-            <object data="src/animations/calm-calibration.svg" type="image/svg+xml">
-              Calm Calibration animated SVG
-            </object>
-          </div>
-          <div class="copy">
-            <span class="state-id">idle</span>
-            <h2>Calm Calibration</h2>
-            <p>Grounded breathing, one small glance, and a single quiet blink. No accessory.</p>
-            <div class="chips"><span class="chip">5.6s loop</span><span class="chip">No prop</span></div>
-          </div>
-        </article>
-
-        <article class="motion-card">
-          <div class="stage">
-            <object data="src/animations/inference-dial.svg" type="image/svg+xml">
-              Inference Dial animated SVG
+            <object data="src/animations/shell-shuffle.svg" type="image/svg+xml">
+              Shell Shuffle animated SVG
             </object>
           </div>
           <div class="copy">
             <span class="state-id">thinking</span>
-            <h2>Inference Dial</h2>
-            <p>A left-shoulder selector compares three physical positions before work begins.</p>
-            <div class="chips"><span class="chip">2.4s loop</span><span class="chip">3 positions</span></div>
+            <h2>Shell Shuffle</h2>
+            <p>Checks three colorful shells one by one, then carefully lifts the chosen one.</p>
+            <div class="chips"><span class="chip">5.6s loop</span><span class="chip">Compare → choose</span></div>
           </div>
         </article>
 
         <article class="motion-card">
           <div class="stage">
-            <object data="src/animations/reasoning-gearbox.svg" type="image/svg+xml">
-              Reasoning Gearbox animated SVG
+            <object data="src/animations/token-knitting.svg" type="image/svg+xml">
+              Token Knitting animated SVG
             </object>
           </div>
           <div class="copy">
-            <span class="state-id">working.default</span>
-            <h2>Reasoning Gearbox</h2>
-            <p>Clutch, crank, and three interlocking gears communicate sustained tool activity.</p>
-            <div class="chips"><span class="chip">2.8s loop</span><span class="chip">Continuous work</span></div>
+            <span class="state-id">working</span>
+            <h2>Token Knitting</h2>
+            <p>Knits a striped ribbon through four beats, pulls it long, and inspects the result.</p>
+            <div class="chips"><span class="chip">4.8s loop</span><span class="chip">Knit → inspect</span></div>
+          </div>
+        </article>
+
+        <article class="motion-card">
+          <div class="stage">
+            <object data="src/animations/hatchling-parade.svg" type="image/svg+xml">
+              Hatchling Parade animated SVG
+            </object>
+          </div>
+          <div class="copy">
+            <span class="state-id">delegating</span>
+            <h2>Hatchling Parade</h2>
+            <p>Wakes three tiny helpers in sequence, points forward, and watches them scurry.</p>
+            <div class="chips"><span class="chip">4.8s loop</span><span class="chip">Staggered helpers</span></div>
+          </div>
+        </article>
+
+        <article class="motion-card">
+          <div class="stage">
+            <object data="src/animations/stuck-jar.svg" type="image/svg+xml">
+              Stuck Jar animated SVG
+            </object>
+          </div>
+          <div class="copy">
+            <span class="state-id">needs_owner</span>
+            <h2>Stuck Jar</h2>
+            <p>Twists twice, strains, gives up with dignity, and offers the jar to the owner.</p>
+            <div class="chips"><span class="chip">4.2s loop</span><span class="chip">Try → ask</span></div>
           </div>
         </article>
       </section>
+
+      <p class="archive">
+        Earlier mechanical prototypes remain available:
+        <a href="src/animations/inference-dial.svg">Inference Dial</a> and
+        <a href="src/animations/reasoning-gearbox.svg">Reasoning Gearbox</a>.
+      </p>
     </main>
   </body>
 </html>

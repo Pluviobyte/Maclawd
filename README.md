@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="previews/all-primary-states.png" width="860" alt="Maclawd twelve primary state concepts">
+  <img src="previews/playful-core-motion.png" width="860" alt="Maclawd playful core motion group">
 </p>
 
 <h1 align="center">Maclawd</h1>
@@ -45,19 +45,24 @@ mount, or ground base.
 These are static pose and accessory candidates. They do not claim that all
 twelve CSS animations are complete.
 
-### Playful v3 direction study
+### Playful core motion group
 
-The next direction replaces persistent machinery with temporary domestic
-metaphors and short visual gags. Its first four candidates are Shell Shuffle,
-Token Knitting, Hatchling Parade, and Stuck Jar.
+The first approved playful group replaces persistent machinery with temporary
+domestic metaphors and short visual gags:
 
-[Open the playful v3 review](design/concepts/playful-core-v3.html) ·
+| `thinking` | `working` | `delegating` | `needs_owner` |
+| --- | --- | --- | --- |
+| <img src="previews/shell-shuffle.gif" width="180" alt="Maclawd Shell Shuffle animation"> | <img src="previews/token-knitting.gif" width="180" alt="Maclawd Token Knitting animation"> | <img src="previews/hatchling-parade.gif" width="180" alt="Maclawd Hatchling Parade animation"> | <img src="previews/stuck-jar.gif" width="180" alt="Maclawd Stuck Jar animation"> |
+| Shell Shuffle | Token Knitting | Hatchling Parade | Stuck Jar |
+
+[Open the live motion lab](index.html) ·
+[View the four-phase 96px check](previews/playful-core-motion-96px.png) ·
 [Read the design rationale](design/playful-motion-direction-v3.md)
 
-## First executable motion baseline
+## Earlier executable motion baseline
 
-The first three implemented states keep the locked Clawd body and eye geometry
-while changing posture, rhythm, and connected machinery:
+These sources remain available for design history. `idle` stays current;
+Inference Dial and Reasoning Gearbox have been superseded by the playful group:
 
 - `idle` — **Calm Calibration**, a 5.6-second accessory-free breathing loop
 - `thinking` — **Inference Dial**, a 2.4-second three-position selector loop
@@ -81,9 +86,9 @@ machine-readable contract in
 ## Repository status
 
 This repository has an independent Git history and contains only Maclawd work.
-The current checkpoint includes three earlier animation sources, the complete
-twelve-state static concept set, previews, the full design contract, browser
-motion lab, and development roadmap.
+The current checkpoint includes five active animations, two retained mechanical
+prototypes, the complete twelve-state static concept set, previews, the full
+design contract, browser motion lab, and development roadmap.
 
 See [`PROGRESS.md`](PROGRESS.md) for completed work and the full build sequence.
 

@@ -1,8 +1,9 @@
 # Maclawd playful motion direction v3
 
-Status: direction study. The mechanical v2 set remains unchanged. This document
-reframes the state system around character acting, everyday metaphors, and short
-visual stories before any production animation is replaced.
+Status: approved direction with the first four production animation candidates
+implemented. The mechanical v2 set remains available as design history. This
+document reframes the state system around character acting, everyday metaphors,
+and short visual stories.
 
 ## What the reference project gets right
 
@@ -51,14 +52,15 @@ Three structural ideas are worth keeping without copying its actions:
 | `success` | Self High-five | Both claws miss once, connect on the second try, and the body hops with pride. |
 | `error` | Yarn Tangle | The working yarn knots around one claw; Maclawd pulls, tumbles, and peeks up. |
 
-## First visual checkpoint
+## First implemented motion group
 
-The first four v3 static candidates test whether this direction feels alive:
+The first four v3 states now have CSS/SVG loops, GIF previews, contact sheets,
+reduced-motion behavior, and a shared 96px motion check:
 
 - `thinking` — Shell Shuffle
 - `working` — Token Knitting
 - `delegating` — Hatchling Parade
 - `needs_owner` — Stuck Jar
 
-If their silhouettes and humor are approved, the remaining states should be
-redrawn in this language before animation timing is implemented.
+The remaining states should be redrawn in this language before their animation
+timing is implemented.

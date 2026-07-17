@@ -1,0 +1,167 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="-15 -25 45 45"
+     width="500"
+     height="500"
+     shape-rendering="crispEdges">
+  <title>Maclawd Token Knitting</title>
+  <desc>Maclawd knits a striped ribbon, pulls it longer, and pauses to inspect the result.</desc>
+  <defs>
+    <style>
+      .knit-body,
+      .knit-left-claw,
+      .knit-right-claw,
+      .knit-left-needle,
+      .knit-right-needle,
+      .knit-yarn-ball,
+      .knit-scarf,
+      .knit-gaze,
+      .knit-blink {
+        transform-box: view-box;
+        animation-duration: 4.8s;
+        animation-iteration-count: infinite;
+        animation-timing-function: step-end;
+      }
+
+      .knit-body { transform-origin: 7.5px 15px; animation-name: knit-body-story; }
+      .knit-left-claw { transform-origin: 1px 10px; animation-name: knit-left-story; }
+      .knit-right-claw { transform-origin: 14px 10px; animation-name: knit-right-story; }
+      .knit-left-needle { transform-origin: 4px 13px; animation-name: knit-left-needle-story; }
+      .knit-right-needle { transform-origin: 11px 13px; animation-name: knit-right-needle-story; }
+      .knit-yarn-ball { transform-origin: -1.5px 13.5px; animation-name: knit-ball-story; }
+      .knit-scarf { transform-origin: 4px 16px; animation-name: knit-scarf-story; }
+      .knit-gaze { animation-name: knit-gaze-story; }
+      .knit-blink { transform-origin: 7.5px 9px; animation-name: knit-blink-story; }
+
+      @keyframes knit-body-story {
+        0%, 12%, 26%, 40%, 54%, 68%, 84%, 100% { transform: translateY(-1px); }
+        13%, 19%, 27%, 33%, 41%, 47%, 55%, 61% { transform: translateY(0); }
+        20%, 25%, 34%, 39%, 48%, 53%, 62%, 67% { transform: translateY(-2px); }
+        69%, 83% { transform: translate(1px, -2px); }
+        85%, 94% { transform: translateY(0); }
+        95%, 99% { transform: translateY(-1px); }
+      }
+
+      @keyframes knit-left-story {
+        0%, 12%, 26%, 40%, 54%, 68%, 84%, 100% { transform: translate(2px, -2px); }
+        13%, 25%, 41%, 53% { transform: translate(3px, -1px); }
+        27%, 39%, 55%, 67% { transform: translate(2px, -3px); }
+        69%, 83% { transform: translate(4px, 0); }
+        85%, 94% { transform: translate(1px, -1px); }
+        95%, 100% { transform: translate(2px, -2px); }
+      }
+
+      @keyframes knit-right-story {
+        0%, 12%, 26%, 40%, 54%, 68%, 84%, 100% { transform: translate(-2px, -2px); }
+        13%, 25%, 41%, 53% { transform: translate(-2px, -3px); }
+        27%, 39%, 55%, 67% { transform: translate(-3px, -1px); }
+        69%, 83% { transform: translate(-1px, 1px); }
+        85%, 94% { transform: translate(-1px, -1px); }
+        95%, 100% { transform: translate(-2px, -2px); }
+      }
+
+      @keyframes knit-left-needle-story {
+        0%, 12%, 26%, 40%, 54%, 68%, 100% { transform: rotate(-24deg) translateY(0); }
+        13%, 25%, 41%, 53% { transform: rotate(-12deg) translateY(1px); }
+        27%, 39%, 55%, 67% { transform: rotate(-30deg) translateY(-1px); }
+        69%, 84% { transform: rotate(-42deg) translate(2px, 1px); }
+        85%, 99% { transform: rotate(-24deg) translateY(0); }
+      }
+
+      @keyframes knit-right-needle-story {
+        0%, 12%, 26%, 40%, 54%, 68%, 100% { transform: rotate(24deg) translateY(0); }
+        13%, 25%, 41%, 53% { transform: rotate(30deg) translateY(-1px); }
+        27%, 39%, 55%, 67% { transform: rotate(12deg) translateY(1px); }
+        69%, 84% { transform: rotate(38deg) translate(-1px, 2px); }
+        85%, 99% { transform: rotate(24deg) translateY(0); }
+      }
+
+      @keyframes knit-ball-story {
+        0%, 12%, 26%, 40%, 54%, 68%, 100% { transform: rotate(0deg); }
+        13%, 25%, 41%, 53% { transform: rotate(-12deg); }
+        27%, 39%, 55%, 67% { transform: rotate(12deg); }
+        69%, 84% { transform: translateX(1px) rotate(12deg); }
+        85%, 99% { transform: rotate(0deg); }
+      }
+
+      @keyframes knit-scarf-story {
+        0%, 12%, 100% { transform: scaleX(0.2); }
+        13%, 26% { transform: scaleX(0.4); }
+        27%, 40% { transform: scaleX(0.6); }
+        41%, 54% { transform: scaleX(0.8); }
+        55%, 68% { transform: scaleX(1); }
+        69%, 84% { transform: translate(1px, -2px) rotate(-4deg) scaleX(1); }
+        85%, 94% { transform: translate(3px, 0) scaleX(0.45); }
+        95%, 99% { transform: scaleX(0.2); }
+      }
+
+      @keyframes knit-gaze-story {
+        0%, 68%, 84%, 100% { transform: translate(0, 1px); }
+        69%, 83% { transform: translate(1px, 0); }
+        85%, 94% { transform: translate(0, 0); }
+        95%, 100% { transform: translate(0, 1px); }
+      }
+
+      @keyframes knit-blink-story {
+        0%, 87%, 93%, 100% { transform: scaleY(1); }
+        88%, 92% { transform: scaleY(0.1); }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .knit-body,
+        .knit-left-claw,
+        .knit-right-claw,
+        .knit-left-needle,
+        .knit-right-needle,
+        .knit-yarn-ball,
+        .knit-scarf,
+        .knit-gaze { animation: none; }
+        .knit-blink { animation: knit-reduced-blink 8s 1 step-end; }
+      }
+
+      @keyframes knit-reduced-blink {
+        0%, 72%, 82%, 100% { transform: scaleY(1); }
+        73%, 81% { transform: scaleY(0.1); }
+      }
+    </style>
+  </defs>
+
+  <g class="knit-yarn-ball">
+    <rect x="-4" y="11" width="5" height="5" fill="#7BC8C4"/>
+    <rect x="-3" y="10" width="3" height="1" fill="#AEE1DE"/>
+    <rect x="-3" y="12" width="4" height="1" fill="#3E7775"/>
+    <rect x="-2" y="14" width="3" height="1" fill="#AEE1DE"/>
+  </g>
+  <path d="M 0 14 H 2 V 12 H 5 V 10 H 9 V 12 H 13 V 14 H 16" fill="none" stroke="#7BC8C4" stroke-width="1"/>
+
+  <g class="knit-scarf">
+    <rect x="4" y="15" width="12" height="2" fill="#F6C85F"/>
+    <rect x="6" y="15" width="2" height="2" fill="#B9A1D9"/>
+    <rect x="10" y="15" width="2" height="2" fill="#7BC8C4"/>
+    <rect x="15" y="14" width="1" height="1" fill="#F6C85F"/>
+  </g>
+
+  <g class="knit-left-needle" fill="#5A4A42">
+    <rect x="3" y="7" width="1" height="7"/>
+  </g>
+  <g class="knit-right-needle" fill="#5A4A42">
+    <rect x="11" y="7" width="1" height="7"/>
+  </g>
+
+  <g id="body-js" class="knit-body">
+    <g id="body-color-group" fill="#DE886D">
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+      <rect id="torso" x="2" y="6" width="11" height="7"/>
+      <g class="knit-left-claw"><rect id="left-arm" x="0" y="9" width="2" height="2"/></g>
+      <g class="knit-right-claw"><rect id="right-arm" x="13" y="9" width="2" height="2"/></g>
+    </g>
+    <g id="eyes-js" class="knit-gaze" fill="#000000">
+      <g class="knit-blink">
+        <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+        <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+      </g>
+    </g>
+  </g>
+</svg>

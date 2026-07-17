@@ -1,0 +1,154 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="-15 -25 45 45"
+     width="500"
+     height="500"
+     shape-rendering="crispEdges">
+  <title>Maclawd Hatchling Parade</title>
+  <desc>Maclawd wakes three tiny helper crabs, points them forward, and watches them scurry away.</desc>
+  <defs>
+    <style>
+      .parade-body,
+      .parade-left-claw,
+      .parade-right-claw,
+      .parade-gaze,
+      .parade-blink,
+      .hatch-one,
+      .hatch-two,
+      .hatch-three {
+        transform-box: view-box;
+        animation-duration: 4.8s;
+        animation-iteration-count: infinite;
+        animation-timing-function: step-end;
+      }
+
+      .parade-body { transform-origin: 7.5px 15px; animation-name: parade-body-story; }
+      .parade-left-claw { transform-origin: 1px 10px; animation-name: parade-left-story; }
+      .parade-right-claw { transform-origin: 14px 10px; animation-name: parade-right-story; }
+      .parade-gaze { animation-name: parade-gaze-story; }
+      .parade-blink { transform-origin: 7.5px 9px; animation-name: parade-blink-story; }
+      .hatch-one { animation-name: hatch-one-story; }
+      .hatch-two { animation-name: hatch-two-story; }
+      .hatch-three { animation-name: hatch-three-story; }
+
+      @keyframes parade-body-story {
+        0%, 10%, 74%, 92%, 100% { transform: translate(-2px, -3px); }
+        11%, 24% { transform: translate(-2px, -2px); }
+        25%, 42% { transform: translate(-1px, -3px); }
+        43%, 73% { transform: translate(0, -3px); }
+        75%, 91% { transform: translate(-1px, -2px); }
+      }
+
+      @keyframes parade-left-story {
+        0%, 24%, 74%, 100% { transform: translate(0, 0); }
+        25%, 42% { transform: translate(2px, 1px); }
+        43%, 73% { transform: translate(3px, -1px); }
+        75%, 91% { transform: translate(1px, 0); }
+        92%, 95% { transform: translate(0, -1px); }
+        96%, 100% { transform: translate(0, 0); }
+      }
+
+      @keyframes parade-right-story {
+        0%, 10%, 24%, 74%, 100% { transform: translate(0, 0); }
+        11%, 24% { transform: translate(-2px, 2px); }
+        25%, 42% { transform: translate(1px, -1px); }
+        43%, 73% { transform: translate(3px, -2px); }
+        75%, 91% { transform: translate(2px, -1px); }
+        92%, 95% { transform: translate(0, 0); }
+        96%, 100% { transform: translate(0, 0); }
+      }
+
+      @keyframes parade-gaze-story {
+        0%, 24%, 100% { transform: translate(0, 1px); }
+        25%, 42% { transform: translate(0, 0); }
+        43%, 91% { transform: translate(1px, 1px); }
+        92%, 95% { transform: translate(0, 0); }
+        96%, 100% { transform: translate(0, 1px); }
+      }
+
+      @keyframes parade-blink-story {
+        0%, 90%, 95%, 100% { transform: scaleY(1); }
+        91%, 94% { transform: scaleY(0.1); }
+      }
+
+      @keyframes hatch-one-story {
+        0%, 10%, 100% { opacity: 0; transform: translate(4px, -3px); }
+        11%, 24% { opacity: 1; transform: translate(4px, -3px); }
+        25%, 42% { opacity: 1; transform: translate(2px, -2px); }
+        43%, 58% { opacity: 1; transform: translate(0, 0); }
+        59%, 74% { opacity: 1; transform: translate(2px, -1px); }
+        75%, 90% { opacity: 1; transform: translate(5px, 0); }
+        91%, 99% { opacity: 0; transform: translate(8px, 0); }
+      }
+
+      @keyframes hatch-two-story {
+        0%, 20%, 100% { opacity: 0; transform: translate(-2px, -3px); }
+        21%, 34% { opacity: 1; transform: translate(-2px, -3px); }
+        35%, 50% { opacity: 1; transform: translate(-1px, -1px); }
+        51%, 66% { opacity: 1; transform: translate(1px, 0); }
+        67%, 82% { opacity: 1; transform: translate(3px, -1px); }
+        83%, 94% { opacity: 1; transform: translate(6px, 0); }
+        95%, 99% { opacity: 0; transform: translate(8px, 0); }
+      }
+
+      @keyframes hatch-three-story {
+        0%, 30%, 100% { opacity: 0; transform: translate(-8px, -3px); }
+        31%, 44% { opacity: 1; transform: translate(-8px, -3px); }
+        45%, 58% { opacity: 1; transform: translate(-6px, -2px); }
+        59%, 72% { opacity: 1; transform: translate(-4px, 0); }
+        73%, 86% { opacity: 1; transform: translate(-2px, -1px); }
+        87%, 96% { opacity: 1; transform: translate(1px, 0); }
+        97%, 99% { opacity: 0; transform: translate(4px, 0); }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .parade-body,
+        .parade-left-claw,
+        .parade-right-claw,
+        .parade-gaze,
+        .hatch-one,
+        .hatch-two,
+        .hatch-three { animation: none; opacity: 1; }
+        .parade-blink { animation: parade-reduced-blink 8s 1 step-end; }
+      }
+
+      @keyframes parade-reduced-blink {
+        0%, 72%, 82%, 100% { transform: scaleY(1); }
+        73%, 81% { transform: scaleY(0.1); }
+      }
+    </style>
+  </defs>
+
+  <g id="body-js" class="parade-body">
+    <g id="body-color-group" fill="#DE886D">
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+      <rect id="torso" x="2" y="6" width="11" height="7"/>
+      <g class="parade-left-claw"><rect id="left-arm" x="0" y="9" width="2" height="2"/></g>
+      <g class="parade-right-claw"><rect id="right-arm" x="13" y="9" width="2" height="2"/></g>
+    </g>
+    <g id="eyes-js" class="parade-gaze" fill="#000000">
+      <g class="parade-blink">
+        <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+        <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+      </g>
+    </g>
+  </g>
+
+  <g transform="translate(4 12)"><g class="hatch-one" fill="#DE886D">
+    <rect x="0" y="0" width="4" height="3"/><rect x="-1" y="1" width="1" height="1"/><rect x="4" y="1" width="1" height="1"/>
+    <rect x="1" y="3" width="1" height="1"/><rect x="3" y="3" width="1" height="1"/>
+    <rect x="1" y="1" width="1" height="1" fill="#000000"/><rect x="3" y="1" width="1" height="1" fill="#000000"/>
+  </g></g>
+  <g transform="translate(10 14)"><g class="hatch-two" fill="#F0A05F">
+    <rect x="0" y="0" width="4" height="2"/><rect x="-1" y="1" width="1" height="1"/><rect x="4" y="1" width="1" height="1"/>
+    <rect x="1" y="2" width="1" height="1"/><rect x="3" y="2" width="1" height="1"/>
+    <rect x="1" y="0" width="1" height="1" fill="#000000"/><rect x="3" y="0" width="1" height="1" fill="#000000"/>
+  </g></g>
+  <g transform="translate(16 12)"><g class="hatch-three" fill="#C98FBA">
+    <rect x="0" y="0" width="4" height="3"/><rect x="-1" y="1" width="1" height="1"/><rect x="4" y="1" width="1" height="1"/>
+    <rect x="1" y="3" width="1" height="1"/><rect x="3" y="3" width="1" height="1"/>
+    <rect x="1" y="1" width="1" height="1" fill="#000000"/><rect x="3" y="1" width="1" height="1" fill="#000000"/>
+  </g></g>
+</svg>

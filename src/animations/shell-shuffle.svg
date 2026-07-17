@@ -1,0 +1,149 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="-15 -25 45 45"
+     width="500"
+     height="500"
+     shape-rendering="crispEdges">
+  <title>Maclawd Shell Shuffle</title>
+  <desc>Maclawd compares three colorful shells, checks each one, and carefully chooses the middle shell.</desc>
+  <defs>
+    <style>
+      .shell-body,
+      .shell-left-claw,
+      .shell-right-claw,
+      .shell-gaze,
+      .shell-blink,
+      .shell-teal,
+      .shell-yellow,
+      .shell-purple {
+        transform-box: view-box;
+        animation-duration: 5.6s;
+        animation-iteration-count: infinite;
+        animation-timing-function: step-end;
+      }
+
+      .shell-body { transform-origin: 7.5px 15px; animation-name: shell-body-story; }
+      .shell-left-claw { transform-origin: 1px 10px; animation-name: shell-left-story; }
+      .shell-right-claw { transform-origin: 14px 10px; animation-name: shell-right-story; }
+      .shell-gaze { animation-name: shell-gaze-story; }
+      .shell-blink { transform-origin: 7.5px 9px; animation-name: shell-blink-story; }
+      .shell-teal { transform-origin: 2px 13px; animation-name: shell-teal-hop; }
+      .shell-yellow { transform-origin: 7px 13px; animation-name: shell-yellow-hop; }
+      .shell-purple { transform-origin: 13px 13px; animation-name: shell-purple-hop; }
+
+      @keyframes shell-body-story {
+        0%, 10%, 28%, 46%, 64%, 92%, 100% { transform: translate(0, -1px); }
+        11%, 27% { transform: translate(-1px, 0); }
+        29%, 45% { transform: translate(0, 0); }
+        47%, 63% { transform: translate(1px, 0); }
+        65%, 82% { transform: translate(0, -2px); }
+        83%, 91% { transform: translate(0, -1px); }
+      }
+
+      @keyframes shell-left-story {
+        0%, 10%, 28%, 46%, 64%, 100% { transform: translate(0, 0); }
+        11%, 27% { transform: translate(1px, 2px); }
+        29%, 45% { transform: translate(3px, 2px); }
+        47%, 63% { transform: translate(5px, 1px); }
+        65%, 82% { transform: translate(4px, -1px); }
+        83%, 91% { transform: translate(1px, 0); }
+        92%, 100% { transform: translate(0, 0); }
+      }
+
+      @keyframes shell-right-story {
+        0%, 10%, 28%, 46%, 64%, 100% { transform: translate(0, 0); }
+        11%, 27% { transform: translate(-5px, 1px); }
+        29%, 45% { transform: translate(-3px, 2px); }
+        47%, 63% { transform: translate(-1px, 2px); }
+        65%, 82% { transform: translate(-4px, -1px); }
+        83%, 91% { transform: translate(-1px, 0); }
+        92%, 100% { transform: translate(0, 0); }
+      }
+
+      @keyframes shell-gaze-story {
+        0%, 10%, 28%, 46%, 64%, 82%, 100% { transform: translate(0, 1px); }
+        11%, 27% { transform: translate(-1px, 1px); }
+        47%, 63% { transform: translate(1px, 1px); }
+        83%, 91% { transform: translate(0, 0); }
+        92%, 100% { transform: translate(0, 1px); }
+      }
+
+      @keyframes shell-blink-story {
+        0%, 85%, 91%, 100% { transform: scaleY(1); }
+        86%, 90% { transform: scaleY(0.1); }
+      }
+
+      @keyframes shell-teal-hop {
+        0%, 10%, 28%, 100% { transform: translateY(0); }
+        11%, 20% { transform: translateY(-2px); }
+        21%, 27% { transform: translateY(-1px); }
+      }
+
+      @keyframes shell-yellow-hop {
+        0%, 28%, 46%, 64%, 100% { transform: translateY(0); }
+        29%, 38% { transform: translateY(-2px); }
+        39%, 45% { transform: translateY(-1px); }
+        65%, 82% { transform: translateY(-5px); }
+        83%, 91% { transform: translateY(-2px); }
+        92%, 100% { transform: translateY(0); }
+      }
+
+      @keyframes shell-purple-hop {
+        0%, 46%, 64%, 100% { transform: translateY(0); }
+        47%, 56% { transform: translateY(-2px); }
+        57%, 63% { transform: translateY(-1px); }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .shell-body,
+        .shell-left-claw,
+        .shell-right-claw,
+        .shell-gaze,
+        .shell-teal,
+        .shell-yellow,
+        .shell-purple { animation: none; }
+        .shell-blink { animation: shell-reduced-blink 8s 1 step-end; }
+      }
+
+      @keyframes shell-reduced-blink {
+        0%, 72%, 82%, 100% { transform: scaleY(1); }
+        73%, 81% { transform: scaleY(0.1); }
+      }
+    </style>
+  </defs>
+
+  <rect x="-2" y="15" width="19" height="1" fill="#E8D9B5"/>
+
+  <g class="shell-teal">
+    <rect x="0" y="12" width="4" height="3" fill="#7BC8C4"/>
+    <rect x="1" y="11" width="2" height="1" fill="#BDE7E4"/>
+    <rect x="1" y="13" width="1" height="1" fill="#3E7775"/>
+  </g>
+  <g class="shell-yellow">
+    <rect x="5" y="12" width="4" height="3" fill="#F6C85F"/>
+    <rect x="6" y="11" width="2" height="1" fill="#FFE59A"/>
+    <rect x="7" y="13" width="1" height="1" fill="#B67B19"/>
+  </g>
+  <g class="shell-purple">
+    <rect x="11" y="12" width="4" height="3" fill="#B9A1D9"/>
+    <rect x="12" y="11" width="2" height="1" fill="#E6D9F5"/>
+    <rect x="13" y="13" width="1" height="1" fill="#72558F"/>
+  </g>
+
+  <g id="body-js" class="shell-body">
+    <g id="body-color-group" fill="#DE886D">
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+      <rect id="torso" x="2" y="6" width="11" height="7"/>
+      <g class="shell-left-claw"><rect id="left-arm" x="0" y="9" width="2" height="2"/></g>
+      <g class="shell-right-claw"><rect id="right-arm" x="13" y="9" width="2" height="2"/></g>
+    </g>
+    <g id="eyes-js" class="shell-gaze" fill="#000000">
+      <g class="shell-blink">
+        <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+        <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+      </g>
+    </g>
+  </g>
+</svg>
