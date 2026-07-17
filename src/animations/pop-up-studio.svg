@@ -1,7 +1,7 @@
 <?xml-stylesheet type="text/css" href="maclawd-actions.css"?>
 <svg xmlns="http://www.w3.org/2000/svg" class="state-workspace" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
   <title>Maclawd Mat Move-in</title><desc>Maclawd unrolls one broad patchwork floor mat, steps onto it, and settles into a ready pose.</desc>
-  <g class="mat motion"><path d="M-8 14H17V19H-8Z" fill="#7BC8C4"/><rect x="-6" y="15" width="4" height="3" fill="#BDE7E4"/><rect x="1" y="15" width="4" height="3" fill="#F6C85F"/><rect x="8" y="15" width="4" height="3" fill="#B9A1D9"/><rect x="15" y="15" width="2" height="3" fill="#BDE7E4"/></g>
+  <g transform="translate(1.5 0) scale(.8 1)"><g class="mat motion"><path d="M-8 14H17V19H-8Z" fill="#7BC8C4"/><rect x="-6" y="15" width="4" height="3" fill="#BDE7E4"/><rect x="1" y="15" width="4" height="3" fill="#F6C85F"/><rect x="8" y="15" width="4" height="3" fill="#B9A1D9"/><rect x="15" y="15" width="2" height="3" fill="#BDE7E4"/></g></g>
   <g class="roll motion"><rect x="-9" y="13" width="3" height="7" fill="#3E7775"/><rect x="-8" y="14" width="2" height="5" fill="#BDE7E4"/></g>
   <g class="actor motion"><g fill="#DE886D">
     <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/><rect id="inner-left-leg" x="5" y="13" width="1" height="2"/><rect id="inner-right-leg" x="9" y="13" width="1" height="2"/><rect id="outer-right-leg" x="11" y="13" width="1" height="2"/><rect id="torso" x="2" y="6" width="11" height="7"/>

@@ -1,6 +1,6 @@
 <?xml-stylesheet type="text/css" href="maclawd-actions.css"?>
 <svg xmlns="http://www.w3.org/2000/svg" class="state-edge" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
   <title>Maclawd Curtain Peek</title><desc>Maclawd hides behind a broad pixel curtain, peeks around its hem, blinks, and retreats.</desc>
-  <g class="curtain"><path d="M18 -25H30V20H18V17H20V12H18V8H20V3H18V-2H20V-7H18V-12H20V-17H18Z" fill="#72558F"/><path d="M18 -25H23V20H18V17H20V12H18V8H20V3H18V-2H20V-7H18V-12H20V-17H18Z" fill="#B9A1D9"/><rect x="18" y="7" width="8" height="3" fill="#F6C85F"/></g>
   <g class="actor motion"><g fill="#DE886D"><rect id="outer-left-leg" x="3" y="13" width="1" height="2"/><rect id="inner-left-leg" x="5" y="13" width="1" height="2"/><rect id="inner-right-leg" x="9" y="13" width="1" height="2"/><rect id="outer-right-leg" x="11" y="13" width="1" height="2"/><rect id="torso" x="2" y="6" width="11" height="7"/><g class="left-claw motion"><rect id="left-arm" x="0" y="9" width="2" height="2"/></g><g class="right-claw"><rect id="right-arm" x="13" y="9" width="2" height="2"/></g></g><g class="eyes motion blink" fill="#000000"><rect id="left-eye" x="4" y="8" width="1" height="2"/><rect id="right-eye" x="10" y="8" width="1" height="2"/></g></g>
+  <g class="curtain"><path d="M9 -25H22V20H9V17H11V12H9V8H11V3H9V-2H11V-7H9V-12H11V-17H9Z" fill="#72558F"/><path d="M9 -25H15V20H9V17H11V12H9V8H11V3H9V-2H11V-7H9V-12H11V-17H9Z" fill="#B9A1D9"/><rect x="9" y="7" width="9" height="3" fill="#F6C85F"/></g>
 </svg>

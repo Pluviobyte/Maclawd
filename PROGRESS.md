@@ -48,6 +48,9 @@ runtime and event integration have not started.
   production SVG sources.
 - Rendered every active action into a deterministic V5 GIF preview and generated
   new 64px and 96px complete-set boards.
+- Added a compact-footprint gate after visual review: all 23 actions now stay
+  within 40–52px horizontally at the 96px QA size instead of expanding to
+  60–81px; scenes remain attached to the body or stack vertically.
 - Fixed the deterministic preview renderer to resize the SVG root before
   pet-size capture; all 18 GIF previews now contain real animated content.
 - Verified all 26 SVG sources parse and preserve the locked source rectangles:

@@ -1,12 +1,12 @@
 <?xml-stylesheet type="text/css" href="maclawd-actions.css"?>
 <svg xmlns="http://www.w3.org/2000/svg" class="state-away" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
   <title>Maclawd Bedtime Pull</title><desc>Maclawd climbs beside the bed and pulls the same large blanket onto the mattress.</desc>
-  <g class="bed-scene"><path d="M-10 10H20V20H-10Z" fill="#6F8A78"/><path d="M-9 10H19V19H-9Z" fill="#EAF4EA"/><path d="M-7 11H2V15H-7Z" fill="#FFF4D7"/><rect x="-5" y="12" width="5" height="1" fill="#FFFFFF"/><rect x="-8" y="18" width="26" height="1" fill="#B9D2C0"/></g>
-  <g class="blanket motion">
+  <g class="bed-scene" transform="translate(2.25 0) scale(.7 1)"><path d="M-10 10H20V20H-10Z" fill="#6F8A78"/><path d="M-9 10H19V19H-9Z" fill="#EAF4EA"/><path d="M-7 11H2V15H-7Z" fill="#FFF4D7"/><rect x="-5" y="12" width="5" height="1" fill="#FFFFFF"/><rect x="-8" y="18" width="26" height="1" fill="#B9D2C0"/></g>
+  <g transform="translate(2.25 0) scale(.7 1)"><g class="blanket motion">
     <path d="M-7 10H-1V11H2V16H0V18H-2V17H-5V18H-7Z" fill="#B9A1D9"/>
     <path d="M-6 10H-1V11H1V12H-6Z" fill="#E7DCF2"/><rect x="-6" y="14" width="7" height="1" fill="#8B73B3"/>
     <rect x="-6" y="17" width="1" height="2" fill="#F6C85F"/><rect x="-2" y="17" width="1" height="2" fill="#F6C85F"/><rect x="1" y="16" width="1" height="2" fill="#F6C85F"/>
-  </g>
+  </g></g>
   <g class="actor motion"><g fill="#DE886D">
     <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/><rect id="inner-left-leg" x="5" y="13" width="1" height="2"/><rect id="inner-right-leg" x="9" y="13" width="1" height="2"/><rect id="outer-right-leg" x="11" y="13" width="1" height="2"/><rect id="torso" x="2" y="6" width="11" height="7"/>
     <g class="left-claw motion"><rect id="left-arm" x="0" y="9" width="2" height="2"/></g><g class="right-claw motion"><rect id="right-arm" x="13" y="9" width="2" height="2"/></g>

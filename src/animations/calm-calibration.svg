@@ -83,7 +83,7 @@
     </style>
   </defs>
 
-  <g id="idle-cushion">
+  <g id="idle-cushion" transform="translate(1.875 0) scale(.75 1)">
     <path d="M-3 13H18V15H20V18H18V20H-3V18H-5V15H-3Z" fill="#B96858"/>
     <path d="M-2 13H17V15H19V17H17V19H-2V17H-4V15H-2Z" fill="#F3C9B9"/>
     <rect x="0" y="14" width="15" height="1" fill="#FBE6DE"/>

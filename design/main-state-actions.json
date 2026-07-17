@@ -20,7 +20,7 @@
   "designRules": {
     "readingOrder": ["recognizable mini-scene", "body silhouette", "physical contact", "pose"],
     "maxSceneFamiliesPerAction": 1,
-    "sceneScale": "roughly 1.2x to 2.5x torso width",
+    "sceneScale": "usually 1.1x to 1.6x the base actor width; rendered horizontal footprint must stay at or below 52px at the 96px QA size",
     "forbidden": ["text", "UI panels", "floating punctuation", "speed lines", "glows", "shadows"],
     "exceptions": ["sleeping may use the user-approved hard-edged pixel Zzz sequence"],
     "qaSizes": [64, 96]

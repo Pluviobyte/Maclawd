@@ -34,9 +34,9 @@
 }
 @keyframes away-eyes { 0%,48%,100%{transform:scaleY(1)} 49%,86%{transform:translateY(1px) scaleY(.35)} 87%,99%{transform:scaleY(1)} }
 @keyframes away-blanket {
-  0%,12%,100%{transform:translate(-7px,1px) rotate(-6deg)} 13%,30%{transform:translate(-4px,0) rotate(0)}
-  31%,48%{transform:translate(-1px,0) rotate(5deg)} 49%,68%{transform:translate(2px,-1px) rotate(8deg)}
-  69%,86%{transform:translate(4px,-2px) rotate(10deg)} 87%,99%{transform:translate(-7px,1px) rotate(-6deg)}
+  0%,12%,100%{transform:translate(-3px,1px) rotate(-6deg)} 13%,30%{transform:translate(-2px,0) rotate(0)}
+  31%,48%{transform:translate(0,0) rotate(5deg)} 49%,68%{transform:translate(2px,-1px) rotate(8deg)}
+  69%,86%{transform:translate(3px,-2px) rotate(10deg)} 87%,99%{transform:translate(-3px,1px) rotate(-6deg)}
 }
 
 .state-sleeping { --duration: 6.4s; }
@@ -97,7 +97,7 @@
 @keyframes wake-left { 0%,14%,100%{transform:translate(2px,1px)} 15%,32%{transform:translate(-4px,-3px)} 33%,50%{transform:translate(-3px,-1px)} 51%,68%{transform:translate(-1px,0)} 69%,99%{transform:translate(0,0)} }
 @keyframes wake-right { 0%,14%,100%{transform:translate(-2px,1px)} 15%,32%{transform:translate(4px,-3px)} 33%,50%{transform:translate(3px,-1px)} 51%,68%{transform:translate(1px,0)} 69%,99%{transform:translate(0,0)} }
 @keyframes wake-eyes { 0%,14%{transform:scaleY(.15)} 15%,54%{transform:scaleY(1)} 55%,62%{transform:scaleY(.15)} 63%,100%{transform:scaleY(1)} }
-@keyframes wake-blanket { 0%,14%,100%{transform:translate(4px,-3px) rotate(0)} 15%,32%{transform:translate(-1px,-4px) rotate(-8deg)} 33%,50%{transform:translate(-7px,-1px) rotate(-18deg)} 51%,99%{transform:translate(-10px,1px) rotate(-22deg)} }
+@keyframes wake-blanket { 0%,14%,100%{transform:translate(2px,-3px) rotate(0)} 15%,32%{transform:translate(0,-4px) rotate(-6deg)} 33%,50%{transform:translate(-2px,-1px) rotate(-10deg)} 51%,99%{transform:translate(-3px,1px) rotate(-12deg)} }
 
 .state-thinking { --duration: 4.6s; }
 .state-thinking .actor { animation-name: think-body; }
@@ -137,9 +137,9 @@
 @keyframes delegate-left { 0%,12%,100%{transform:translate(0,0)} 13%,34%{transform:translate(-4px,1px)} 35%,58%{transform:translate(3px,-2px)} 59%,80%{transform:translate(2px,-1px)} 81%,99%{transform:translate(0,0)} }
 @keyframes delegate-right { 0%,12%,100%{transform:translate(0,0)} 13%,34%{transform:translate(-3px,-2px)} 35%,58%{transform:translate(4px,1px)} 59%,80%{transform:translate(3px,-1px)} 81%,99%{transform:translate(0,0)} }
 @keyframes delegate-eyes { 0%,12%,100%{transform:translate(-1px,1px)} 13%,34%{transform:translate(-2px,1px)} 35%,80%{transform:translate(1px,1px)} 81%,88%{transform:scaleY(.15)} 89%,99%{transform:translate(-1px,1px)} }
-@keyframes helper-a { 0%,12%,100%{opacity:0;transform:translate(6px,-2px)} 13%,34%{opacity:1;transform:translate(4px,-2px)} 35%,58%{opacity:1;transform:translate(7px,0)} 59%,80%{opacity:1;transform:translate(11px,-1px)} 81%,99%{opacity:0;transform:translate(15px,0)} }
-@keyframes helper-b { 0%,34%,100%{opacity:0;transform:translate(-8px,-2px)} 35%,58%{opacity:1;transform:translate(-7px,-2px)} 59%,80%{opacity:1;transform:translate(-4px,0)} 81%,94%{opacity:1;transform:translate(0,-1px)} 95%,99%{opacity:0;transform:translate(3px,0)} }
-@keyframes delegate-parcel { 0%,12%,100%{opacity:0;transform:translate(-6px,1px)} 13%,34%{opacity:1;transform:translate(-3px,0)} 35%,58%{opacity:1;transform:translate(2px,-1px)} 59%,80%{opacity:1;transform:translate(8px,1px)} 81%,99%{opacity:0;transform:translate(12px,1px)} }
+@keyframes helper-a { 0%,12%,100%{opacity:0;transform:translate(-1px,1px)} 13%,34%{opacity:1;transform:translate(0,0)} 35%,58%{opacity:1;transform:translate(1px,1px)} 59%,80%{opacity:1;transform:translate(2px,0)} 81%,99%{opacity:0;transform:translate(3px,1px)} }
+@keyframes helper-b { 0%,34%,100%{opacity:0;transform:translate(-3px,1px)} 35%,58%{opacity:1;transform:translate(-2px,0)} 59%,80%{opacity:1;transform:translate(-1px,1px)} 81%,94%{opacity:1;transform:translate(0,0)} 95%,99%{opacity:0;transform:translate(1px,1px)} }
+@keyframes delegate-parcel { 0%,12%,100%{opacity:0;transform:translate(-3px,1px)} 13%,34%{opacity:1;transform:translate(-1px,0)} 35%,58%{opacity:1;transform:translate(1px,-1px)} 59%,80%{opacity:1;transform:translate(3px,1px)} 81%,99%{opacity:0;transform:translate(5px,1px)} }
 
 .state-needs-owner { --duration: 4.8s; }
 .state-needs-owner .actor { animation-name: owner-body; }
@@ -161,7 +161,7 @@
 .state-compacting .right-claw { animation-name: fold-right; }
 .state-compacting .eyes { animation-name: fold-eyes; }
 .state-compacting .accordion { transform-origin: -7px 15px; animation-name: fold-accordion; }
-@keyframes fold-body { 0%,12%,100%{transform:translate(3px,0)} 13%,34%{transform:translate(1px,-1px)} 35%,56%{transform:translate(3px,-1px)} 57%,78%{transform:translate(5px,-1px)} 79%,99%{transform:translate(3px,0)} }
+@keyframes fold-body { 0%,12%,100%{transform:translate(2px,0)} 13%,34%{transform:translate(1px,-1px)} 35%,56%{transform:translate(2px,-1px)} 57%,78%{transform:translate(4px,-1px)} 79%,99%{transform:translate(2px,0)} }
 @keyframes fold-left { 0%,12%,100%{transform:translate(0,0)} 13%,34%{transform:translate(-5px,1px)} 35%,56%{transform:translate(-3px,-2px)} 57%,78%{transform:translate(-4px,-1px)} 79%,99%{transform:translate(0,0)} }
 @keyframes fold-right { 0%,12%,100%{transform:translate(0,0)} 13%,34%{transform:translate(-4px,-2px)} 35%,56%{transform:translate(-6px,1px)} 57%,78%{transform:translate(-5px,-2px)} 79%,99%{transform:translate(0,0)} }
 @keyframes fold-eyes { 0%,78%,100%{transform:translate(-1px,1px)} 79%,86%{transform:scaleY(.15)} 87%,99%{transform:translate(-1px,1px)} }
@@ -173,11 +173,11 @@
 .state-workspace .right-claw { animation-name: mat-right; }
 .state-workspace .mat { transform-origin: -7px 17px; animation-name: mat-roll; }
 .state-workspace .roll { transform-origin: -6px 15px; animation-name: mat-end; }
-@keyframes mat-body { 0%,12%,100%{transform:translate(-3px,0)} 13%,32%{transform:translate(-1px,-2px)} 33%,52%{transform:translate(2px,-2px)} 53%,72%{transform:translate(4px,-1px)} 73%,88%{transform:translate(4px,-2px)} 89%,99%{transform:translate(-3px,0)} }
+@keyframes mat-body { 0%,12%,100%{transform:translate(-2px,0)} 13%,32%{transform:translate(-1px,-2px)} 33%,52%{transform:translate(1px,-2px)} 53%,72%{transform:translate(3px,-1px)} 73%,88%{transform:translate(3px,-2px)} 89%,99%{transform:translate(-2px,0)} }
 @keyframes mat-left { 0%,12%,100%{transform:translate(0,0)} 13%,32%{transform:translate(-3px,-2px)} 33%,52%{transform:translate(2px,-1px)} 53%,72%{transform:translate(1px,0)} 73%,88%{transform:translate(-1px,-1px)} 89%,99%{transform:translate(0,0)} }
 @keyframes mat-right { 0%,12%,100%{transform:translate(0,0)} 13%,32%{transform:translate(-5px,1px)} 33%,52%{transform:translate(-3px,-2px)} 53%,72%{transform:translate(-1px,0)} 73%,88%{transform:translate(1px,-1px)} 89%,99%{transform:translate(0,0)} }
 @keyframes mat-roll { 0%,12%,100%{transform:scaleX(.18)} 13%,32%{transform:scaleX(.42)} 33%,52%{transform:scaleX(.68)} 53%,88%{transform:scaleX(1)} 89%,99%{transform:scaleX(.18)} }
-@keyframes mat-end { 0%,12%,100%{transform:translateX(0)} 13%,32%{transform:translateX(5px)} 33%,52%{transform:translateX(11px)} 53%,88%{transform:translateX(20px)} 89%,99%{transform:translateX(0)} }
+@keyframes mat-end { 0%,12%,100%{transform:translateX(1px)} 13%,32%{transform:translateX(5px)} 33%,52%{transform:translateX(10px)} 53%,88%{transform:translateX(18px)} 89%,99%{transform:translateX(1px)} }
 
 .state-success { --duration: 2.9s; }
 .state-success .actor { animation-name: highfive-body; }
@@ -201,7 +201,7 @@
 @keyframes fail-left { 0%,12%,100%{transform:translate(0,0)} 13%,30%{transform:translate(-3px,-2px)} 31%,48%{transform:translate(3px,-2px)} 49%,66%{transform:translate(-2px,3px)} 67%,82%{transform:translate(3px,-3px)} 83%,90%{transform:translate(2px,3px)} 91%,99%{transform:translate(0,0)} }
 @keyframes fail-right { 0%,12%,100%{transform:translate(0,0)} 13%,30%{transform:translate(-3px,-2px)} 31%,48%{transform:translate(3px,-2px)} 49%,66%{transform:translate(-2px,3px)} 67%,82%{transform:translate(-3px,-3px)} 83%,90%{transform:translate(2px,3px)} 91%,99%{transform:translate(0,0)} }
 @keyframes fail-eyes { 0%,48%,100%{transform:scaleY(1)} 49%,66%{transform:translateY(1px) scaleY(.15)} 67%,82%{transform:translateY(0) scaleY(.45)} 83%,90%{transform:translateY(1px) scaleY(.15)} 91%,99%{transform:scaleY(1)} }
-@keyframes fail-basket { 0%,12%,100%{transform:translate(12px,-10px) rotate(12deg)} 13%,30%{transform:translate(5px,-4px) rotate(-7deg)} 31%,48%{transform:translate(1px,-1px) rotate(5deg)} 49%,66%{transform:translate(-1px,2px) rotate(-8deg)} 67%,82%{transform:translate(6px,-2px) rotate(9deg)} 83%,90%{transform:translate(9px,1px) rotate(14deg)} 91%,99%{transform:translate(12px,-10px) rotate(12deg)} }
+@keyframes fail-basket { 0%,12%,100%{transform:translate(3px,-8px) rotate(10deg)} 13%,30%{transform:translate(1px,-3px) rotate(-6deg)} 31%,48%{transform:translate(0,-1px) rotate(4deg)} 49%,66%{transform:translate(-1px,2px) rotate(-7deg)} 67%,82%{transform:translate(1px,-2px) rotate(7deg)} 83%,90%{transform:translate(2px,1px) rotate(10deg)} 91%,99%{transform:translate(3px,-8px) rotate(10deg)} }
 
 /* Working activity modifiers ------------------------------------------- */
 .state-reading { --duration: 5s; }
@@ -317,7 +317,7 @@
 .state-edge .actor { animation-name: edge-body; }
 .state-edge .left-claw { animation-name: edge-left; }
 .state-edge .eyes { animation-name: edge-eyes; }
-@keyframes edge-body { 0%,14%,100%{transform:translateX(11px)} 15%,36%{transform:translateX(6px)} 37%,62%{transform:translateX(3px)} 63%,78%{transform:translateX(5px)} 79%,99%{transform:translateX(11px)} }
+@keyframes edge-body { 0%,14%,100%{transform:translateX(7px)} 15%,36%{transform:translateX(5px)} 37%,62%{transform:translateX(2px)} 63%,78%{transform:translateX(4px)} 79%,99%{transform:translateX(7px)} }
 @keyframes edge-left { 0%,14%,100%{transform:translate(0,0)} 15%,62%{transform:translate(-2px,-1px)} 63%,78%{transform:translate(-1px,0)} 79%,99%{transform:translate(0,0)} }
 @keyframes edge-eyes { 0%,14%,100%{transform:translateX(-1px)} 15%,36%{transform:translateX(-2px)} 37%,62%{transform:translateX(-1px)} 63%,78%{transform:scaleY(.18) translateX(-1px)} 79%,99%{transform:translateX(-1px)} }
 
