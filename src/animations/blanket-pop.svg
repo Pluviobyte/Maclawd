@@ -1,7 +1,6 @@
 <?xml-stylesheet type="text/css" href="maclawd-actions.css"?>
 <svg xmlns="http://www.w3.org/2000/svg" class="state-waking" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
-  <title>Maclawd Morning Stretch</title><desc>Maclawd wakes on the same top-down bed, stretches, and lets the blanket slide to the foot.</desc>
-  <g class="bed-scene" transform="translate(2.25 0) scale(.7 1)"><path d="M-10 10H20V20H-10Z" fill="#6F8A78"/><path d="M-9 10H19V19H-9Z" fill="#EAF4EA"/><path d="M-7 11H2V15H-7Z" fill="#FFF4D7"/><rect x="-5" y="12" width="5" height="1" fill="#FFFFFF"/><rect x="-8" y="18" width="26" height="1" fill="#B9D2C0"/></g>
+  <title>Maclawd Morning Stretch</title><desc>Maclawd springs upright, stretches, and lets its small blanket slip away.</desc>
   <g transform="translate(1.875 0) scale(.75 1)"><g class="blanket motion"><path d="M0 10H15V17H13V19H10V18H6V19H3V18H0Z" fill="#B9A1D9"/><rect x="1" y="10" width="13" height="1" fill="#E7DCF2"/><rect x="2" y="14" width="11" height="1" fill="#8B73B3"/></g></g>
   <g class="actor motion"><g fill="#DE886D">
     <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/><rect id="inner-left-leg" x="5" y="13" width="1" height="2"/><rect id="inner-right-leg" x="9" y="13" width="1" height="2"/><rect id="outer-right-leg" x="11" y="13" width="1" height="2"/><rect id="torso" x="2" y="6" width="11" height="7"/>

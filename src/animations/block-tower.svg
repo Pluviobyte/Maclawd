@@ -1,7 +1,6 @@
 <?xml-stylesheet type="text/css" href="maclawd-actions.css"?>
 <svg xmlns="http://www.w3.org/2000/svg" class="state-building" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
-  <title>Maclawd Block Garden</title><desc>On a broad play rug, Maclawd carries one large block and sets it onto another.</desc>
-  <g class="build-rug" transform="translate(3 0) scale(.6 1)"><path d="M-11 14H23V20H-11Z" fill="#6F8A78"/><path d="M-10 14H22V19H-10Z" fill="#DCEBD9"/><rect x="-8" y="17" width="28" height="1" fill="#B9D2C0"/></g>
+  <title>Maclawd Block Stack</title><desc>Maclawd carries one large block and sets it vertically onto another.</desc>
   <g transform="translate(1.5 0) scale(.8 1)"><g><rect x="-8" y="12" width="7" height="6" fill="#7BC8C4"/><rect x="-7" y="13" width="5" height="1" fill="#BDE7E4"/><rect x="-7" y="15" width="2" height="2" fill="#3E7775"/></g></g>
   <g transform="translate(1.5 0) scale(.8 1)"><g class="block-top motion"><rect x="-8" y="12" width="7" height="6" fill="#F6C85F"/><rect x="-7" y="13" width="5" height="1" fill="#FFE59A"/><rect x="-4" y="15" width="2" height="2" fill="#B67B19"/></g></g>
   <g class="actor motion"><g fill="#DE886D">

@@ -39,7 +39,7 @@
       <header>
         <p class="eyebrow">Maclawd · Complete motion lab</p>
         <h1>状态会变化，<br>角色还是它。</h1>
-        <p>身体、眼睛、颜色与坐标保持不变；每个动作都让 Clawd 真正进入一个可识别的小场景，而不是在脚边堆功能图标。这里汇总 12 个主状态、5 个工作修饰和 6 个互动彩蛋。</p>
+        <p>身体、眼睛、颜色与坐标保持不变；动作以身体表演为主，道具只贴身出现或纵向叠放，不再为每个状态铺一块横向舞台。这里汇总 12 个主状态、5 个工作修饰和 6 个互动彩蛋。</p>
       </header>
       <div id="lab"></div>
       <p class="note">旧的机械候选仍保留在 <a href="design/concepts/all-primary-states.html">静态概念档案</a>；当前页面展示的是新的趣味动作方向。</p>
@@ -50,41 +50,41 @@
           title: "12 个主状态",
           copy: "用于表达 owner 与 Agent 的稳定主状态；休眠链、任务链和结果链都有明确转场。",
           items: [
-            ["idle","Cushion Watch","calm-calibration.svg","5.6s loop","坐进软垫里呼吸、观察和眨眼"],
-            ["away","Bedtime Pull","blanket-drag.svg","3.8s transition","爬到床边，把同一条毛毯拉上床"],
+            ["idle","Quiet Watch","calm-calibration.svg","5.6s loop","不带道具，安静呼吸、观察和眨眼"],
+            ["away","Blanket Tug","blanket-drag.svg","3.8s transition","困倦地把小毛毯拉到身边"],
             ["sleeping","Top-down Sleep","blanket-burrito.svg","6.4s loop","俯视平躺在枕头上，盖被呼吸并冒出像素 Zzz"],
-            ["waking","Morning Stretch","blanket-pop.svg","2.6s transition","在同一张床上伸展，被子滑向床尾"],
-            ["thinking","Puzzle Pause","shell-shuffle.svg","4.6s loop","趴在地垫前转动最后一块拼图"],
-            ["working","Desk Shuffle","token-knitting.svg","3.4s loop","伏在低桌前交替推动两块工作牌"],
-            ["delegating","Parcel Parade","hatchling-parade.svg","5.0s loop","沿地面小路把大包裹交给两位助手"],
-            ["needs_owner","Picnic Jar","stuck-jar.svg","4.8s loop","在餐垫上拧不开罐子后推给主人"],
+            ["waking","Morning Stretch","blanket-pop.svg","2.6s transition","起身伸展，小毛毯从身前滑落"],
+            ["thinking","Puzzle Turn","shell-shuffle.svg","4.6s loop","双爪间转动最后一块拼图"],
+            ["working","Tile Stack","token-knitting.svg","3.4s loop","在身前交替整理两块重叠工作牌"],
+            ["delegating","Parcel Stack","hatchling-parade.svg","5.0s loop","把包裹递给身侧纵向接力的助手"],
+            ["needs_owner","Stuck Jar","stuck-jar.svg","4.8s loop","拧不开罐子后把它推给主人"],
             ["compacting","Suitcase Fold","accordion-fold.svg","4.8s loop","把大条纹布逐折塞进行李箱"],
-            ["workspace","Mat Move-in","pop-up-studio.svg","4.2s transition","展开拼布地垫并搬进新工作位"],
-            ["success","Cushion Cheer","self-high-five.svg","2.9s reaction","踩软垫起跳，双爪在头顶碰到"],
+            ["workspace","Workspace Folder","pop-up-studio.svg","4.2s transition","在身侧弹开竖直工作文件夹"],
+            ["success","Self High-five","self-high-five.svg","2.9s reaction","直接起跳，双爪在头顶碰到"],
             ["error","Basket Rescue","yarn-tangle.svg","4.8s loop","被大篮子扣住，挣脱后又被碰倒"]
           ]
         },
         {
           title: "5 个 working 活动修饰",
-          copy: "只有拿到可靠的活动类别时才覆盖 generic working；command 不单独画一套，统一回退到 Desk Shuffle。",
+          copy: "只有拿到可靠的活动类别时才覆盖 generic working；command 不单独画一套，统一回退到 Tile Stack。",
           items: [
-            ["working.reading","Floor Book","card-browsing.svg","5.0s loop","坐在圆地毯上读一本身体宽度的书"],
-            ["working.writing","Letter Desk","note-stitching.svg","4.6s loop","伏在木桌前用大铅笔写一封信"],
-            ["working.building","Block Garden","block-tower.svg","5.0s loop","在游戏地毯上搬起并叠好两块积木"],
-            ["working.testing","Toy Check","wobble-test.svg","4.8s loop","跪在软垫旁推不倒翁并观察回正"],
-            ["working.syncing","Clothesline Relay","relay-bead.svg","4.4s loop","把条纹小袋沿晾衣绳送到另一边"]
+            ["working.reading","Pocket Book","card-browsing.svg","5.0s loop","抱着一本身体宽度的书翻页"],
+            ["working.writing","Letter Note","note-stitching.svg","4.6s loop","在身前握住信纸并用长铅笔书写"],
+            ["working.building","Block Stack","block-tower.svg","5.0s loop","在身侧纵向叠好两块积木"],
+            ["working.testing","Toy Check","wobble-test.svg","4.8s loop","轻推身侧不倒翁并观察回正"],
+            ["working.syncing","Spool Sync","relay-bead.svg","4.4s loop","双爪间把条纹线轴沿竖绳拉起"]
           ]
         },
         {
           title: "6 个互动与环境彩蛋",
           copy: "这些动作由桌面交互或环境事件触发，不冒充 Agent 的具体任务进度。",
           items: [
-            ["interaction.click","Cushion Poke","click-flinch.svg","2.2s reaction","被轻点后陷进软垫并回望"],
-            ["interaction.double_click","Cushion Hop","surprised-hop.svg","2.4s reaction","连点压缩软垫并弹起一次"],
-            ["interaction.drag","Hanging Cling","drag-cling.svg","3.2s held loop","被拖动时双爪抓住木杆悬挂"],
-            ["interaction.drop","Cushion Bounce","drop-wobble.svg","2.6s reaction","落到软垫上压扁、回弹、站稳"],
+            ["interaction.click","Poke Squish","click-flinch.svg","2.2s reaction","被轻点后身体侧向压扁并回望"],
+            ["interaction.double_click","Surprised Hop","surprised-hop.svg","2.4s reaction","连点后直接惊跳一次"],
+            ["interaction.drag","Hanging Loop","drag-cling.svg","3.2s held loop","被拖动时双爪抓住中央吊环"],
+            ["interaction.drop","Drop Wobble","drop-wobble.svg","2.6s reaction","落地后压扁、回弹、站稳"],
             ["ambient.edge","Curtain Peek","edge-peek.svg","4.6s loop","从大帘幕后偷看再躲回去"],
-            ["ambient.low_battery","Cushion Curl","low-battery-droop.svg","6.2s loop","蜷进软垫，只用半闭眼和长停顿"]
+            ["ambient.low_battery","Low Battery Droop","low-battery-droop.svg","6.2s loop","身体下沉、双爪内卷并半闭眼"]
           ]
         }
       ];

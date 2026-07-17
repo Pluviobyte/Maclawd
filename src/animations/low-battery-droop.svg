@@ -1,7 +1,6 @@
 <?xml-stylesheet type="text/css" href="maclawd-actions.css"?>
 <svg xmlns="http://www.w3.org/2000/svg" class="state-low-battery" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
-  <title>Maclawd Cushion Curl</title><desc>Maclawd sinks into a broad cushion, curls its claws inward, and rests with half-closed eyes.</desc>
-  <g transform="translate(1.875 0) scale(.75 1)"><g class="cushion motion"><path d="M-5 13H20V15H22V19H20V20H-5V19H-7V15H-5Z" fill="#72558F"/><path d="M-4 13H19V15H21V18H19V19H-4V18H-6V15H-4Z" fill="#B9A1D9"/><rect x="-1" y="14" width="17" height="1" fill="#E7DCF2"/></g></g>
+  <title>Maclawd Low Battery Droop</title><desc>Maclawd sinks low, curls its claws inward, and rests with half-closed eyes.</desc>
   <g class="actor motion"><g fill="#DE886D">
     <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/><rect id="inner-left-leg" x="5" y="13" width="1" height="2"/><rect id="inner-right-leg" x="9" y="13" width="1" height="2"/><rect id="outer-right-leg" x="11" y="13" width="1" height="2"/><rect id="torso" x="2" y="6" width="11" height="7"/>
     <g class="left-claw motion"><rect id="left-arm" x="0" y="9" width="2" height="2"/></g><g class="right-claw motion"><rect id="right-arm" x="13" y="9" width="2" height="2"/></g>

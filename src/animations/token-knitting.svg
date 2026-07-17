@@ -1,9 +1,8 @@
 <?xml-stylesheet type="text/css" href="maclawd-actions.css"?>
 <svg xmlns="http://www.w3.org/2000/svg" class="state-working" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
-  <title>Maclawd Desk Shuffle</title><desc>Maclawd leans over a broad low desk, alternates both claws on two wooden work tiles, then inspects them.</desc>
-  <g class="low-desk" transform="translate(2.625 0) scale(.65 1)"><path d="M-8 11H23V17H-8Z" fill="#7C5A3B"/><path d="M-7 10H22V15H-7Z" fill="#F0C98F"/><rect x="-5" y="15" width="3" height="5" fill="#7C5A3B"/><rect x="17" y="15" width="3" height="5" fill="#7C5A3B"/></g>
-  <g class="work-tile-a motion"><path d="M0 12H6V16H0Z" fill="#7BC8C4"/><rect x="1" y="13" width="4" height="1" fill="#BDE7E4"/></g>
-  <g class="work-tile-b motion"><path d="M9 12H15V16H9Z" fill="#B9A1D9"/><rect x="10" y="13" width="4" height="1" fill="#E7DCF2"/></g>
+  <title>Maclawd Tile Stack</title><desc>Maclawd alternates both claws on two compact overlapping work tiles, then inspects the stack.</desc>
+  <g class="work-tile-a motion"><path d="M4 11H10V15H4Z" fill="#7BC8C4"/><rect x="5" y="12" width="4" height="1" fill="#BDE7E4"/></g>
+  <g class="work-tile-b motion"><path d="M6 14H12V18H6Z" fill="#B9A1D9"/><rect x="7" y="15" width="4" height="1" fill="#E7DCF2"/></g>
   <g class="actor motion"><g fill="#DE886D">
     <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/><rect id="inner-left-leg" x="5" y="13" width="1" height="2"/><rect id="inner-right-leg" x="9" y="13" width="1" height="2"/><rect id="outer-right-leg" x="11" y="13" width="1" height="2"/><rect id="torso" x="2" y="6" width="11" height="7"/>
     <g class="left-claw motion"><rect id="left-arm" x="0" y="9" width="2" height="2"/></g><g class="right-claw motion"><rect id="right-arm" x="13" y="9" width="2" height="2"/></g>

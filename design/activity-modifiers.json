@@ -5,10 +5,10 @@
   "rule": "Apply only when a reliable external event maps to one category; never infer a detailed task from generic busy state.",
   "aliases": {"working.command":"working"},
   "modifiers": [
-    {"id":"working.reading","name":"Floor Book","durationMs":5000,"source":"src/animations/card-browsing.svg","signalExamples":["file_read","web_open","search_result_read"]},
-    {"id":"working.writing","name":"Letter Desk","durationMs":4600,"source":"src/animations/note-stitching.svg","signalExamples":["file_write","patch_apply","document_edit"]},
-    {"id":"working.building","name":"Block Garden","durationMs":5000,"source":"src/animations/block-tower.svg","signalExamples":["build_start","compile_start","bundle_start"]},
+    {"id":"working.reading","name":"Pocket Book","durationMs":5000,"source":"src/animations/card-browsing.svg","signalExamples":["file_read","web_open","search_result_read"]},
+    {"id":"working.writing","name":"Letter Note","durationMs":4600,"source":"src/animations/note-stitching.svg","signalExamples":["file_write","patch_apply","document_edit"]},
+    {"id":"working.building","name":"Block Stack","durationMs":5000,"source":"src/animations/block-tower.svg","signalExamples":["build_start","compile_start","bundle_start"]},
     {"id":"working.testing","name":"Toy Check","durationMs":4800,"source":"src/animations/wobble-test.svg","signalExamples":["test_start","qa_start","validation_start"]},
-    {"id":"working.syncing","name":"Clothesline Relay","durationMs":4400,"source":"src/animations/relay-bead.svg","signalExamples":["git_fetch","git_pull","git_push","remote_sync"]}
+    {"id":"working.syncing","name":"Spool Sync","durationMs":4400,"source":"src/animations/relay-bead.svg","signalExamples":["git_fetch","git_pull","git_push","remote_sync"]}
   ]
 }

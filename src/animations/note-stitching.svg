@@ -1,7 +1,6 @@
 <?xml-stylesheet type="text/css" href="maclawd-actions.css"?>
 <svg xmlns="http://www.w3.org/2000/svg" class="state-writing" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
-  <title>Maclawd Letter Desk</title><desc>Maclawd leans over a low wooden desk and writes across one clear letter with a body-length pencil.</desc>
-  <g class="letter-desk" transform="translate(2.625 0) scale(.65 1)"><path d="M-7 11H22V17H-7Z" fill="#7C5A3B"/><path d="M-6 10H21V15H-6Z" fill="#F0C98F"/><rect x="-4" y="15" width="3" height="5" fill="#7C5A3B"/><rect x="16" y="15" width="3" height="5" fill="#7C5A3B"/></g>
+  <title>Maclawd Letter Note</title><desc>Maclawd holds one letter close and writes with a tall pencil.</desc>
   <g class="sheet motion"><path d="M-1 12H12V18H-1Z" fill="#FFF4D7"/><rect x="1" y="14" width="8" height="1" fill="#D9C79F"/><rect x="1" y="16" width="6" height="1" fill="#D9C79F"/></g>
   <g class="pencil motion"><rect x="10" y="3" width="3" height="12" fill="#F6C85F"/><rect x="10" y="3" width="3" height="2" fill="#C98FBA"/><path d="M10 15H13L11 18Z" fill="#D8B07C"/><rect x="11" y="16" width="1" height="2" fill="#544942"/></g>
   <g class="actor motion"><g fill="#DE886D">

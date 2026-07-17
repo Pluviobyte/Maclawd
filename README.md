@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="previews/all-actions-v5-96px.png" width="1000" alt="Maclawd V5 scene-first motion set at pet size">
+  <img src="previews/all-actions-v5-96px.png" width="1000" alt="Maclawd V5.3 body-first motion set at pet size">
 </p>
 
 <h1 align="center">Maclawd</h1>
@@ -13,7 +13,7 @@
 
 > [!IMPORTANT]
 > Maclawd has completed its first full motion-design checkpoint. There is no downloadable macOS
-> application yet. The current V5 checkpoint is a complete scene-first motion design system.
+> application yet. The current V5.3 checkpoint is a complete body-first motion design system.
 
 ## What we are building
 
@@ -50,20 +50,21 @@ temporary props, and discrete animation change.
 
 | `away` | `sleeping` | `waking` | `success` |
 | --- | --- | --- | --- |
-| <img src="previews/blanket-drag-v5.gif" width="180" alt="Maclawd Bedtime Pull animation"> | <img src="previews/blanket-burrito-v5.gif" width="180" alt="Maclawd Top-down Sleep animation"> | <img src="previews/blanket-pop-v5.gif" width="180" alt="Maclawd Morning Stretch animation"> | <img src="previews/self-high-five-v5.gif" width="180" alt="Maclawd Cushion Cheer animation"> |
-| Bedtime Pull | Top-down Sleep | Morning Stretch | Cushion Cheer |
+| <img src="previews/blanket-drag-v5.gif" width="180" alt="Maclawd Blanket Tug animation"> | <img src="previews/blanket-burrito-v5.gif" width="180" alt="Maclawd Top-down Sleep animation"> | <img src="previews/blanket-pop-v5.gif" width="180" alt="Maclawd Morning Stretch animation"> | <img src="previews/self-high-five-v5.gif" width="180" alt="Maclawd Self High-five animation"> |
+| Blanket Tug | Top-down Sleep | Morning Stretch | Self High-five |
 
 The sleep chain deliberately reuses one blanket, so `away → sleeping → waking`
 reads as a continuous story. The sleep loop uses a clear top-down bed, pillow,
-blanket, closed-eye, and pixel-Zzz composition. V5 carries that same idea into
-the full set: each action is a small recognizable scene with physical contact,
-including **Puzzle Pause**, **Desk Shuffle**, **Parcel Parade**, **Picnic Jar**,
-**Suitcase Fold**, **Mat Move-in**, and **Basket Rescue**.
+blanket, closed-eye, and pixel-Zzz composition. V5.3 keeps that full scene only
+where it is necessary. The rest is body-first: no rugs, desks, paths, cushions,
+floor strips, or hanging bars. Small props overlap the body, attach to one side,
+or stack vertically in **Puzzle Turn**, **Tile Stack**, **Parcel Stack**,
+**Stuck Jar**, **Suitcase Fold**, **Workspace Folder**, and **Basket Rescue**.
 
 ### Working modifiers and interactions
 
 Detailed activities are only shown when an external event can classify them
-reliably. Generic busy activity always falls back to **Desk Shuffle**; `command`
+reliably. Generic busy activity always falls back to **Tile Stack**; `command`
 is an alias of that generic state rather than a sixth prop animation. The pet
 never invents a task from an opaque Agent state. Interaction actions are driven
 by the Mac app's own input and system events and do not require Agent internals.
@@ -81,7 +82,7 @@ Inference Dial, and Reasoning Gearbox have all been superseded by V5:
 | --- | --- | --- |
 | <img src="previews/calm-calibration.gif" width="220" alt="Maclawd Calm Calibration animation"> | <img src="previews/inference-dial.gif" width="220" alt="Maclawd Inference Dial animation"> | <img src="previews/reasoning-gearbox.gif" width="220" alt="Maclawd Reasoning Gearbox animation"> |
 
-[Open current Cushion Watch](src/animations/calm-calibration.svg) ·
+[Open current Quiet Watch](src/animations/calm-calibration.svg) ·
 [Open Thinking](src/animations/inference-dial.svg) ·
 [Open Working](src/animations/reasoning-gearbox.svg) ·
 [Read the design contract](design/reasoning-gearbox.md) ·

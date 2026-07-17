@@ -5,7 +5,7 @@ Last updated: 2026-07-17
 ## Current checkpoint
 
 Maclawd is a standalone project with an independent repository and Git history.
-Its first complete scene-first motion-design system is now implemented:
+Its first complete body-first motion-design system is now implemented:
 
 - 12 primary states
 - 5 optional `working` activity modifiers
@@ -13,9 +13,10 @@ Its first complete scene-first motion-design system is now implemented:
 - 23 active CSS/SVG animations in total
 
 The body, claws, legs, eyes, colors, and source coordinates are identical across
-the full set. Every action now places Clawd inside one recognizable mini-scene
-instead of surrounding it with technical status objects. The macOS application
-runtime and event integration have not started.
+the full set. V5.3 removes repeated horizontal stages: only top-down sleeping
+keeps a full scene, while every other prop overlaps the body, sits to one side,
+or stacks vertically. The macOS application runtime and event integration have
+not started.
 
 ## Completed
 
@@ -26,20 +27,20 @@ runtime and event integration have not started.
   states into everyday metaphors, give every loop a setup/action/reaction, and
   keep the character more important than its prop.
 - Preserved earlier static concepts and mechanical prototypes in Git history.
-- Rebuilt the primary set around scene-readable actions: **Cushion Watch**,
-  **Bedtime Pull**, **Top-down Sleep**, **Morning Stretch**, **Puzzle Pause**,
-  **Desk Shuffle**, **Parcel Parade**, **Picnic Jar**, **Suitcase Fold**, **Mat
-  Move-in**, **Cushion Cheer**, and **Basket Rescue**.
+- Rebuilt the primary set around body-readable actions: **Quiet Watch**,
+  **Blanket Tug**, **Top-down Sleep**, **Morning Stretch**, **Puzzle Turn**,
+  **Tile Stack**, **Parcel Stack**, **Stuck Jar**, **Suitcase Fold**, **Workspace
+  Folder**, **Self High-five**, and **Basket Rescue**.
 - Made `away → sleeping → waking` a continuous story using the same blanket
   colors, patch, and fold language across all three actions.
 - Rebuilt `sleeping` as a direct overhead bed composition: Clawd lies flat on a
   pillow, keeps both closed eyes and claws visible, breathes under the blanket,
   and emits a user-approved three-step pixel `Zzz` sequence.
-- Replaced the working modifier set with five complete activity scenes: **Floor
-  Book**, **Letter Desk**, **Block Garden**, **Toy Check**, and **Clothesline
-  Relay**. `working.command` now aliases generic **Desk Shuffle**.
-- Added six desktop/system scenes: **Cushion Poke**, **Cushion Hop**, **Hanging
-  Cling**, **Cushion Bounce**, **Curtain Peek**, and **Cushion Curl**.
+- Replaced the working modifier set with five compact actions: **Pocket Book**,
+  **Letter Note**, **Block Stack**, **Toy Check**, and **Spool Sync**.
+  `working.command` now aliases generic **Tile Stack**.
+- Added six desktop/system actions: **Poke Squish**, **Surprised Hop**, **Hanging
+  Loop**, **Drop Wobble**, **Curtain Peek**, and **Low Battery Droop**.
 - Defined conservative Hook behavior: detailed working modifiers require a
   reliable external event; otherwise the system falls back to generic working.
 - Added machine-readable contracts for primary states, modifiers, and
@@ -48,11 +49,11 @@ runtime and event integration have not started.
   production SVG sources.
 - Rendered every active action into a deterministic V5 GIF preview and generated
   new 64px and 96px complete-set boards.
-- Added a compact-footprint gate after visual review: all 23 actions now stay
-  within 40–52px horizontally at the 96px QA size instead of expanding to
-  60–81px; scenes remain attached to the body or stack vertically.
+- Removed 14 repeated horizontal base constructions: rugs, desks, paths,
+  cushions, floor strips, the clothesline, and the hanging bar. The current
+  23-action set stays within 16–48px horizontally at the 96px QA size.
 - Fixed the deterministic preview renderer to resize the SVG root before
-  pet-size capture; all 18 GIF previews now contain real animated content.
+  pet-size capture; all 23 GIF previews now contain real animated content.
 - Verified all 26 SVG sources parse and preserve the locked source rectangles:
   23 current actions, one historical command entry, and two mechanical prototypes.
 - Produced browser-rendered 64px and 96px boards covering all 23 active actions.

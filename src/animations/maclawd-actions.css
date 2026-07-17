@@ -160,24 +160,24 @@
 .state-compacting .left-claw { animation-name: fold-left; }
 .state-compacting .right-claw { animation-name: fold-right; }
 .state-compacting .eyes { animation-name: fold-eyes; }
-.state-compacting .accordion { transform-origin: -7px 15px; animation-name: fold-accordion; }
-@keyframes fold-body { 0%,12%,100%{transform:translate(2px,0)} 13%,34%{transform:translate(1px,-1px)} 35%,56%{transform:translate(2px,-1px)} 57%,78%{transform:translate(4px,-1px)} 79%,99%{transform:translate(2px,0)} }
-@keyframes fold-left { 0%,12%,100%{transform:translate(0,0)} 13%,34%{transform:translate(-5px,1px)} 35%,56%{transform:translate(-3px,-2px)} 57%,78%{transform:translate(-4px,-1px)} 79%,99%{transform:translate(0,0)} }
-@keyframes fold-right { 0%,12%,100%{transform:translate(0,0)} 13%,34%{transform:translate(-4px,-2px)} 35%,56%{transform:translate(-6px,1px)} 57%,78%{transform:translate(-5px,-2px)} 79%,99%{transform:translate(0,0)} }
-@keyframes fold-eyes { 0%,78%,100%{transform:translate(-1px,1px)} 79%,86%{transform:scaleY(.15)} 87%,99%{transform:translate(-1px,1px)} }
-@keyframes fold-accordion { 0%,12%,100%{transform:scaleX(1)} 13%,34%{transform:translateX(3px) scaleX(.78)} 35%,56%{transform:translateX(6px) scaleX(.55)} 57%,78%{transform:translate(9px,-1px) scaleX(.32)} 79%,99%{transform:scaleX(1)} }
+.state-compacting .accordion { transform-origin: 7.5px 14px; animation-name: fold-accordion; }
+@keyframes fold-body { 0%,12%,100%{transform:translate(0,0)} 13%,34%{transform:translate(0,-1px)} 35%,56%{transform:translate(0,0)} 57%,78%{transform:translate(0,1px) scaleY(.94)} 79%,99%{transform:translate(0,0)} }
+@keyframes fold-left { 0%,12%,100%{transform:translate(0,0)} 13%,34%{transform:translate(4px,-3px)} 35%,56%{transform:translate(5px,0)} 57%,78%{transform:translate(4px,2px)} 79%,99%{transform:translate(0,0)} }
+@keyframes fold-right { 0%,12%,100%{transform:translate(0,0)} 13%,34%{transform:translate(-4px,-3px)} 35%,56%{transform:translate(-5px,0)} 57%,78%{transform:translate(-4px,2px)} 79%,99%{transform:translate(0,0)} }
+@keyframes fold-eyes { 0%,78%,100%{transform:translate(0,1px)} 79%,86%{transform:scaleY(.15)} 87%,99%{transform:translate(0,1px)} }
+@keyframes fold-accordion { 0%,12%,100%{transform:translateY(0) scaleY(1)} 13%,34%{transform:translateY(3px) scaleY(.78)} 35%,56%{transform:translateY(6px) scaleY(.55)} 57%,78%{transform:translateY(9px) scaleY(.28)} 79%,99%{transform:translateY(0) scaleY(1)} }
 
 .state-workspace { --duration: 4.2s; }
 .state-workspace .actor { animation-name: mat-body; }
 .state-workspace .left-claw { animation-name: mat-left; }
 .state-workspace .right-claw { animation-name: mat-right; }
-.state-workspace .mat { transform-origin: -7px 17px; animation-name: mat-roll; }
-.state-workspace .roll { transform-origin: -6px 15px; animation-name: mat-end; }
-@keyframes mat-body { 0%,12%,100%{transform:translate(-2px,0)} 13%,32%{transform:translate(-1px,-2px)} 33%,52%{transform:translate(1px,-2px)} 53%,72%{transform:translate(3px,-1px)} 73%,88%{transform:translate(3px,-2px)} 89%,99%{transform:translate(-2px,0)} }
-@keyframes mat-left { 0%,12%,100%{transform:translate(0,0)} 13%,32%{transform:translate(-3px,-2px)} 33%,52%{transform:translate(2px,-1px)} 53%,72%{transform:translate(1px,0)} 73%,88%{transform:translate(-1px,-1px)} 89%,99%{transform:translate(0,0)} }
-@keyframes mat-right { 0%,12%,100%{transform:translate(0,0)} 13%,32%{transform:translate(-5px,1px)} 33%,52%{transform:translate(-3px,-2px)} 53%,72%{transform:translate(-1px,0)} 73%,88%{transform:translate(1px,-1px)} 89%,99%{transform:translate(0,0)} }
-@keyframes mat-roll { 0%,12%,100%{transform:scaleX(.18)} 13%,32%{transform:scaleX(.42)} 33%,52%{transform:scaleX(.68)} 53%,88%{transform:scaleX(1)} 89%,99%{transform:scaleX(.18)} }
-@keyframes mat-end { 0%,12%,100%{transform:translateX(1px)} 13%,32%{transform:translateX(5px)} 33%,52%{transform:translateX(10px)} 53%,88%{transform:translateX(18px)} 89%,99%{transform:translateX(1px)} }
+.state-workspace .mat { transform-origin: 13px 18px; animation-name: mat-roll; }
+.state-workspace .roll { transform-origin: 11px 5px; animation-name: mat-end; }
+@keyframes mat-body { 0%,12%,100%{transform:translate(-1px,0)} 13%,32%{transform:translate(0,-1px)} 33%,52%{transform:translate(-1px,-1px)} 53%,72%{transform:translate(0,-1px)} 73%,88%{transform:translate(0,-2px)} 89%,99%{transform:translate(-1px,0)} }
+@keyframes mat-left { 0%,12%,100%{transform:translate(0,0)} 13%,32%{transform:translate(2px,-2px)} 33%,52%{transform:translate(1px,-1px)} 53%,72%{transform:translate(0,0)} 73%,88%{transform:translate(1px,-1px)} 89%,99%{transform:translate(0,0)} }
+@keyframes mat-right { 0%,12%,100%{transform:translate(0,0)} 13%,32%{transform:translate(3px,-1px)} 33%,52%{transform:translate(4px,-3px)} 53%,72%{transform:translate(3px,-1px)} 73%,88%{transform:translate(2px,-2px)} 89%,99%{transform:translate(0,0)} }
+@keyframes mat-roll { 0%,12%,100%{transform:scaleY(.22)} 13%,32%{transform:scaleY(.48)} 33%,52%{transform:scaleY(.72)} 53%,88%{transform:scaleY(1)} 89%,99%{transform:scaleY(.22)} }
+@keyframes mat-end { 0%,12%,100%{transform:translateY(10px)} 13%,32%{transform:translateY(6px)} 33%,52%{transform:translateY(3px)} 53%,88%{transform:translateY(0)} 89%,99%{transform:translateY(10px)} }
 
 .state-success { --duration: 2.9s; }
 .state-success .actor { animation-name: highfive-body; }
@@ -262,13 +262,13 @@
 .state-syncing .actor { animation-name: sync-body; }
 .state-syncing .left-claw { animation-name: sync-left; }
 .state-syncing .right-claw { animation-name: sync-right; }
-.state-syncing .bead { transform-origin: 7px 12px; animation-name: sync-bead; }
-.state-syncing .cord { transform-origin: 7px 12px; animation-name: sync-cord; }
+.state-syncing .bead { transform-origin: 8px 10px; animation-name: sync-bead; }
+.state-syncing .cord { transform-origin: 8px 17px; animation-name: sync-cord; }
 @keyframes sync-body { 0%,12%,100%{transform:translateY(0)} 13%,34%{transform:translateX(-1px)} 35%,56%{transform:translateY(-1px)} 57%,78%{transform:translateX(1px)} 79%,99%{transform:translateY(0)} }
 @keyframes sync-left { 0%,12%,100%{transform:translate(0,0)} 13%,34%{transform:translate(3px,-1px)} 35%,56%{transform:translate(5px,-2px)} 57%,78%{transform:translate(3px,-1px)} 79%,99%{transform:translate(0,0)} }
 @keyframes sync-right { 0%,12%,100%{transform:translate(0,0)} 13%,34%{transform:translate(-3px,-1px)} 35%,56%{transform:translate(-5px,-2px)} 57%,78%{transform:translate(-3px,-1px)} 79%,99%{transform:translate(0,0)} }
-@keyframes sync-bead { 0%,12%,100%{transform:translateX(-7px)} 13%,34%{transform:translateX(-3px)} 35%,56%{transform:translateX(0)} 57%,78%{transform:translateX(6px)} 79%,99%{transform:translateX(-7px)} }
-@keyframes sync-cord { 0%,34%,100%{transform:scaleX(.8)} 35%,56%{transform:scaleX(1)} 57%,78%{transform:scaleX(.9)} 79%,99%{transform:scaleX(.8)} }
+@keyframes sync-bead { 0%,12%,100%{transform:translateY(5px)} 13%,34%{transform:translateY(2px)} 35%,56%{transform:translateY(-2px)} 57%,78%{transform:translateY(-6px)} 79%,99%{transform:translateY(5px)} }
+@keyframes sync-cord { 0%,34%,100%{transform:scaleY(.82)} 35%,56%{transform:scaleY(1)} 57%,78%{transform:scaleY(.9)} 79%,99%{transform:scaleY(.82)} }
 
 /* Interaction and ambient actions -------------------------------------- */
 .state-click { --duration: 2.2s; }
@@ -297,8 +297,8 @@
 .state-drag .right-claw { animation-name: drag-right; }
 .state-drag .eyes { animation-name: drag-eyes; }
 @keyframes drag-body { 0%,16%,100%{transform:translate(0,0)} 17%,36%{transform:translate(0,-2px) rotate(-2deg)} 37%,56%{transform:translate(1px,-3px) rotate(2deg)} 57%,76%{transform:translate(-1px,-2px) rotate(-2deg)} 77%,99%{transform:translate(0,0)} }
-@keyframes drag-left { 0%,16%,100%{transform:translate(0,0)} 17%,76%{transform:translate(3px,-6px) rotate(20deg)} 77%,99%{transform:translate(0,0)} }
-@keyframes drag-right { 0%,16%,100%{transform:translate(0,0)} 17%,76%{transform:translate(-3px,-6px) rotate(-20deg)} 77%,99%{transform:translate(0,0)} }
+@keyframes drag-left { 0%,16%,100%{transform:translate(0,0)} 17%,76%{transform:translate(5px,-6px) rotate(20deg)} 77%,99%{transform:translate(0,0)} }
+@keyframes drag-right { 0%,16%,100%{transform:translate(0,0)} 17%,76%{transform:translate(-5px,-6px) rotate(-20deg)} 77%,99%{transform:translate(0,0)} }
 @keyframes drag-eyes { 0%,16%,100%{transform:translate(0,0)} 17%,36%{transform:translate(-1px,-1px)} 37%,56%{transform:translate(1px,-1px)} 57%,76%{transform:translate(0,-1px)} 77%,99%{transform:translate(0,0)} }
 
 .state-drop { --duration: 2.6s; }

@@ -2,11 +2,11 @@
   "schemaVersion": 2,
   "priority": "interaction-overlays-current-state-briefly",
   "interactions": [
-    {"id":"interaction.click","name":"Cushion Poke","mode":"reaction","durationMs":2200,"source":"src/animations/click-flinch.svg","trigger":"single click or poke"},
-    {"id":"interaction.double_click","name":"Cushion Hop","mode":"reaction","durationMs":2400,"source":"src/animations/surprised-hop.svg","trigger":"double or rapid click"},
-    {"id":"interaction.drag","name":"Hanging Cling","mode":"held","durationMs":3200,"source":"src/animations/drag-cling.svg","trigger":"pointer drag begins"},
-    {"id":"interaction.drop","name":"Cushion Bounce","mode":"reaction","durationMs":2600,"source":"src/animations/drop-wobble.svg","trigger":"pointer drag ends"},
+    {"id":"interaction.click","name":"Poke Squish","mode":"reaction","durationMs":2200,"source":"src/animations/click-flinch.svg","trigger":"single click or poke"},
+    {"id":"interaction.double_click","name":"Surprised Hop","mode":"reaction","durationMs":2400,"source":"src/animations/surprised-hop.svg","trigger":"double or rapid click"},
+    {"id":"interaction.drag","name":"Hanging Loop","mode":"held","durationMs":3200,"source":"src/animations/drag-cling.svg","trigger":"pointer drag begins"},
+    {"id":"interaction.drop","name":"Drop Wobble","mode":"reaction","durationMs":2600,"source":"src/animations/drop-wobble.svg","trigger":"pointer drag ends"},
     {"id":"ambient.edge","name":"Curtain Peek","mode":"loop","durationMs":4600,"source":"src/animations/edge-peek.svg","trigger":"pet enters configured screen-edge idle behavior"},
-    {"id":"ambient.low_battery","name":"Cushion Curl","mode":"loop","durationMs":6200,"source":"src/animations/low-battery-droop.svg","trigger":"system battery crosses configured threshold","accessory":"one broad cushion"}
+    {"id":"ambient.low_battery","name":"Low Battery Droop","mode":"loop","durationMs":6200,"source":"src/animations/low-battery-droop.svg","trigger":"system battery crosses configured threshold","accessory":"none"}
   ]
 }
