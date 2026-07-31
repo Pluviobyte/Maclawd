@@ -71,6 +71,36 @@
   .danger button{border:1px solid rgba(165,95,76,.5);background:#fff;color:#a55f4c;
     border-radius:10px;padding:7px 13px;font-size:12px;cursor:pointer;}
   .note{font-size:12px;color:var(--muted);line-height:1.6;}
+  .sub{font-size:12px;margin:0 0 8px;font-weight:700;letter-spacing:.02em;}
+  .sub span{font-weight:500;color:var(--muted);margin-left:6px;}
+  .live{display:flex;gap:20px;align-items:flex-start;padding-bottom:14px;
+    border-bottom:1px solid rgba(30,30,46,.07);margin-bottom:14px;}
+  .liveMain{flex:1;min-width:0;}
+  .liveNow{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+  .liveNow strong{font-size:20px;letter-spacing:-.01em;}
+  .liveMeta{text-align:right;font-size:11px;color:var(--muted);line-height:1.5;}
+  .liveMeta b{display:block;color:var(--ink);font-size:15px;font-weight:650;}
+  .liveMeta div+div{margin-top:8px;}
+  .pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;}
+  .pill{font-size:10.5px;padding:3px 8px;border-radius:999px;
+    background:rgba(30,30,46,.055);color:var(--muted);}
+  .pill.warn{background:rgba(198,122,98,.14);color:#a55f4c;}
+  .pill.ok{background:rgba(76,175,80,.13);color:#3b7a3e;}
+  .split2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  .arb{width:100%;border-collapse:collapse;font-size:12px;}
+  .arb td{padding:5px 6px;border-bottom:1px solid rgba(30,30,46,.05);}
+  .arb tr.win td{background:rgba(222,136,109,.12);font-weight:650;}
+  .arb td:last-child{text-align:right;color:var(--muted);}
+  .arb .src{font:10.5px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);}
+  .log{max-height:190px;overflow-y:auto;font:11px/1.75 ui-monospace,SFMono-Regular,Menlo,monospace;}
+  .log div{display:flex;gap:8px;white-space:nowrap;}
+  .log .t{color:var(--muted);flex:0 0 58px;}
+  .log .k{flex:0 0 42px;}
+  .log .k.hook{color:var(--accent);}
+  .log .k.shell{color:#3b7a3e;}
+  .log .d{color:var(--muted);overflow:hidden;text-overflow:ellipsis;}
+  @media(max-width:820px){.split2{grid-template-columns:1fr;}.live{flex-direction:column;}
+    .liveMeta{text-align:left;display:flex;gap:24px;}.liveMeta div+div{margin-top:0;}}
   @media(max-width:820px){.split{grid-template-columns:1fr;}}
 </style>
 </head>
@@ -107,17 +137,40 @@
 
   <div class="card">
     <h2>运行时状态 <span>由真实用量与事件驱动</span></h2>
-    <div class="row">
-      <div style="flex:1">
-        <strong id="liveState">—</strong><span class="badge" id="liveReason"></span>
-        <p id="liveDetail"></p>
+
+    <div class="live">
+      <div class="liveMain">
+        <div class="liveNow">
+          <strong id="liveState">—</strong>
+          <span class="badge" id="liveVariant" hidden></span>
+          <span class="badge" id="liveMode"></span>
+        </div>
+        <p class="note" id="liveDetail"></p>
+        <div class="pills" id="livePills"></div>
       </div>
-      <div class="meta" style="text-align:right"><b id="liveAway">—</b>away 阈值</div>
+      <div class="liveMeta">
+        <div><b id="liveHeld">—</b>已保持</div>
+        <div><b id="liveAway">—</b>away 阈值</div>
+      </div>
     </div>
-    <div class="chain" id="events" style="margin-top:4px"></div>
-    <p class="note" style="margin-top:10px">
+
+    <div class="split2">
+      <div>
+        <h3 class="sub">仲裁 <span>优先级最小者胜；同级取最近</span></h3>
+        <table class="arb"><tbody id="arbBody"></tbody></table>
+        <p class="note" id="arbNote"></p>
+      </div>
+      <div>
+        <h3 class="sub">事件流 <span>最近 24 条</span></h3>
+        <div class="log" id="eventLog"></div>
+        <p class="note" id="logNote"></p>
+      </div>
+    </div>
+
+    <div class="chain" id="events" style="margin-top:14px"></div>
+    <p class="note" style="margin-top:8px">
       按钮模拟 Claude Code 的 hook 事件，用来验证状态机与仲裁优先级。
-      hook 通道接上后同一个引擎直接消费真实事件，不需要改结构。
+      真实 hook 事件与它们走同一条路径。
     </p>
   </div>
 
@@ -449,25 +502,92 @@ function renderEvents(){
   });
 }
 
+const SOURCE_LABEL = { hook: 'hook', shell: '外壳', rate: '速率' };
+
+function ago(ms){
+  if (!Number.isFinite(ms) || ms < 0) return '—';
+  if (ms < 1000) return '刚刚';
+  if (ms < 60_000) return Math.round(ms/1000) + 's';
+  if (ms < 3_600_000) return Math.round(ms/60_000) + 'm';
+  return Math.round(ms/3_600_000) + 'h';
+}
+
+/** 会话 id 可能是 UUID，截断只为可读，不做任何脱敏用途。 */
+const shortId = (id) => (id === 'rate' ? '速率推断' : id === 'shell' ? '外壳' : id.slice(0, 8));
+
 function applyState(s){
   if (!s?.state) return;
-  el('liveState').textContent = `${s.plan?.name ?? s.state.actionId}`;
-  el('liveReason').textContent = s.state.reason;
-  const parts = [`状态 ${s.state.actionId}`];
-  if (s.state.variant) parts.push(`变体 ${s.state.variant}`);
-  if (s.plan?.fellBackFrom) parts.push(`回落自 ${s.plan.fellBackFrom}`);
-  if (s.plan?.mode) parts.push(s.plan.mode === 'oneshot' ? '一次性' : '循环');
-  if (s.plan?.next) parts.push(`结束后 → ${s.plan.next}`);
-  if (s.plan && s.plan.motion === false) parts.push('减弱动效：道具与位移已停');
-  el('liveDetail').textContent = parts.join(' · ');
-  el('liveAway').textContent = `${Math.round((s.debug?.awayThresholdMs ?? 0)/1000)}s`;
-  // 预览台跟随运行时状态
-  if (s.plan?.source) {
-    const action = actions.find(a => a.id === s.plan.actionId && a.source);
+  const plan = s.plan ?? {};
+  const dbg = s.debug ?? {};
+  const now = Date.now();
+
+  el('liveState').textContent = plan.name ?? s.state.actionId;
+
+  const variantBadge = el('liveVariant');
+  variantBadge.hidden = !s.state.variant;
+  if (s.state.variant) variantBadge.textContent = s.state.variant;
+  el('liveMode').textContent = plan.mode === 'oneshot' ? '一次性' : plan.mode ?? '';
+
+  // 一句话说清「这是什么状态、从哪来」
+  const winner = (dbg.sessions ?? []).find(x => x.winner);
+  const from = s.state.reason === 'oneshot' ? '一次性插播'
+    : s.state.reason === 'silence' ? '静默转场'
+      : s.state.reason === 'idle' ? '加权 idle 调度'
+        : winner ? `会话 ${shortId(winner.id)} 胜出（优先级 ${winner.priority}）`
+          : s.state.reason;
+  el('liveDetail').textContent = `${s.state.actionId} · ${from}`;
+
+  // 计划里的关键事实做成 pill，一眼扫完
+  const pills = [];
+  if (plan.durationMs) pills.push(['', (plan.durationMs/1000).toFixed(1) + 's 循环']);
+  if (plan.next) pills.push(['', '结束后 → ' + plan.next]);
+  if (plan.aliasedFrom) pills.push(['ok', `别名自 ${plan.aliasedFrom}`]);
+  if (plan.fellBackFrom) pills.push(['warn', `回落自 ${plan.fellBackFrom}（缺资产）`]);
+  if (plan.motion === false) pills.push(['warn', '减弱动效']);
+  if (dbg.oneshot) pills.push(['', '插播中 ' + ago(dbg.oneshot.until - now) + '后结束']);
+  el('livePills').innerHTML = pills
+    .map(([k, t]) => `<span class="pill ${k}">${esc(t)}</span>`).join('');
+
+  el('liveHeld').textContent = ago(now - (s.state.since ?? now));
+  el('liveAway').textContent = Math.round((dbg.awayThresholdMs ?? 0)/1000) + 's';
+
+  // 仲裁：把所有参与者摊开，胜者高亮。这是「为什么是这个动作」的答案。
+  const sessions = [...(dbg.sessions ?? [])].sort((a,b) => a.priority - b.priority);
+  el('arbBody').innerHTML = sessions.length
+    ? sessions.map(x => `<tr class="${x.winner ? 'win' : ''}">
+        <td class="src">${esc(shortId(x.id))}</td>
+        <td>${esc(x.state)}${x.subagents ? ` ×${x.subagents}` : ''}</td>
+        <td>P${x.priority}</td>
+        <td>${ago(now - x.at)}</td></tr>`).join('')
+    : '<tr><td colspan="4" style="color:var(--muted)">没有活跃会话，走静默与 idle 调度</td></tr>';
+  el('arbNote').textContent = sessions.length > 1
+    ? `${sessions.length} 个来源竞争，优先级最小者胜`
+    : '';
+
+  // 事件流：hook 到底有没有在送事件，一眼可见
+  const events = dbg.events ?? [];
+  el('eventLog').innerHTML = events.length
+    ? events.map(e => {
+        const time = new Date(e.at).toLocaleTimeString('zh-CN', { hour12: false });
+        const detail = [e.tool, e.detail, e.action, e.session && shortId(e.session)]
+          .filter(Boolean).join(' · ');
+        return `<div><span class="t">${time}</span>` +
+          `<span class="k ${e.kind}">${SOURCE_LABEL[e.kind] ?? e.kind}</span>` +
+          `<span>${esc(e.type)}</span><span class="d">${esc(detail)}</span></div>`;
+      }).join('')
+    : '<div style="color:var(--muted)">还没有收到事件</div>';
+
+  // hook 健康：只有速率推断在动时，32 个事件驱动的动作全都到不了
+  const lastHook = events.find(e => e.kind === 'hook');
+  el('logNote').textContent = lastHook
+    ? `最近一条 hook 事件 ${ago(now - lastHook.at)}前`
+    : '尚未收到任何 hook 事件——只有速率推断在驱动，多数动作到不了。';
+
+  if (plan.source) {
+    const action = actions.find(a => a.id === plan.actionId && a.source);
     if (action) show(action);
-    // 变体驱动共享样式表里的规则（如 delegating 的助手数量）
     const stage = el('preview').parentElement;
-    if (s.plan.variant) stage.setAttribute('data-variant', s.plan.variant);
+    if (plan.variant) stage.setAttribute('data-variant', plan.variant);
     else stage.removeAttribute('data-variant');
   }
 }

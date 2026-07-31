@@ -174,6 +174,22 @@ export function createStateEngine(options = {}) {
   let lastActivityAt = 0;
   const random = options.random ?? Math.random;
 
+  /**
+   * 最近事件的环形缓冲。
+   *
+   * 面板此前答不出两个问题：hook 到底有没有在送事件？桌宠为什么是现在这个动作？
+   * 前者在 hook 静默失败时尤其要命——一切看起来正常，只是永远停在速率推断上。
+   * 这里只记录**已经脱敏过的元数据**（类型、来源、结果动作），
+   * 命令原文与 prompt 从来就没进过引擎。
+   */
+  const EVENT_LOG_MAX = 24;
+  const eventLog = [];
+
+  function logEvent(type, kind, at, extra) {
+    eventLog.push({ type, kind, at, ...extra });
+    if (eventLog.length > EVENT_LOG_MAX) eventLog.shift();
+  }
+
   const session = (id) => {
     let s = sessions.get(id);
     if (!s) {
@@ -228,6 +244,7 @@ export function createStateEngine(options = {}) {
     // 外壳事件走单独一条路：它们不属于任何 agent 会话。
     const shellAction = SHELL_ACTIONS[type];
     if (shellAction) {
+      logEvent(type, 'shell', now, { action: shellAction });
       lastActivityAt = now;
       if (ONESHOT.has(shellAction)) {
         pushOneshot(shellAction, now);
@@ -241,6 +258,12 @@ export function createStateEngine(options = {}) {
       resolve(now);
       return;
     }
+
+    logEvent(type, 'hook', now, {
+      session: sessionId,
+      tool: event.toolName ?? null,
+      detail: event.commandClass ?? event.matcher ?? event.disposition ?? null,
+    });
 
     const s = session(sessionId);
     s.at = now;
@@ -418,6 +441,7 @@ export function createStateEngine(options = {}) {
       if (!best || priority < best.priority || (priority === best.priority && s.at > best.at)) {
         best = { priority, id, state: s.state, variant: s.variant, at: s.at };
       }
+      s.priority = priority;
     }
     if (best) {
       emit({ actionId: best.state, variant: best.variant, sessionId: best.id }, 'session', now);
@@ -456,9 +480,19 @@ export function createStateEngine(options = {}) {
       energy,
       rate,
       awayThresholdMs: Math.round(awayThreshold()),
+      minDwellMs: config.minDwellMs,
+      oneshot: oneshot ? { id: oneshot.id, until: oneshot.until } : null,
       sessions: [...sessions.entries()].map(([id, s]) => ({
-        id, state: s.state, variant: s.variant, at: s.at, subagents: s.subagents.size,
+        id,
+        state: s.state,
+        variant: s.variant,
+        at: s.at,
+        subagents: s.subagents.size,
+        // 仲裁用的优先级——面板据此解释「为什么是它赢」
+        priority: id === 'shell' ? SHELL_PRIORITY : (PRIORITY[s.state] ?? PRIORITY.idle),
+        winner: id === current.sessionId,
       })),
+      events: [...eventLog].reverse(),
     }),
   };
 }
