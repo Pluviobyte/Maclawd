@@ -17,7 +17,7 @@
  *
  * 用法：node scripts/build-site.mjs
  */
-import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import { loadActions } from '../src/runtime/server.js';
@@ -91,8 +91,28 @@ function rewriteNav(html) {
   );
 }
 
+/**
+ * 清空产物目录，但**保留 `.vercel`**。
+ *
+ * 那是托管平台的项目链接。连它一起删掉的话，下次部署会按目录名
+ * 新建一个叫 `site` 的项目，而不是更新原来那个——已经踩过一次。
+ */
+async function cleanOutput() {
+  let entries;
+  try {
+    entries = await readdir(OUT);
+  } catch {
+    await mkdir(OUT, { recursive: true });
+    return;
+  }
+  for (const name of entries) {
+    if (name === '.vercel') continue;
+    await rm(join(OUT, name), { recursive: true, force: true });
+  }
+}
+
 async function main() {
-  await rm(OUT, { recursive: true, force: true });
+  await cleanOutput();
   await mkdir(OUT, { recursive: true });
 
   // 动作实验室：本来就是纯静态的，原样搬过去，只加一条去面板的导航。
