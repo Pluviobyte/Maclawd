@@ -114,11 +114,40 @@ not started.
 - Add hardened runtime, Developer ID signing, and notarization.
 - Publish the first `.dmg` release.
 
-## Not implemented yet
+## Implemented since that checkpoint
 
-- No running Maclawd application exists yet.
-- SVG animations are not connected to a runtime state engine yet.
-- No Agent event adapter or real event trace playback exists yet.
-- No application icon, signed binary, notarized build, or `.dmg` exists yet.
+- **Runtime.** `src/runtime/` — token scanner across 21 AI coding tools, rollup with
+  `model × project × source` cells, pricing, LAN mirror, permission broker, probe.
+  Node 20+, pure ESM, zero npm dependencies.
+- **State engine.** `src/runtime/state-engine.js` — priority arbitration across
+  concurrent sessions, minimum dwell, one-shot insertion, energy model, fallback
+  chain. Drives 31 main-form actions plus 8 tucked-edge `mini` actions.
+- **Agent event adapter.** `hooks/maclawd-hook.js` registers 14 Claude Code hook
+  events. Bash commands are classified in-process — the raw command never crosses
+  the boundary.
+- **macOS shell.** `mac/Sources/Maclawd/` — Swift 6 / SwiftPM, transparent
+  borderless `NSWindow` rendering the CSS-animated SVGs in `WKWebView` (zero asset
+  conversion), menu-bar mark, login item, drag / click / hover / edge-dock input.
+- **Packaging.** `mac/package.sh` builds `Maclawd.app` with a **self-contained Node
+  runtime bundled inside** (`Contents/Resources/node`, fetched and SHA256-verified
+  by `mac/vendor-node.sh`). App ~117 MB, DMG ~44 MB. Programmatic app icon.
+- **Tests.** 270, covering token-accounting invariants, state arbitration, redaction,
+  motion quality (pose density, easing, pixel grid), and demo-site data hygiene.
 
-The public repository is a validated motion-system checkpoint, not a release claim.
+## Still not done
+
+- **No Developer ID signing or notarization.** `package.sh` produces an ad-hoc
+  signature, which `spctl --assess` **rejects**. The app runs fine on the machine
+  that built it, but anyone who downloads the DMG hits Gatekeeper and must
+  right-click → Open (or `xattr -d com.apple.quarantine`). Real distribution needs
+  a paid Apple Developer account; set `MACLAWD_SIGN_ID` and the script takes the
+  Developer ID path instead.
+- **Apple Silicon only.** `vendor-node.sh` fetches the runtime for the build
+  machine's architecture. A universal build needs both Node binaries.
+- **14 of 21 tool parsers are unverified** — they are written against documented
+  log formats but have never been run against real samples from those tools.
+- **Never dogfooded for a full working day.** Everything above is verified by tests
+  and by launching the app, not by living with it.
+
+The public repository is a working application plus a validated motion system —
+but it is not a signed release, and installing it still requires a Gatekeeper bypass.

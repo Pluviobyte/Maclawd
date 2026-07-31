@@ -63,8 +63,23 @@ final class RuntimeClient {
     // MARK: - 子进程
 
     /// 找 node。GUI 进程不继承用户 shell 的 PATH，所以要显式探测常见位置。
+    /**
+     找到可用的 Node。
+
+     顺序刻意是「**随包的优先**」：分发出去的应用不能指望用户机器上有 Node。
+     不打包时的失败模式全是静默的——nvm 装的 node 不在 login shell 之外的
+     PATH 里、版本过旧、或只有 x86 版——用户只会看到「桌宠没出来」，
+     根本不知道是缺运行时。
+
+     系统 node 只作为开发期回落（从源码目录直接跑时包里没有 Resources/node）。
+     */
     private func findNode() -> String? {
-        let candidates = [
+        var candidates: [String] = []
+        if let bundled = Bundle.main.resourceURL?
+            .appendingPathComponent("node/bin/node").path {
+            candidates.append(bundled)
+        }
+        candidates += [
             "/opt/homebrew/bin/node",
             "/usr/local/bin/node",
             "/usr/bin/node",

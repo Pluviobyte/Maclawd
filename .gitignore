@@ -9,3 +9,4 @@ mac/*.dmg
 mac/AppIcon.icns
 mac/AppIcon.iconset/
 site/
+mac/vendor/

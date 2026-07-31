@@ -19,6 +19,12 @@ echo "==> 生成图标"
 # 图标按角色几何合同程序化绘制，与桌宠本体必然同源，不会漂移
 swift make-icon.swift
 
+echo "==> 准备 Node 运行时"
+# 必须打包：不打的话应用要求用户自己装 Node 20+，而 nvm 装的 node 不在
+# login shell 之外的 PATH 里、版本过旧、或只有 x86 版——每一种都会让应用
+# 静默起不来，用户只看到「桌宠没出来」。见 vendor-node.sh 顶部的说明。
+./vendor-node.sh
+
 echo "==> 编译 ($CONFIG)"
 swift build -c "$CONFIG"
 BIN="$(swift build -c "$CONFIG" --show-bin-path)/Maclawd"
@@ -38,6 +44,13 @@ for item in bin src web design package.json; do
 done
 # 解析缓存与聚合数据是用户数据，绝不打进包里
 rm -rf "$RUNTIME/node_modules"
+
+# 自包含的 Node 运行时。放在 Resources/node 下，应用优先用它，
+# 找不到才回落到系统 node（开发时方便，分发时用不到）。
+ARCH="$(uname -m)"
+case "$ARCH" in arm64) NODE_ARCH=arm64 ;; x86_64) NODE_ARCH=x64 ;; esac
+mkdir -p "$APP/Contents/Resources/node/bin"
+cp "vendor/node-$NODE_ARCH/bin/node" "$APP/Contents/Resources/node/bin/node"
 
 VERSION="$(python3 -c "import json;print(json.load(open('$REPO_ROOT/package.json'))['version'])")"
 
