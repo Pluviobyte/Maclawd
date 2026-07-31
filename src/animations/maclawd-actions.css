@@ -178,22 +178,31 @@
 @keyframes drowsy-right { 0%,16%{transform:translate(0,0)} 17%,27%{transform:translate(0,1px)} 28%,71%{transform:translate(0,3px)} 72%,77%{transform:translate(0,-1px)} 78%,100%{transform:translate(0,0)} }
 @keyframes drowsy-eyes { 0%,16%{transform:translate(0,0)} 17%,27%{transform:translate(0,1px)} 28%,71%{transform:translate(0,3px)} 72%,77%{transform:translate(0,-1px)} 78%,100%{transform:translate(0,0)} }
 @keyframes drowsy-blink { 0%,14%{transform:scaleY(1)} 15%,24%{transform:scaleY(.5)} 25%,29%{transform:scaleY(1)} 30%,44%{transform:scaleY(.35)} 45%,74%{transform:scaleY(.15)} 75%,100%{transform:scaleY(1)} }
-/* working：整理两块工作牌。这是「在干活」的主视觉，节奏要稳、要密，
-   但不能急躁——急躁读作焦虑，不是专注。 */
+/* working：工作牌不断从下方流入，一只爪接住、另一只送上去，循环不停。
+
+   **重做的原因**：旧版首尾两个姿态都是 translate(0,0)，加起来 43% 的
+   循环停在原位；而且首尾同为原位，跨过循环接缝后是连续 1.5 秒的静止。
+   于是它读作「干一下、停一下」，不是持续在工作。
+
+   所以这一版有三条硬约束：
+   1. **没有任何静止姿态**——身体永远带着位移，最「静」的姿态也偏 1 格。
+   2. **接缝必须无痕**——末帧与首帧刻意不同，且相差恰好一格，接得上。
+   3. **材料必须在推进**——牌的位置单调上行并首尾淡出，这才是「在干活」
+      而不是「在原地摆弄」。旧版的牌只是上下抖 1 格，没有去向。 */
 .state-working { --duration: 3.4s; }
 .state-working .actor { animation-name: work-body; }
-.state-working .left-claw { animation-name: work-left; }
-.state-working .right-claw { animation-name: work-right; }
+.state-working .left-claw { animation-name: work-left; animation-duration: 1.7s; }
+.state-working .right-claw { animation-name: work-right; animation-duration: 1.7s; }
 .state-working .work-tile-a { animation-name: work-tile-a; }
 .state-working .work-tile-b { animation-name: work-tile-b; }
 .state-working .eyes { animation-name: work-eyes; animation-duration: 2.9s; }
 .state-working .blink { animation-name: work-blink; animation-duration: 4.7s; }
-@keyframes work-body { 0%,16%{transform:translate(0,0)} 17%,24%{transform:translate(-1px,-1px)} 25%,41%{transform:translate(-1px,-1px)} 42%,49%{transform:translate(0,-1px)} 50%,66%{transform:translate(1px,-1px)} 67%,74%{transform:translate(1px,-2px)} 75%,82%{transform:translate(0,-1px)} 83%,100%{transform:translate(0,0)} }
-@keyframes work-left { 0%,7%{transform:translate(0,0)} 8%,16%{transform:translate(3px,-2px)} 17%,32%{transform:translate(5px,-3px)} 33%,41%{transform:translate(4px,-1px)} 42%,57%{transform:translate(2px,1px)} 58%,66%{transform:translate(3px,-1px)} 67%,82%{transform:translate(5px,-2px)} 83%,91%{transform:translate(2px,0)} 92%,100%{transform:translate(0,0)} }
-@keyframes work-right { 0%,7%{transform:translate(0,0)} 8%,24%{transform:translate(-2px,1px)} 25%,32%{transform:translate(-4px,-1px)} 33%,49%{transform:translate(-5px,-3px)} 50%,57%{transform:translate(-3px,-1px)} 58%,74%{transform:translate(-2px,1px)} 75%,82%{transform:translate(-4px,-2px)} 83%,100%{transform:translate(0,0)} }
-@keyframes work-tile-a { 0%,24%{transform:translateY(0)} 25%,37%{transform:translateY(1px)} 38%,49%{transform:translateY(0)} 50%,74%{transform:translateY(1px)} 75%,100%{transform:translateY(0)} }
-@keyframes work-tile-b { 0%,24%{transform:translateY(1px)} 25%,49%{transform:translateY(0)} 50%,62%{transform:translateY(1px)} 63%,74%{transform:translateY(0)} 75%,100%{transform:translateY(1px)} }
-@keyframes work-eyes { 0%,39%{transform:translate(0,1px)} 40%,59%{transform:translate(0,0)} 60%,69%{transform:translate(1px,0)} 70%,100%{transform:translate(0,1px)} }
+@keyframes work-body { 0%,16%{transform:translate(0,-1px)} 17%,24%{transform:translate(-1px,0)} 25%,41%{transform:translate(-1px,1px)} 42%,49%{transform:translate(-1px,0)} 50%,66%{transform:translate(0,-1px)} 67%,74%{transform:translate(1px,0)} 75%,91%{transform:translate(1px,1px)} 92%,100%{transform:translate(1px,0)} }
+@keyframes work-left { 0%,28%{transform:translate(4px,3px)} 29%,42%{transform:translate(4px,1px)} 43%,70%{transform:translate(3px,-1px)} 71%,85%{transform:translate(3px,0)} 86%,100%{transform:translate(4px,2px)} }
+@keyframes work-right { 0%,28%{transform:translate(-3px,0)} 29%,42%{transform:translate(-3px,-2px)} 43%,70%{transform:translate(-4px,-3px)} 71%,85%{transform:translate(-4px,-1px)} 86%,100%{transform:translate(-3px,1px)} }
+@keyframes work-tile-a { 0%,7%{opacity:0;transform:translateY(8px)} 8%,24%{opacity:1;transform:translateY(6px)} 25%,41%{opacity:1;transform:translateY(4px)} 42%,57%{opacity:1;transform:translateY(2px)} 58%,74%{opacity:1;transform:translateY(1px)} 75%,91%{opacity:1;transform:translateY(0)} 92%,100%{opacity:0;transform:translateY(-2px)} }
+@keyframes work-tile-b { 0%,16%{opacity:1;transform:translateY(1px)} 17%,32%{opacity:1;transform:translateY(0)} 33%,41%{opacity:0;transform:translateY(-2px)} 42%,49%{opacity:0;transform:translateY(8px)} 50%,66%{opacity:1;transform:translateY(6px)} 67%,82%{opacity:1;transform:translateY(4px)} 83%,100%{opacity:1;transform:translateY(2px)} }
+@keyframes work-eyes { 0%,26%{transform:translate(0,1px)} 27%,44%{transform:translate(0,0)} 45%,63%{transform:translate(0,-1px)} 64%,81%{transform:translate(0,0)} 82%,100%{transform:translate(0,1px)} }
 @keyframes work-blink { 0%,68%{transform:scaleY(1)} 69%,74%{transform:scaleY(.15)} 75%,100%{transform:scaleY(1)} }
 /* thinking：双爪间转动拼图、比对两面、停顿。「停顿」那一拍要最长——
    思考的读感来自停顿，不来自转动。 */
@@ -204,7 +213,7 @@
 .state-thinking .puzzle-piece { transform-origin: 8px 16px; animation-name: think-piece; }
 .state-thinking .eyes { animation-name: think-eyes; animation-duration: 3.7s; }
 .state-thinking .blink { animation-name: think-blink; animation-duration: 5.3s; }
-@keyframes think-body { 0%,12%{transform:translate(0,0)} 13%,19%{transform:translate(-1px,-1px)} 20%,32%{transform:translate(-1px,-1px)} 33%,39%{transform:translate(0,-1px)} 40%,52%{transform:translate(1px,-1px)} 53%,59%{transform:translate(1px,-1px)} 60%,86%{transform:translate(0,-2px)} 87%,100%{transform:translate(0,0)} }
+@keyframes think-body { 0%,12%{transform:translate(0,-1px)} 13%,19%{transform:translate(-1px,-1px)} 20%,32%{transform:translate(-1px,-2px)} 33%,39%{transform:translate(0,-1px)} 40%,52%{transform:translate(1px,-2px)} 53%,59%{transform:translate(1px,-1px)} 60%,86%{transform:translate(0,-2px)} 87%,92%{transform:translate(0,-1px)} 93%,100%{transform:translate(-1px,-1px)} }
 @keyframes think-left { 0%,12%{transform:translate(0,0)} 13%,19%{transform:translate(2px,-1px)} 20%,32%{transform:translate(3px,-1px)} 33%,39%{transform:translate(4px,-2px)} 40%,52%{transform:translate(5px,-2px)} 53%,59%{transform:translate(4px,-3px)} 60%,86%{transform:translate(4px,-4px)} 87%,100%{transform:translate(0,0)} }
 @keyframes think-right { 0%,12%{transform:translate(0,0)} 13%,19%{transform:translate(-3px,-1px)} 20%,32%{transform:translate(-5px,-2px)} 33%,39%{transform:translate(-4px,-1px)} 40%,52%{transform:translate(-3px,-1px)} 53%,59%{transform:translate(-4px,-3px)} 60%,86%{transform:translate(-4px,-4px)} 87%,100%{transform:translate(0,0)} }
 @keyframes think-piece { 0%,12%{transform:translate(0,0) rotate(0)} 13%,19%{transform:translate(-1px,-1px) rotate(-4deg)} 20%,32%{transform:translate(-2px,-1px) rotate(-7deg)} 33%,39%{transform:translate(0,-1px) rotate(0)} 40%,52%{transform:translate(2px,-1px) rotate(7deg)} 53%,59%{transform:translate(1px,-2px) rotate(4deg)} 60%,86%{transform:translate(0,-2px) rotate(0)} 87%,100%{transform:translate(0,0) rotate(0)} }
@@ -220,7 +229,7 @@
 .state-delegating .helper-b { transform-origin: 18px 15px; animation-name: helper-b; }
 .state-delegating .eyes { animation-name: delegate-eyes; animation-duration: 3.9s; }
 .state-delegating .blink { animation-name: delegate-blink; animation-duration: 6.3s; }
-@keyframes delegate-body { 0%,19%{transform:translate(0,-1px)} 20%,26%{transform:translate(-1px,-2px)} 27%,46%{transform:translate(-1px,-2px)} 47%,52%{transform:translate(0,-2px)} 53%,72%{transform:translate(1px,-2px)} 73%,79%{transform:translate(0,-1px)} 80%,100%{transform:translate(0,-1px)} }
+@keyframes delegate-body { 0%,19%{transform:translate(0,-1px)} 20%,26%{transform:translate(-1px,-2px)} 27%,46%{transform:translate(-1px,-2px)} 47%,52%{transform:translate(0,-2px)} 53%,72%{transform:translate(1px,-2px)} 73%,79%{transform:translate(0,-1px)} 80%,100%{transform:translate(-1px,-1px)} }
 @keyframes delegate-left { 0%,19%{transform:translate(0,0)} 20%,26%{transform:translate(-2px,0)} 27%,46%{transform:translate(-4px,1px)} 47%,52%{transform:translate(0,-1px)} 53%,72%{transform:translate(3px,-2px)} 73%,79%{transform:translate(2px,-1px)} 80%,100%{transform:translate(0,0)} }
 @keyframes delegate-right { 0%,19%{transform:translate(0,0)} 20%,26%{transform:translate(-2px,-1px)} 27%,46%{transform:translate(-3px,-2px)} 47%,52%{transform:translate(1px,-1px)} 53%,72%{transform:translate(4px,1px)} 73%,79%{transform:translate(3px,-1px)} 80%,100%{transform:translate(0,0)} }
 @keyframes delegate-parcel { 0%,19%{transform:translate(0,0)} 20%,26%{transform:translate(-2px,-1px)} 27%,46%{transform:translate(-4px,0)} 47%,52%{transform:translate(0,-2px)} 53%,72%{transform:translate(4px,0)} 73%,79%{transform:translate(2px,-1px)} 80%,100%{transform:translate(0,0)} }
@@ -237,7 +246,7 @@
 .state-compacting .accordion { transform-origin: 7.5px 14px; animation-name: fold-accordion; }
 .state-compacting .eyes { animation-name: fold-eyes; animation-duration: 3.5s; }
 .state-compacting .blink { animation-name: fold-blink; animation-duration: 5.7s; }
-@keyframes fold-body { 0%,10%{transform:translate(0,0)} 11%,16%{transform:translate(0,1px)} 17%,27%{transform:translate(0,2px)} 28%,32%{transform:translate(0,1px)} 33%,38%{transform:translate(0,0)} 39%,43%{transform:translate(0,1px)} 44%,55%{transform:translate(0,2px)} 56%,60%{transform:translate(0,1px)} 61%,66%{transform:translate(0,0)} 67%,71%{transform:translate(0,1px)} 72%,82%{transform:translate(0,2px)} 83%,88%{transform:translate(0,1px)} 89%,100%{transform:translate(0,0)} }
+@keyframes fold-body { 0%,10%{transform:translate(0,-1px)} 11%,16%{transform:translate(0,1px)} 17%,27%{transform:translate(0,2px)} 28%,32%{transform:translate(0,1px)} 33%,38%{transform:translate(-1px,-1px)} 39%,43%{transform:translate(0,1px)} 44%,55%{transform:translate(0,2px)} 56%,60%{transform:translate(0,1px)} 61%,66%{transform:translate(1px,-1px)} 67%,71%{transform:translate(0,1px)} 72%,82%{transform:translate(0,2px)} 83%,88%{transform:translate(0,1px)} 89%,100%{transform:translate(1px,0)} }
 @keyframes fold-left { 0%,10%{transform:translate(0,0)} 11%,16%{transform:translate(2px,1px)} 17%,27%{transform:translate(3px,3px)} 28%,32%{transform:translate(2px,1px)} 33%,38%{transform:translate(1px,0)} 39%,43%{transform:translate(2px,1px)} 44%,55%{transform:translate(3px,3px)} 56%,60%{transform:translate(2px,1px)} 61%,66%{transform:translate(1px,0)} 67%,71%{transform:translate(2px,1px)} 72%,82%{transform:translate(3px,3px)} 83%,88%{transform:translate(2px,1px)} 89%,100%{transform:translate(0,0)} }
 @keyframes fold-right { 0%,10%{transform:translate(0,0)} 11%,16%{transform:translate(-2px,1px)} 17%,27%{transform:translate(-3px,3px)} 28%,32%{transform:translate(-2px,1px)} 33%,38%{transform:translate(-1px,0)} 39%,43%{transform:translate(-2px,1px)} 44%,55%{transform:translate(-3px,3px)} 56%,60%{transform:translate(-2px,1px)} 61%,66%{transform:translate(-1px,0)} 67%,71%{transform:translate(-2px,1px)} 72%,82%{transform:translate(-3px,3px)} 83%,88%{transform:translate(-2px,1px)} 89%,100%{transform:translate(0,0)} }
 @keyframes fold-accordion { 0%,10%{transform:scaleY(1)} 11%,16%{transform:scaleY(.9)} 17%,27%{transform:scaleY(.8)} 28%,32%{transform:scaleY(.84)} 33%,38%{transform:scaleY(.8)} 39%,43%{transform:scaleY(.7)} 44%,55%{transform:scaleY(.6)} 56%,60%{transform:scaleY(.64)} 61%,66%{transform:scaleY(.6)} 67%,71%{transform:scaleY(.5)} 72%,82%{transform:scaleY(.4)} 83%,88%{transform:scaleY(.44)} 89%,100%{transform:scaleY(1)} }
@@ -341,7 +350,7 @@
 .state-building .block-top { transform-origin: -3px 15px; animation-name: build-block; }
 .state-building .eyes { animation-name: build-eyes; animation-duration: 3.7s; }
 .state-building .blink { animation-name: build-blink; animation-duration: 5.9s; }
-@keyframes build-body { 0%,16%{transform:translate(0,0)} 17%,21%{transform:translate(-1px,0)} 22%,38%{transform:translate(-1px,-1px)} 39%,43%{transform:translate(0,-1px)} 44%,66%{transform:translate(0,0)} 67%,71%{transform:translate(0,1px)} 72%,77%{transform:translate(0,0)} 78%,82%{transform:translate(-1px,0)} 83%,100%{transform:translate(0,0)} }
+@keyframes build-body { 0%,16%{transform:translate(0,-1px)} 17%,21%{transform:translate(-1px,0)} 22%,38%{transform:translate(-1px,-1px)} 39%,43%{transform:translate(0,-1px)} 44%,66%{transform:translate(0,1px)} 67%,71%{transform:translate(1px,1px)} 72%,77%{transform:translate(1px,0)} 78%,82%{transform:translate(-1px,0)} 83%,100%{transform:translate(-1px,1px)} }
 @keyframes build-left { 0%,13%{transform:translate(0,0)} 14%,20%{transform:translate(-2px,-2px)} 21%,35%{transform:translate(-4px,-4px)} 36%,42%{transform:translate(-4px,-2px)} 43%,56%{transform:translate(-4px,0)} 57%,63%{transform:translate(-2px,1px)} 64%,78%{transform:translate(0,0)} 79%,85%{transform:translate(-1px,-1px)} 86%,100%{transform:translate(0,0)} }
 @keyframes build-right { 0%,20%{transform:translate(0,0)} 21%,28%{transform:translate(-1px,1px)} 29%,49%{transform:translate(-2px,1px)} 50%,56%{transform:translate(-1px,0)} 57%,78%{transform:translate(0,0)} 79%,85%{transform:translate(0,1px)} 86%,100%{transform:translate(0,0)} }
 @keyframes build-block { 0%,13%{transform:translate(0,0)} 14%,20%{transform:translate(0,-2px)} 21%,35%{transform:translate(0,-4px)} 36%,42%{transform:translate(0,-2px)} 43%,70%{transform:translate(0,0)} 71%,78%{transform:translate(0,0)} 79%,85%{transform:translate(0,-1px)} 86%,100%{transform:translate(0,0)} }
@@ -355,7 +364,7 @@
 .state-testing .toy { transform-origin: -4px 17px; animation-name: test-toy; }
 .state-testing .eyes { animation-name: test-eyes; animation-duration: 3.3s; }
 .state-testing .blink { animation-name: test-blink; animation-duration: 5.1s; }
-@keyframes test-body { 0%,18%{transform:translate(0,0)} 19%,24%{transform:translate(-1px,0)} 25%,37%{transform:translate(-2px,0)} 38%,43%{transform:translate(-1px,0)} 44%,74%{transform:translate(0,0)} 75%,80%{transform:translate(0,-1px)} 81%,100%{transform:translate(0,0)} }
+@keyframes test-body { 0%,11%{transform:translate(0,-1px)} 12%,17%{transform:translate(-1px,0)} 18%,28%{transform:translate(-2px,0)} 29%,34%{transform:translate(-1px,0)} 35%,52%{transform:translate(-1px,-1px)} 53%,58%{transform:translate(0,-1px)} 59%,70%{transform:translate(-1px,-1px)} 71%,75%{transform:translate(0,-1px)} 76%,87%{transform:translate(-1px,-1px)} 88%,93%{transform:translate(-1px,0)} 94%,100%{transform:translate(0,-2px)} }
 @keyframes test-left { 0%,18%{transform:translate(0,0)} 19%,24%{transform:translate(-3px,0)} 25%,37%{transform:translate(-5px,1px)} 38%,43%{transform:translate(-3px,0)} 44%,74%{transform:translate(-1px,0)} 75%,80%{transform:translate(0,-1px)} 81%,100%{transform:translate(0,0)} }
 @keyframes test-right { 0%,24%{transform:translate(0,0)} 25%,37%{transform:translate(-1px,0)} 38%,74%{transform:translate(0,0)} 75%,80%{transform:translate(0,-1px)} 81%,100%{transform:translate(0,0)} }
 @keyframes test-toy { 0%,18%{transform:rotate(0)} 19%,24%{transform:rotate(-6deg)} 25%,37%{transform:rotate(-14deg)} 38%,43%{transform:rotate(-6deg)} 44%,49%{transform:rotate(6deg)} 50%,55%{transform:rotate(10deg)} 56%,62%{transform:rotate(2deg)} 63%,68%{transform:rotate(-6deg)} 69%,74%{transform:rotate(-2deg)} 75%,80%{transform:rotate(3deg)} 81%,100%{transform:rotate(0)} }
@@ -386,7 +395,7 @@
 .state-drag .right-claw { animation-name: drag-right; }
 .state-drag .eyes { animation-name: drag-eyes; animation-duration: 2.3s; }
 .state-drag .blink { animation-name: drag-blink; animation-duration: 3.7s; }
-@keyframes drag-body { 0%,16%{transform:translate(0,1px)} 17%,24%{transform:translate(-1px,1px)} 25%,41%{transform:translate(-2px,2px)} 42%,49%{transform:translate(-1px,1px)} 50%,57%{transform:translate(0,1px)} 58%,66%{transform:translate(1px,1px)} 67%,82%{transform:translate(2px,2px)} 83%,91%{transform:translate(1px,1px)} 92%,100%{transform:translate(0,1px)} }
+@keyframes drag-body { 0%,16%{transform:translate(0,1px)} 17%,24%{transform:translate(-1px,1px)} 25%,41%{transform:translate(-2px,2px)} 42%,49%{transform:translate(-1px,1px)} 50%,57%{transform:translate(0,1px)} 58%,66%{transform:translate(1px,1px)} 67%,82%{transform:translate(2px,2px)} 83%,91%{transform:translate(1px,1px)} 92%,100%{transform:translate(0,2px)} }
 @keyframes drag-left { 0%,24%{transform:translate(2px,-3px)} 25%,41%{transform:translate(2px,-4px)} 42%,66%{transform:translate(2px,-3px)} 67%,82%{transform:translate(2px,-4px)} 83%,100%{transform:translate(2px,-3px)} }
 @keyframes drag-right { 0%,24%{transform:translate(-2px,-3px)} 25%,41%{transform:translate(-2px,-4px)} 42%,66%{transform:translate(-2px,-3px)} 67%,82%{transform:translate(-2px,-4px)} 83%,100%{transform:translate(-2px,-3px)} }
 @keyframes drag-eyes { 0%,32%{transform:translate(0,1px)} 33%,55%{transform:translate(-1px,1px)} 56%,77%{transform:translate(1px,1px)} 78%,100%{transform:translate(0,1px)} }
@@ -410,7 +419,7 @@
 .state-hover .right-claw { animation-name: hover-right; animation-duration: 2.7s; }
 .state-hover .eyes { animation-name: hover-eyes; animation-duration: 1.9s; }
 .state-hover .blink { animation-name: hover-blink; animation-duration: 4.3s; }
-@keyframes hover-body { 0%,24%{transform:translate(0,0)} 25%,32%{transform:translate(0,-1px)} 33%,49%{transform:translate(1px,-1px)} 50%,57%{transform:translate(1px,0)} 58%,74%{transform:translate(0,0)} 75%,82%{transform:translate(-1px,0)} 83%,100%{transform:translate(0,0)} }
+@keyframes hover-body { 0%,24%{transform:translate(1px,-1px)} 25%,32%{transform:translate(1px,0)} 33%,49%{transform:translate(2px,-1px)} 50%,57%{transform:translate(1px,-1px)} 58%,74%{transform:translate(0,-1px)} 75%,82%{transform:translate(1px,-1px)} 83%,100%{transform:translate(1px,0)} }
 @keyframes hover-left { 0%,29%{transform:translate(0,0)} 30%,49%{transform:translate(1px,-2px)} 50%,69%{transform:translate(1px,-1px)} 70%,100%{transform:translate(0,0)} }
 @keyframes hover-right { 0%,43%{transform:translate(0,0)} 44%,66%{transform:translate(-1px,-1px)} 67%,100%{transform:translate(0,0)} }
 @keyframes hover-eyes { 0%,29%{transform:translate(1px,-1px)} 30%,49%{transform:translate(1px,0)} 50%,69%{transform:translate(0,-1px)} 70%,100%{transform:translate(1px,-1px)} }

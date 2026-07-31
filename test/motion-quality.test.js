@@ -195,3 +195,35 @@ test('样式表不驱动素材里不存在的图层', () => {
   }
   assert.deepEqual(dead, [], `这些规则驱动的图层在素材里不存在：${dead.join(', ')}`);
 });
+
+test('持续态的循环里不许有静止姿态，接缝不许停顿', () => {
+  // working 旧版首尾两个姿态都是 translate(0,0)，加起来 43% 的循环停在原位，
+  // 而且首尾同为原位——跨过循环接缝后是连续 1.5 秒的静止，
+  // 于是「持续在工作」读成了「干一下、停一下」。
+  //
+  // 只对**表示持续活动**的状态设这条。idle / sleeping / paused 恰恰
+  // 应该有静止，对它们套这条规则是反的。
+  const SUSTAINED = ['working', 'thinking', 'delegating', 'compacting',
+    'building', 'testing', 'drag', 'hover'];
+  const IDENTITY = /^translate\(0,\s*0\)$|^translateY\(0\)$|^translateX\(0\)$/;
+
+  for (const state of SUSTAINED) {
+    const anim = ANIMATIONS.find((a) => a.state === state);
+    assert.ok(anim, `姿态谱里没有 ${state}`);
+    const body = anim.layers.find((l) => l.sel === '.actor');
+    assert.ok(body, `${state} 没有身体图层`);
+
+    const first = body.poses[0][0].trim();
+    const last = body.poses.at(-1)[0].trim();
+    assert.notEqual(first, last,
+      `${state} 的首尾姿态相同（${first}），跨接缝会连成一段停顿`);
+
+    const resting = body.poses
+      .filter(([t]) => IDENTITY.test(t.trim()))
+      .reduce((n, [, w]) => n + w, 0);
+    const total = body.poses.reduce((n, [, w]) => n + w, 0);
+    const share = resting / total;
+    assert.ok(share < 0.15,
+      `${state} 有 ${(share * 100).toFixed(0)}% 的循环停在原位，读不出持续活动`);
+  }
+});

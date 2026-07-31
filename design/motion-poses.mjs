@@ -252,72 +252,94 @@ export const ANIMATIONS = [
     state: 'working',
     svg: {
       file: 'token-knitting.svg',
-      title: 'Tile Stack',
-      desc: 'Maclawd alternates both claws on two compact overlapping work tiles.',
-      props: '<g class="work-tile-a motion"><path d="M4 11H10V15H4Z" fill="#7BC8C4"/>'
-        + '<rect x="5" y="12" width="4" height="1" fill="#BDE7E4"/></g>'
-        + '<g class="work-tile-b motion"><path d="M6 14H12V18H6Z" fill="#B9A1D9"/>'
-        + '<rect x="7" y="15" width="4" height="1" fill="#E7DCF2"/></g>',
+      title: 'Tile Feed',
+      desc: 'Work tiles arrive from below in an unbroken stream; Maclawd receives each '
+        + 'with one claw and passes it up with the other, never returning to rest.',
+      // 道具在**身前**：接在手里的东西画在身后会被躯干挡掉一半。
+      // 两块牌同一个起始位置，靠半个周期的相位差错开，所以永远
+      // 一块在下方进场、一块在上方离场——画面上不存在「没有牌」的瞬间。
+      propsAfter: '<g class="work-tile-a motion"><rect x="5" y="11" width="5" height="4" fill="#7BC8C4"/>'
+        + '<rect x="6" y="12" width="3" height="1" fill="#BDE7E4"/></g>'
+        + '<g class="work-tile-b motion"><rect x="5" y="11" width="5" height="4" fill="#B9A1D9"/>'
+        + '<rect x="6" y="12" width="3" height="1" fill="#E7DCF2"/></g>',
     },
     duration: 3400,
-    comment: '整理两块工作牌。这是「在干活」的主视觉，节奏要稳、要密，\n'
-      + '   但不能急躁——急躁读作焦虑，不是专注。',
+    comment: '工作牌不断从下方流入，一只爪接住、另一只送上去，循环不停。\n'
+      + '\n'
+      + '   **重做的原因**：旧版首尾两个姿态都是 translate(0,0)，加起来 43% 的\n'
+      + '   循环停在原位；而且首尾同为原位，跨过循环接缝后是连续 1.5 秒的静止。\n'
+      + '   于是它读作「干一下、停一下」，不是持续在工作。\n'
+      + '\n'
+      + '   所以这一版有三条硬约束：\n'
+      + '   1. **没有任何静止姿态**——身体永远带着位移，最「静」的姿态也偏 1 格。\n'
+      + '   2. **接缝必须无痕**——末帧与首帧刻意不同，且相差恰好一格，接得上。\n'
+      + '   3. **材料必须在推进**——牌的位置单调上行并首尾淡出，这才是「在干活」\n'
+      + '      而不是「在原地摆弄」。旧版的牌只是上下抖 1 格，没有去向。',
     layers: [
       {
         sel: '.actor',
         name: 'work-body',
+        // 两拍：左爪接的时候重心左沉，右爪送的时候重心右沉。
+        // 全程没有 translate(0,0)。
         poses: [
-          p('translate(0,0)', 2), p('translate(-1px,-1px)', 1), p('translate(-1px,-1px)', 2),
-          p('translate(0,-1px)', 1), p('translate(1px,-1px)', 2), p('translate(1px,-2px)', 1),
-          p('translate(0,-1px)', 1), p('translate(0,0)', 2),
+          p('translate(0,-1px)', 2), p('translate(-1px,0)', 1), p('translate(-1px,1px)', 2),
+          p('translate(-1px,0)', 1), p('translate(0,-1px)', 2), p('translate(1px,0)', 1),
+          p('translate(1px,1px)', 2), p('translate(1px,0)', 1),
         ],
       },
       {
         sel: '.left-claw',
         name: 'work-left',
-        period: 3400,
+        // 周期是身体的一半：每一拍都要接一次，节奏才不断。
+        period: 1700,
         poses: [
-          p('translate(0,0)', 1), p('translate(3px,-2px)', 1), p('translate(5px,-3px)', 2),
-          p('translate(4px,-1px)', 1), p('translate(2px,1px)', 2), p('translate(3px,-1px)', 1),
-          p('translate(5px,-2px)', 2), p('translate(2px,0)', 1), p('translate(0,0)', 1),
+          p('translate(4px,3px)', 2), p('translate(4px,1px)', 1), p('translate(3px,-1px)', 2),
+          p('translate(3px,0)', 1), p('translate(4px,2px)', 1),
         ],
       },
       {
         sel: '.right-claw',
         name: 'work-right',
-        period: 3400,
-        // 与左爪反相：一只上去时另一只下来，这是「交替整理」的读法
+        // 与左爪反相：左爪往上交的时候，右爪正好在上面等着接。
+        period: 1700,
         poses: [
-          p('translate(0,0)', 1), p('translate(-2px,1px)', 2), p('translate(-4px,-1px)', 1),
-          p('translate(-5px,-3px)', 2), p('translate(-3px,-1px)', 1), p('translate(-2px,1px)', 2),
-          p('translate(-4px,-2px)', 1), p('translate(0,0)', 2),
+          p('translate(-3px,0)', 2), p('translate(-3px,-2px)', 1), p('translate(-4px,-3px)', 2),
+          p('translate(-4px,-1px)', 1), p('translate(-3px,1px)', 1),
         ],
       },
       {
         sel: '.work-tile-a',
         name: 'work-tile-a',
-        period: 3400,
+        // 从画面下方进来、在上方淡出。单调上行，不折返。
+        // 行程上限压在眼睛以下：牌升到脸的高度会和眼睛抢位置，
+        // 而脸是桌宠的身份。牌在胸口被「收下」并淡出，语义上也更对——
+        // 是处理掉了，不是飞走了。
         poses: [
-          p('translateY(0)', 2), p('translateY(1px)', 1), p('translateY(0)', 1),
-          p('translateY(1px)', 2), p('translateY(0)', 2),
+          p('opacity:0;transform:translateY(8px)', 1), p('opacity:1;transform:translateY(6px)', 2),
+          p('opacity:1;transform:translateY(4px)', 2), p('opacity:1;transform:translateY(2px)', 2),
+          p('opacity:1;transform:translateY(1px)', 2), p('opacity:1;transform:translateY(0)', 2),
+          p('opacity:0;transform:translateY(-2px)', 1),
         ],
       },
       {
         sel: '.work-tile-b',
         name: 'work-tile-b',
-        period: 3400,
+        // 与 a 相差半个周期：同一串姿态，从中间接着写。
         poses: [
-          p('translateY(1px)', 2), p('translateY(0)', 2), p('translateY(1px)', 1),
-          p('translateY(0)', 1), p('translateY(1px)', 2),
+          p('opacity:1;transform:translateY(1px)', 2), p('opacity:1;transform:translateY(0)', 2),
+          p('opacity:0;transform:translateY(-2px)', 1), p('opacity:0;transform:translateY(8px)', 1),
+          p('opacity:1;transform:translateY(6px)', 2), p('opacity:1;transform:translateY(4px)', 2),
+          p('opacity:1;transform:translateY(2px)', 2),
         ],
       },
       {
         sel: '.eyes',
         name: 'work-eyes',
-        period: 2900, // 与身体不同周期：视线不跟着手上的节拍走
+        // 视线跟着上行的牌走，但周期与身体不同——目光不该踩在手的节拍上。
+        period: 2900,
         poses: [
-          p('translate(0,1px)', 4), p('translate(0,0)', 2), p('translate(1px,0)', 1),
-          p('translate(0,1px)', 3),
+          p('translate(0,1px)', 3), p('translate(0,0)', 2), p('translate(0,-1px)', 2),
+          p('translate(0,0)', 2), p('translate(0,1px)', 2),
         ],
       },
       {
@@ -344,10 +366,12 @@ ANIMATIONS.push(
     comment: '双爪间转动拼图、比对两面、停顿。「停顿」那一拍要最长——\n'
       + '   思考的读感来自停顿，不来自转动。',
     layers: [
+      // 停顿是**保持一个姿势**，不是回到原点：held 的姿势读作「在想」，
+      // 回中立读作「停了」。首尾也刻意不同，避免跨接缝把停顿加倍。
       { sel: '.actor', name: 'think-body', poses: [
-        p('translate(0,0)', 2), p('translate(-1px,-1px)', 1), p('translate(-1px,-1px)', 2),
-        p('translate(0,-1px)', 1), p('translate(1px,-1px)', 2), p('translate(1px,-1px)', 1),
-        p('translate(0,-2px)', 4), p('translate(0,0)', 2) ] },
+        p('translate(0,-1px)', 2), p('translate(-1px,-1px)', 1), p('translate(-1px,-2px)', 2),
+        p('translate(0,-1px)', 1), p('translate(1px,-2px)', 2), p('translate(1px,-1px)', 1),
+        p('translate(0,-2px)', 4), p('translate(0,-1px)', 1), p('translate(-1px,-1px)', 1) ] },
       { sel: '.left-claw', name: 'think-left', poses: [
         p('translate(0,0)', 2), p('translate(2px,-1px)', 1), p('translate(3px,-1px)', 2),
         p('translate(4px,-2px)', 1), p('translate(5px,-2px)', 2), p('translate(4px,-3px)', 1),
@@ -377,7 +401,7 @@ ANIMATIONS.push(
       { sel: '.actor', name: 'delegate-body', poses: [
         p('translate(0,-1px)', 3), p('translate(-1px,-2px)', 1), p('translate(-1px,-2px)', 3),
         p('translate(0,-2px)', 1), p('translate(1px,-2px)', 3), p('translate(0,-1px)', 1),
-        p('translate(0,-1px)', 3) ] },
+        p('translate(-1px,-1px)', 3) ] },
       { sel: '.left-claw', name: 'delegate-left', poses: [
         p('translate(0,0)', 3), p('translate(-2px,0)', 1), p('translate(-4px,1px)', 3),
         p('translate(0,-1px)', 1), p('translate(3px,-2px)', 3), p('translate(2px,-1px)', 1),
@@ -412,11 +436,11 @@ ANIMATIONS.push(
       + '   松手回弹要有一拍，这样才有材料的手感。',
     layers: [
       { sel: '.actor', name: 'fold-body', poses: [
-        p('translate(0,0)', 2), p('translate(0,1px)', 1), p('translate(0,2px)', 2),
-        p('translate(0,1px)', 1), p('translate(0,0)', 1), p('translate(0,1px)', 1),
-        p('translate(0,2px)', 2), p('translate(0,1px)', 1), p('translate(0,0)', 1),
+        p('translate(0,-1px)', 2), p('translate(0,1px)', 1), p('translate(0,2px)', 2),
+        p('translate(0,1px)', 1), p('translate(-1px,-1px)', 1), p('translate(0,1px)', 1),
+        p('translate(0,2px)', 2), p('translate(0,1px)', 1), p('translate(1px,-1px)', 1),
         p('translate(0,1px)', 1), p('translate(0,2px)', 2), p('translate(0,1px)', 1),
-        p('translate(0,0)', 2) ] },
+        p('translate(1px,0)', 2) ] },
       { sel: '.left-claw', name: 'fold-left', poses: [
         p('translate(0,0)', 2), p('translate(2px,1px)', 1), p('translate(3px,3px)', 2),
         p('translate(2px,1px)', 1), p('translate(1px,0)', 1), p('translate(2px,1px)', 1),
@@ -639,9 +663,9 @@ ANIMATIONS.push(
     comment: '在身侧纵向叠积木。放下去那一刻要「顿」一拍，才有重量。',
     layers: [
       { sel: '.actor', name: 'build-body', poses: [
-        p('translate(0,0)', 3), p('translate(-1px,0)', 1), p('translate(-1px,-1px)', 3),
-        p('translate(0,-1px)', 1), p('translate(0,0)', 4), p('translate(0,1px)', 1),
-        p('translate(0,0)', 1), p('translate(-1px,0)', 1), p('translate(0,0)', 3) ] },
+        p('translate(0,-1px)', 3), p('translate(-1px,0)', 1), p('translate(-1px,-1px)', 3),
+        p('translate(0,-1px)', 1), p('translate(0,1px)', 4), p('translate(1px,1px)', 1),
+        p('translate(1px,0)', 1), p('translate(-1px,0)', 1), p('translate(-1px,1px)', 3) ] },
       { sel: '.left-claw', name: 'build-left', poses: [
         p('translate(0,0)', 2), p('translate(-2px,-2px)', 1), p('translate(-4px,-4px)', 2),
         p('translate(-4px,-2px)', 1), p('translate(-4px,0)', 2), p('translate(-2px,1px)', 1),
@@ -666,10 +690,13 @@ ANIMATIONS.push(
     duration: 4800,
     comment: '轻推不倒翁并观察回正。回正的摆幅要逐次变小——等幅摆动读作机械。',
     layers: [
+      // 「观察不倒翁回正」不是站着不动：保持一个前倾盯着看的姿势，
+      // 中间还要跟着它摆两下——不然 4.8 秒里有 3 秒多是静止图。
       { sel: '.actor', name: 'test-body', poses: [
-        p('translate(0,0)', 3), p('translate(-1px,0)', 1), p('translate(-2px,0)', 2),
-        p('translate(-1px,0)', 1), p('translate(0,0)', 5), p('translate(0,-1px)', 1),
-        p('translate(0,0)', 3) ] },
+        p('translate(0,-1px)', 2), p('translate(-1px,0)', 1), p('translate(-2px,0)', 2),
+        p('translate(-1px,0)', 1), p('translate(-1px,-1px)', 3), p('translate(0,-1px)', 1),
+        p('translate(-1px,-1px)', 2), p('translate(0,-1px)', 1), p('translate(-1px,-1px)', 2),
+        p('translate(-1px,0)', 1), p('translate(0,-2px)', 1) ] },
       { sel: '.left-claw', name: 'test-left', poses: [
         p('translate(0,0)', 3), p('translate(-3px,0)', 1), p('translate(-5px,1px)', 2),
         p('translate(-3px,0)', 1), p('translate(-1px,0)', 5), p('translate(0,-1px)', 1),
@@ -745,7 +772,7 @@ ANIMATIONS.push(
       { sel: '.actor', name: 'drag-body', poses: [
         p('translate(0,1px)', 2), p('translate(-1px,1px)', 1), p('translate(-2px,2px)', 2),
         p('translate(-1px,1px)', 1), p('translate(0,1px)', 1), p('translate(1px,1px)', 1),
-        p('translate(2px,2px)', 2), p('translate(1px,1px)', 1), p('translate(0,1px)', 1) ] },
+        p('translate(2px,2px)', 2), p('translate(1px,1px)', 1), p('translate(0,2px)', 1) ] },
       { sel: '.left-claw', name: 'drag-left', poses: [
         p('translate(2px,-3px)', 3), p('translate(2px,-4px)', 2), p('translate(2px,-3px)', 3),
         p('translate(2px,-4px)', 2), p('translate(2px,-3px)', 2) ] },
@@ -789,10 +816,12 @@ ANIMATIONS.push(
     duration: 3000,
     comment: '不画光标，只用眼神与重心跟随。这是 held：必须能无限循环而不腻。',
     layers: [
+      // 「注视」不是站住不动：身体始终朝光标方向保持一点前倾，
+      // 重心在小范围里持续调整。回到中立姿势读作「不看了」。
       { sel: '.actor', name: 'hover-body', poses: [
-        p('translate(0,0)', 3), p('translate(0,-1px)', 1), p('translate(1px,-1px)', 2),
-        p('translate(1px,0)', 1), p('translate(0,0)', 2), p('translate(-1px,0)', 1),
-        p('translate(0,0)', 2) ] },
+        p('translate(1px,-1px)', 3), p('translate(1px,0)', 1), p('translate(2px,-1px)', 2),
+        p('translate(1px,-1px)', 1), p('translate(0,-1px)', 2), p('translate(1px,-1px)', 1),
+        p('translate(1px,0)', 2) ] },
       { sel: '.left-claw', name: 'hover-left', period: 2300, poses: [
         p('translate(0,0)', 3), p('translate(1px,-2px)', 2), p('translate(1px,-1px)', 2),
         p('translate(0,0)', 3) ] },

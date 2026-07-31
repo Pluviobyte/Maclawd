@@ -55,8 +55,10 @@ async function main() {
   let count = 0;
   for (const anim of ANIMATIONS) {
     if (!anim.svg) continue;
-    const { file, title, desc, props = '', splitLegs } = anim.svg;
-    const body = `${props}${actor(c, { splitLegs })}`;
+    const { file, title, desc, props = '', propsAfter = '', splitLegs } = anim.svg;
+    // props 画在角色**之前**（在身后），propsAfter 画在**之后**（在身前）。
+    // 「拿在手里」的道具必须在身前，画在身后会被躯干挡掉一半。
+    const body = `${props}${actor(c, { splitLegs })}${propsAfter}`;
     const svg = `<?xml-stylesheet type="text/css" href="maclawd-actions.css"?>
 <svg xmlns="http://www.w3.org/2000/svg" class="state-${anim.state}" viewBox="${VIEWBOX}" width="500" height="500" shape-rendering="crispEdges">
   <title>Maclawd ${title}</title><desc>${desc}</desc>

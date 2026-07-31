@@ -121,13 +121,14 @@
     },
     {
       "id": "working",
-      "name": "Tile Stack",
+      "name": "Tile Feed",
       "mode": "loop",
       "durationMs": 3400,
-      "accessory": "two overlapping work tiles",
-      "action": "Alternate both claws on the compact stack, then inspect.",
+      "accessory": "two work tiles flowing through a single vertical lane",
+      "action": "Receive each arriving tile with one claw and pass it up with the other; never return to a rest pose.",
       "source": "src/animations/token-knitting.svg",
-      "exit": "event-driven"
+      "exit": "event-driven",
+      "loopContinuity": "持续态：循环内不得出现静止姿态，首尾姿态必须不同。旧版首尾同为原位，跨接缝后是连续 1.5 秒静止，读作「干一下停一下」。"
     },
     {
       "id": "delegating",
