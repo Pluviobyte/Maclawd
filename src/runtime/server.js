@@ -231,7 +231,7 @@ function buildSummary(query) {
 
 // ---------- 动作清单 ----------
 
-function loadActions() {
+export function loadActions() {
   const files = [
     ['primary', 'design/main-state-actions.json'],
     ['modifier', 'design/activity-modifiers.json'],
