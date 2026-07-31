@@ -204,7 +204,9 @@ test('持续态的循环里不许有静止姿态，接缝不许停顿', () => {
   // 只对**表示持续活动**的状态设这条。idle / sleeping / paused 恰恰
   // 应该有静止，对它们套这条规则是反的。
   const SUSTAINED = ['working', 'thinking', 'delegating', 'compacting',
-    'building', 'testing', 'drag', 'hover'];
+    'building', 'testing', 'drag', 'hover',
+    // working 的候选方案也守同一条，否则选进来才发现有停顿就晚了
+    'work-b', 'work-c', 'work-d', 'work-e', 'work-f', 'work-g', 'work-h'];
   const IDENTITY = /^translate\(0,\s*0\)$|^translateY\(0\)$|^translateX\(0\)$/;
 
   for (const state of SUSTAINED) {

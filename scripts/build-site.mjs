@@ -130,6 +130,9 @@ async function main() {
     await write(dest, injectHead(rewriteNav(await read(src)), DEMO_TAGS));
   }
 
+  // 候选对比页：纯静态，不需要演示兜底。
+  await write('working-candidates.html', await read('web/working-candidates.html'));
+
   await write('demo-engine.js', await bundleEngine());
   await write('demo-data.js', await read('web/demo-data.js'));
   await write('demo-mode.js', await read('web/demo-mode.js'));

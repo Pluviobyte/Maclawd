@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Maclawd — 工作状态候选</title>
+    <style>
+      :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+              background:#f4f1ea; color:#1e1e2e; }
+      * { box-sizing:border-box; }
+      body { margin:0; padding:44px 24px 72px; }
+      main { width:min(1280px,100%); margin:0 auto; }
+      h1 { margin:0 0 10px; font-size:clamp(30px,4vw,46px); letter-spacing:-.03em; }
+      .lede { max-width:760px; margin:0 0 8px; color:#50505e; line-height:1.6; }
+      .rule { max-width:760px; margin:14px 0 36px; padding:14px 16px; border-radius:14px;
+              background:rgba(255,255,255,.55); border:1px solid rgba(30,30,46,.1);
+              color:#626271; font-size:14px; line-height:1.6; }
+      .rule b { color:#1e1e2e; }
+      .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px; }
+      .card.flawed { opacity:.72; }
+      .card.flawed .tag { background:#b4553f; }
+      .card { border:1px solid rgba(30,30,46,.11); border-radius:24px; background:#fbfaf7;
+              box-shadow:0 14px 40px rgba(30,30,46,.07); overflow:hidden; }
+      .stages { display:flex; align-items:center; gap:18px; padding:20px 20px 6px; }
+      /* 放大档看清姿态，真实档看它在桌面上到底多大 */
+      .zoom { width:270px; height:270px; flex:none;
+              background:linear-gradient(rgba(30,30,46,.04) 1px,transparent 1px),
+                         linear-gradient(90deg,rgba(30,30,46,.04) 1px,transparent 1px),#fff;
+              background-size:18px 18px; border-radius:12px; }
+      .real { width:135px; height:135px; flex:none; background:#fff; border-radius:12px;
+              border:1px dashed rgba(30,30,46,.18); }
+      .real-note { font:11px ui-monospace,SFMono-Regular,Menlo,monospace; color:#8a8a99; }
+      object { width:100%; height:100%; image-rendering:pixelated; display:block; }
+      .copy { padding:6px 22px 24px; }
+      .tag { display:inline-block; padding:4px 10px; border-radius:999px; background:#1e1e2e;
+             color:#fbfaf7; font-size:11px; font-weight:800; letter-spacing:.08em; }
+      h2 { margin:12px 0 4px; font-size:23px; }
+      .idiom { margin:0 0 10px; color:#c67a62; font-size:13px; font-weight:700; }
+      .card p { margin:0 0 10px; color:#50505e; font-size:14px; line-height:1.6; }
+      .pros { margin:0; padding:0; list-style:none; font-size:13px; line-height:1.75; }
+      .pros li::before { content:"＋ "; color:#3f8f6a; font-weight:800; }
+      .pros li.con::before { content:"－ "; color:#b4553f; }
+      .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
+      .chip { padding:5px 9px; border-radius:999px; background:#fff;
+              border:1px solid rgba(30,30,46,.12); font-size:11px; font-weight:700; }
+      @media(max-width:980px){ .grid{grid-template-columns:1fr} .stages{flex-wrap:wrap} }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>工作状态：八个候选</h1>
+      <p class="lede">左边是 4× 放大（看清姿态），右边虚线框是 <code>135px</code> 真实尺寸——桌面上就是那么大，<b>请以右边为准做判断</b>。</p>
+      <p class="lede"><b>第一批 A–D</b> 变的是拿什么道具，没变的是怎么站——都是正面站立、双爪在身前对称交替。<br><b>第二批 E–H</b> 换掉了真正没变过的轴：道具有/无、道具比角色大/小、道具在上/下、单件/多件、腿参不参与。</p>
+      <div class="rule">
+        八个都守同一组约束，这是上一轮定下来的：<br>
+        <b>① 循环内没有静止姿态</b>——旧版 43% 的时间停在原位，读作「干一下停一下」。<br>
+        <b>② 首尾姿态不同</b>——首尾相同会让停顿跨过循环接缝被加倍。<br>
+        <b>③ 材料有去向</b>——原地抖动是「在摆弄」，不是「在干活」。<br>
+        <b>④ 道具不遮脸</b>——脸是桌宠的身份。
+      </div>
+      <div class="grid" id="grid"></div>
+    </main>
+    <script>
+      const candidates = [
+        {
+          tag: "A", file: "token-knitting.svg", name: "Tile Feed", idiom: "流动 — 材料进场、被处理、离场",
+          desc: "工作牌从画面下方源源不断进场，一只爪接住、另一只送上去，在胸口被收下并淡出。两块牌相位差半个周期，画面上永远一块在进场、一块在处理。",
+          pros: ["语义最贴切：像 token 流被逐个处理", "任何一帧都有材料在动，队列感强"],
+          cons: ["两块牌颜色不同，可能读作两种东西而不是一条流水线"],
+          rate: "7.65 姿态/秒",
+        },
+        {
+          tag: "B", file: "work-b-stitch.svg", name: "Stitch Pair", idiom: "往复 — 靠节奏本身表意，不运输材料",
+          desc: "双爪各持一针在身体两侧交替下扎，线团随节奏被带动。往复动作本身就是无限的，不需要材料进出场。",
+          pros: ["最安静克制，不抢视觉注意力", "呼应资产原名 token-knitting"],
+          cons: ["针色浅、对比度低，远看容易糊成一团", "没有可见进度，看不出「干了多少」"],
+          rate: "6.18 姿态/秒",
+        },
+        {
+          tag: "C", file: "work-c-stack.svg", name: "Stack Up", idiom: "累积 — 进度可见",
+          desc: "做好一块就搁到身侧，那一摞一层层长高；满了整摞搬走，再从头堆。",
+          pros: ["唯一能看出「已经干了多少」的方案", "有明确的阶段感：一摞 = 一批"],
+          cons: ["摞紧贴身体，小尺寸下容易和身体糊在一起", "构图偏右，桌宠看起来不对称"],
+          rate: "8.24 姿态/秒",
+        },
+        {
+          tag: "D", file: "work-d-knead.svg", name: "Knead", idiom: "用力 — 压扁回弹",
+          desc: "双爪交替下压同一团材料，压扁、回弹、再压。道具最少、幅度最大。",
+          pros: ["小尺寸下最好读：压扁回弹是最强的动画原理", "体力感最足，一眼看出「在使劲干」"],
+          cons: ["材料块偏大，几乎盖住下半身", "看不出在处理什么，语义最模糊"],
+          rate: "6.76 姿态/秒",
+        },
+
+        {
+          tag: "E", file: "work-e-haul.svg", name: "Full Haul", idiom: "无道具 — 全身发力，腿是主角", flawed: true,
+          desc: "一个道具都没有，全靠身体压低前倾、四条腿交替蹬地来表达使劲。",
+          pros: ["唯一不需要任何道具的方案", "四条腿真正参与了（其余七个腿都不动）"],
+          cons: ["<b>这个方向我认为是失败的</b>：没有道具，角色只是一个方块在变胖变瘦，读不出在干什么", "角色本身没有肌肉或方向性特征，撑不起「用力」的叙事"],
+          rate: "6.18 姿态/秒",
+        },
+        {
+          tag: "F", file: "work-f-buried.svg", name: "Buried", idiom: "道具比角色大 — 角色被活儿淹没",
+          desc: "一堆活儿把下半身整个吞掉，只露出头和一只扒拉的爪；堆随扒动起伏。",
+          pros: ["八个里叙事性最强：一眼读出「被活儿埋了」", "唯一一个角色不是画面主体的构图", "情绪表达力最好——忙到看不见身子"],
+          cons: ["腿完全被盖住，角色的可爱度打折", "堆是紫色大块，视觉上比较重"],
+          rate: "10.88 姿态/秒",
+        },
+        {
+          tag: "G", file: "work-g-carry.svg", name: "Head Carry", idiom: "道具在头顶 — 全身做平衡",
+          desc: "头顶一摞东西，摞往一边倒、身体就往反方向挪去接住；腿在小步调整。",
+          pros: ["构图最独特：用上了取景上方一直空着的 69% 空间", "摞的倾斜与身体的补偿方向相反，「在稳住」的读感很强", "摞的层数天然可以映射任务量"],
+          cons: ["道具在头顶，会让桌宠整体显得更高，占屏更多", "和「工作」的语义关联稍间接（更像搬运）"],
+          rate: "14.12 姿态/秒",
+        },
+        {
+          tag: "H", file: "work-h-rain.svg", name: "Task Rain", idiom: "多件从上方落 — 高频反射式应对",
+          desc: "小件不停从上方掉下来，双爪快速拨挡，节奏是急的。",
+          pros: ["节奏最急，最能表达「忙不过来」", "语义最直白：活儿是外面丢进来的，不是自己找的", "件数天然可以映射并发会话数"],
+          cons: ["小件散落在角色周围，偶尔会盖到眼睛", "视觉最吵，长时间看容易累"],
+          rate: "13.24 姿态/秒",
+        },
+      ];
+      document.getElementById("grid").innerHTML = candidates.map(c => `
+        <article class="card${c.flawed ? " flawed" : ""}">
+          <div class="stages">
+            <div class="zoom"><object data="src/animations/${c.file}" type="image/svg+xml">${c.name}</object></div>
+            <div>
+              <div class="real"><object data="src/animations/${c.file}" type="image/svg+xml"></object></div>
+              <div class="real-note">135px 真实尺寸</div>
+            </div>
+          </div>
+          <div class="copy">
+            <span class="tag">${c.tag}</span>
+            <h2>${c.name}</h2>
+            <p class="idiom">${c.idiom}</p>
+            <p>${c.desc}</p>
+            <ul class="pros">
+              ${c.pros.map(t => `<li>${t}</li>`).join("")}
+              ${c.cons.map(t => `<li class="con">${t}</li>`).join("")}
+            </ul>
+            <div class="chips"><span class="chip">3.4s loop</span><span class="chip">${c.rate}</span><span class="chip">静止占比 0%</span></div>
+          </div>
+        </article>`).join("");
+    </script>
+  </body>
+</html>

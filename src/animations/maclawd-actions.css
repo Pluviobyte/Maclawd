@@ -545,5 +545,135 @@
 @keyframes recovering-basket { 0%,16%{transform:translate(0,0) rotate(0)} 17%,24%{transform:translate(1px,-2px) rotate(10deg)} 25%,41%{transform:translate(4px,-4px) rotate(26deg)} 42%,49%{transform:translate(6px,-2px) rotate(38deg)} 50%,57%{transform:translate(7px,0) rotate(44deg)} 58%,100%{transform:translate(7px,1px) rotate(46deg)} }
 @keyframes recovering-eyes { 0%,16%{transform:translate(0,2px)} 17%,24%{transform:translate(0,0)} 25%,41%{transform:translate(0,-1px)} 42%,100%{transform:translate(0,0)} }
 @keyframes recovering-blink { 0%,16%{transform:scaleY(.35)} 17%,66%{transform:scaleY(1)} 67%,74%{transform:scaleY(.15)} 75%,100%{transform:scaleY(1)} }
+/* work-b：织。双爪各持一针交替下扎，线团随节奏被带动。
+   往复本身就是无限的，不需要材料进出场——这是与 A 最本质的区别。 */
+.state-work-b { --duration: 3.4s; }
+.state-work-b .actor { animation-name: stitch-body; }
+.state-work-b .left-claw { animation-name: stitch-left; animation-duration: 1.7s; }
+.state-work-b .right-claw { animation-name: stitch-right; animation-duration: 1.7s; }
+.state-work-b .needle-l { animation-name: stitch-needle-l; animation-duration: 1.7s; }
+.state-work-b .needle-r { animation-name: stitch-needle-r; animation-duration: 1.7s; }
+.state-work-b .yarn { transform-origin: 7.5px 20px; animation-name: stitch-yarn; animation-duration: 1.7s; }
+.state-work-b .eyes { animation-name: stitch-eyes; animation-duration: 2.9s; }
+.state-work-b .blink { animation-name: stitch-blink; animation-duration: 4.7s; }
+@keyframes stitch-body { 0%,28%{transform:translate(0,-1px)} 29%,42%{transform:translate(-1px,0)} 43%,49%{transform:translate(-1px,-1px)} 50%,78%{transform:translate(0,-1px)} 79%,92%{transform:translate(1px,0)} 93%,100%{transform:translate(1px,-1px)} }
+@keyframes stitch-left { 0%,24%{transform:translate(3px,0)} 25%,49%{transform:translate(3px,2px)} 50%,62%{transform:translate(3px,1px)} 63%,87%{transform:translate(3px,-1px)} 88%,100%{transform:translate(3px,-2px)} }
+@keyframes stitch-right { 0%,24%{transform:translate(-3px,-1px)} 25%,37%{transform:translate(-3px,-2px)} 38%,62%{transform:translate(-3px,0)} 63%,87%{transform:translate(-3px,2px)} 88%,100%{transform:translate(-3px,1px)} }
+@keyframes stitch-needle-l { 0%,24%{transform:translateY(0)} 25%,49%{transform:translateY(2px)} 50%,62%{transform:translateY(1px)} 63%,87%{transform:translateY(-1px)} 88%,100%{transform:translateY(-2px)} }
+@keyframes stitch-needle-r { 0%,24%{transform:translateY(-1px)} 25%,37%{transform:translateY(-2px)} 38%,62%{transform:translateY(0)} 63%,87%{transform:translateY(2px)} 88%,100%{transform:translateY(1px)} }
+@keyframes stitch-yarn { 0%,24%{transform:scaleY(1)} 25%,49%{transform:scaleY(.82)} 50%,62%{transform:scaleY(1.08)} 63%,100%{transform:scaleY(1)} }
+@keyframes stitch-eyes { 0%,32%{transform:translate(0,1px)} 33%,55%{transform:translate(0,0)} 56%,77%{transform:translate(0,1px)} 78%,100%{transform:translate(-1px,1px)} }
+@keyframes stitch-blink { 0%,68%{transform:scaleY(1)} 69%,74%{transform:scaleY(.15)} 75%,100%{transform:scaleY(1)} }
+/* work-c：累积。做好一块就搁到身侧，那一摞一层层长高，满了整摞搬走再来。
+   与 A、B 的区别是**进度可见**——你能看出它已经干了多少。 */
+.state-work-c { --duration: 3.4s; }
+.state-work-c .actor { animation-name: stack-body; }
+.state-work-c .left-claw { animation-name: stack-left; animation-duration: 1.7s; }
+.state-work-c .right-claw { animation-name: stack-right; animation-duration: 1.7s; }
+.state-work-c .piece { animation-name: stack-piece; animation-duration: 1.7s; }
+.state-work-c .pile { transform-origin: 16.5px 15px; animation-name: stack-pile; }
+.state-work-c .eyes { animation-name: stack-eyes; animation-duration: 2.9s; }
+.state-work-c .blink { animation-name: stack-blink; animation-duration: 4.7s; }
+@keyframes stack-body { 0%,28%{transform:translate(0,-1px)} 29%,35%{transform:translate(-1px,1px)} 36%,49%{transform:translate(0,-1px)} 50%,70%{transform:translate(1px,0)} 71%,78%{transform:translate(1px,-1px)} 79%,92%{transform:translate(0,1px)} 93%,100%{transform:translate(-1px,0)} }
+@keyframes stack-left { 0%,24%{transform:translate(3px,1px)} 25%,49%{transform:translate(3px,2px)} 50%,62%{transform:translate(2px,0)} 63%,87%{transform:translate(2px,-1px)} 88%,100%{transform:translate(3px,0)} }
+@keyframes stack-right { 0%,24%{transform:translate(-2px,-1px)} 25%,37%{transform:translate(-1px,-2px)} 38%,62%{transform:translate(1px,-2px)} 63%,87%{transform:translate(0,0)} 88%,100%{transform:translate(-2px,0)} }
+@keyframes stack-piece { 0%,12%{opacity:0;transform:translateY(4px)} 13%,37%{opacity:1;transform:translateY(2px)} 38%,62%{opacity:1;transform:translateY(0)} 63%,87%{opacity:1;transform:translate(3px,-1px)} 88%,100%{opacity:0;transform:translate(6px,0)} }
+@keyframes stack-pile { 0%,22%{opacity:1;transform:scaleY(.5)} 23%,45%{opacity:1;transform:scaleY(.67)} 46%,68%{opacity:1;transform:scaleY(.84)} 69%,91%{opacity:1;transform:scaleY(1)} 92%,100%{opacity:0;transform:scaleY(1) translateY(-3px)} }
+@keyframes stack-eyes { 0%,32%{transform:translate(0,1px)} 33%,55%{transform:translate(1px,0)} 56%,77%{transform:translate(1px,1px)} 78%,100%{transform:translate(0,0)} }
+@keyframes stack-blink { 0%,68%{transform:scaleY(1)} 69%,74%{transform:scaleY(.15)} 75%,100%{transform:scaleY(1)} }
+/* work-d：揉。双爪交替下压同一团材料，压扁、回弹、再压。
+   道具最少、幅度最大——压扁回弹是小尺寸下最容易读懂的动画原理，
+   也是四个里体力感最强的一个。 */
+.state-work-d { --duration: 3.4s; }
+.state-work-d .actor { animation-name: knead-body; }
+.state-work-d .left-claw { animation-name: knead-left; animation-duration: 1.7s; }
+.state-work-d .right-claw { animation-name: knead-right; animation-duration: 1.7s; }
+.state-work-d .lump { transform-origin: 7.5px 16px; animation-name: knead-lump; animation-duration: 1.7s; }
+.state-work-d .eyes { animation-name: knead-eyes; animation-duration: 2.9s; }
+.state-work-d .blink { animation-name: knead-blink; animation-duration: 4.7s; }
+@keyframes knead-body { 0%,13%{transform:translate(0,-1px)} 14%,42%{transform:translate(-1px,1px)} 43%,49%{transform:translate(-1px,0)} 50%,63%{transform:translate(0,-1px)} 64%,92%{transform:translate(1px,1px)} 93%,100%{transform:translate(1px,0)} }
+@keyframes knead-left { 0%,24%{transform:translate(3px,-1px)} 25%,49%{transform:translate(3px,2px)} 50%,62%{transform:translate(3px,3px)} 63%,87%{transform:translate(3px,1px)} 88%,100%{transform:translate(3px,-1px)} }
+@keyframes knead-right { 0%,12%{transform:translate(-3px,3px)} 13%,37%{transform:translate(-3px,1px)} 38%,62%{transform:translate(-3px,-1px)} 63%,87%{transform:translate(-3px,2px)} 88%,100%{transform:translate(-3px,3px)} }
+@keyframes knead-lump { 0%,24%{transform:scaleY(1) scaleX(1)} 25%,49%{transform:scaleY(.6) scaleX(1.2)} 50%,62%{transform:scaleY(1.2) scaleX(.9)} 63%,87%{transform:scaleY(.95) scaleX(1.05)} 88%,100%{transform:scaleY(1.05) scaleX(1)} }
+@keyframes knead-eyes { 0%,32%{transform:translate(0,1px)} 33%,55%{transform:translate(0,2px)} 56%,77%{transform:translate(0,1px)} 78%,100%{transform:translate(0,0)} }
+@keyframes knead-blink { 0%,68%{transform:scaleY(1)} 69%,74%{transform:scaleY(.15)} 75%,100%{transform:scaleY(1)} }
+/* work-e：全身拉拽。**一个道具都没有**——发力感全靠身体拱动与四条腿交替蹬地。
+   前四个候选里腿是完全不动的，这里腿是主角。 */
+.state-work-e { --duration: 3.4s; }
+.state-work-e .actor { animation-name: haul-body; }
+.state-work-e .left-claw { animation-name: haul-left; }
+.state-work-e .right-claw { animation-name: haul-right; }
+.state-work-e .leg-a { animation-name: haul-leg-a; animation-duration: 1.7s; }
+.state-work-e .leg-b { animation-name: haul-leg-b; animation-duration: 1.7s; }
+.state-work-e .leg-c { animation-name: haul-leg-c; animation-duration: 1.7s; }
+.state-work-e .leg-d { animation-name: haul-leg-d; animation-duration: 1.7s; }
+.state-work-e .eyes { animation-name: haul-eyes; }
+.state-work-e .blink { animation-name: haul-blink; animation-duration: 4.7s; }
+@keyframes haul-body { 0%,28%{transform:translate(-2px,2px) scaleY(.82)} 29%,35%{transform:translate(-1px,1px) scaleY(.9)} 36%,49%{transform:translate(1px,-1px) scaleY(1.06)} 50%,56%{transform:translate(1px,0) scaleY(1)} 57%,78%{transform:translate(0,1px) scaleY(.9)} 79%,85%{transform:translate(-1px,2px) scaleY(.84)} 86%,100%{transform:translate(-2px,1px) scaleY(.88)} }
+@keyframes haul-left { 0%,28%{transform:translate(2px,4px)} 29%,35%{transform:translate(2px,2px)} 36%,49%{transform:translate(1px,-1px)} 50%,56%{transform:translate(1px,0)} 57%,78%{transform:translate(2px,3px)} 79%,85%{transform:translate(2px,4px)} 86%,100%{transform:translate(2px,3px)} }
+@keyframes haul-right { 0%,28%{transform:translate(-2px,4px)} 29%,35%{transform:translate(-2px,2px)} 36%,49%{transform:translate(-1px,-1px)} 50%,56%{transform:translate(-1px,0)} 57%,78%{transform:translate(-2px,3px)} 79%,85%{transform:translate(-2px,4px)} 86%,100%{transform:translate(-2px,3px)} }
+@keyframes haul-leg-a { 0%,37%{transform:translate(0,0)} 38%,49%{transform:translate(1px,-1px)} 50%,62%{transform:translate(1px,0)} 63%,100%{transform:translate(0,0)} }
+@keyframes haul-leg-b { 0%,62%{transform:translate(0,0)} 63%,74%{transform:translate(1px,-1px)} 75%,87%{transform:translate(1px,0)} 88%,100%{transform:translate(0,0)} }
+@keyframes haul-leg-c { 0%,12%{transform:translate(1px,0)} 13%,62%{transform:translate(0,0)} 63%,74%{transform:translate(1px,-1px)} 75%,100%{transform:translate(1px,0)} }
+@keyframes haul-leg-d { 0%,12%{transform:translate(1px,-1px)} 13%,37%{transform:translate(1px,0)} 38%,87%{transform:translate(0,0)} 88%,100%{transform:translate(0,-1px)} }
+@keyframes haul-eyes { 0%,35%{transform:translateY(1px) scaleY(.5)} 36%,56%{transform:translateY(1px) scaleY(.35)} 57%,70%{transform:translateY(0) scaleY(.6)} 71%,100%{transform:translateY(1px) scaleY(.5)} }
+@keyframes haul-blink { 0%,68%{transform:scaleY(1)} 69%,74%{transform:scaleY(.15)} 75%,100%{transform:scaleY(1)} }
+/* work-f：埋在活里。道具比角色还大，把下半身整个吞掉，只露出头和一只扒拉的爪。
+   这是唯一一个**角色不是画面主体**的构图——活儿才是。 */
+.state-work-f { --duration: 3.4s; }
+.state-work-f .actor { animation-name: buried-body; }
+.state-work-f .dig-claw { animation-name: buried-dig; animation-duration: 1.13s; }
+.state-work-f .heap { transform-origin: 7.5px 20px; animation-name: buried-heap; animation-duration: 1.7s; }
+.state-work-f .eyes { animation-name: buried-eyes; animation-duration: 2.9s; }
+.state-work-f .blink { animation-name: buried-blink; animation-duration: 4.3s; }
+@keyframes buried-body { 0%,22%{transform:translate(0,-1px)} 23%,30%{transform:translate(-1px,0)} 31%,45%{transform:translate(-1px,1px)} 46%,53%{transform:translate(0,0)} 54%,76%{transform:translate(1px,-1px)} 77%,84%{transform:translate(1px,0)} 85%,100%{transform:translate(0,1px)} }
+@keyframes buried-dig { 0%,37%{transform:translate(0,0)} 38%,49%{transform:translate(1px,2px)} 50%,74%{transform:translate(2px,4px)} 75%,87%{transform:translate(1px,2px)} 88%,100%{transform:translate(0,-1px)} }
+@keyframes buried-heap { 0%,32%{transform:scaleY(1)} 33%,43%{transform:scaleY(1.04) translateX(-1px)} 44%,66%{transform:scaleY(.96)} 67%,77%{transform:scaleY(1.02) translateX(1px)} 78%,100%{transform:scaleY(1)} }
+@keyframes buried-eyes { 0%,32%{transform:translate(0,0)} 33%,55%{transform:translate(-1px,1px)} 56%,77%{transform:translate(0,1px)} 78%,100%{transform:translate(1px,0)} }
+@keyframes buried-blink { 0%,63%{transform:scaleY(1)} 64%,70%{transform:scaleY(.15)} 71%,100%{transform:scaleY(1)} }
+/* work-g：顶运。头顶一摞东西，全身在做持续的平衡补偿，腿在小步挪。
+   摞的倾斜与身体的补偿**方向相反**——那个反向才是「在稳住」的读感。
+   顺带用上了取景上方那 69% 一直空着的空间。 */
+.state-work-g { --duration: 3.4s; }
+.state-work-g .actor { animation-name: carry-body; }
+.state-work-g .load { transform-origin: 7.5px 6px; animation-name: carry-load; }
+.state-work-g .left-claw { animation-name: carry-left; animation-duration: 1.7s; }
+.state-work-g .right-claw { animation-name: carry-right; animation-duration: 1.7s; }
+.state-work-g .leg-a { animation-name: carry-leg-a; animation-duration: 1.13s; }
+.state-work-g .leg-b { animation-name: carry-leg-b; animation-duration: 1.13s; }
+.state-work-g .leg-c { animation-name: carry-leg-c; animation-duration: 1.13s; }
+.state-work-g .leg-d { animation-name: carry-leg-d; animation-duration: 1.13s; }
+.state-work-g .eyes { animation-name: carry-eyes; animation-duration: 2.3s; }
+.state-work-g .blink { animation-name: carry-blink; animation-duration: 5.3s; }
+@keyframes carry-body { 0%,22%{transform:translate(2px,0)} 23%,30%{transform:translate(1px,-1px)} 31%,45%{transform:translate(0,-1px)} 46%,68%{transform:translate(-2px,0)} 69%,76%{transform:translate(-1px,-1px)} 77%,91%{transform:translate(0,-1px)} 92%,100%{transform:translate(1px,-1px)} }
+@keyframes carry-load { 0%,22%{transform:rotate(-11deg) translateX(-1px)} 23%,30%{transform:rotate(-5deg)} 31%,45%{transform:rotate(0)} 46%,68%{transform:rotate(11deg) translateX(1px)} 69%,76%{transform:rotate(5deg)} 77%,91%{transform:rotate(0)} 92%,100%{transform:rotate(-5deg)} }
+@keyframes carry-left { 0%,37%{transform:translate(0,-2px)} 38%,62%{transform:translate(-1px,-3px)} 63%,87%{transform:translate(-1px,-2px)} 88%,100%{transform:translate(0,-1px)} }
+@keyframes carry-right { 0%,12%{transform:translate(0,-1px)} 13%,49%{transform:translate(0,-2px)} 50%,74%{transform:translate(1px,-3px)} 75%,100%{transform:translate(1px,-2px)} }
+@keyframes carry-leg-a { 0%,49%{transform:translateY(0)} 50%,62%{transform:translateY(-1px)} 63%,100%{transform:translateY(0)} }
+@keyframes carry-leg-b { 0%,74%{transform:translateY(0)} 75%,87%{transform:translateY(-1px)} 88%,100%{transform:translateY(0)} }
+@keyframes carry-leg-c { 0%,12%{transform:translateY(-1px)} 13%,74%{transform:translateY(0)} 75%,100%{transform:translateY(0)} }
+@keyframes carry-leg-d { 0%,24%{transform:translateY(0)} 25%,37%{transform:translateY(-1px)} 38%,100%{transform:translateY(0)} }
+@keyframes carry-eyes { 0%,43%{transform:translate(0,-1px)} 44%,66%{transform:translate(0,0)} 67%,100%{transform:translate(0,-1px)} }
+@keyframes carry-blink { 0%,70%{transform:scaleY(1)} 71%,75%{transform:scaleY(.15)} 76%,100%{transform:scaleY(1)} }
+/* work-h：任务雨。小件不停从上方掉下来，双爪快速拨挡。
+   四个候选里节奏最急的一个：件多、来得快、应对是反射式的。
+   语义也最直白——活儿是外面丢进来的，不是自己找的。 */
+.state-work-h { --duration: 3.4s; }
+.state-work-h .actor { animation-name: rain-body; }
+.state-work-h .left-claw { animation-name: rain-left; animation-duration: 1.13s; }
+.state-work-h .right-claw { animation-name: rain-right; animation-duration: 1.13s; }
+.state-work-h .drop-a { animation-name: rain-drop-a; animation-duration: 1.7s; }
+.state-work-h .drop-b { animation-name: rain-drop-b; animation-duration: 1.7s; }
+.state-work-h .drop-c { animation-name: rain-drop-c; animation-duration: 2.55s; }
+.state-work-h .eyes { animation-name: rain-eyes; animation-duration: 1.9s; }
+.state-work-h .blink { animation-name: rain-blink; animation-duration: 3.7s; }
+@keyframes rain-body { 0%,32%{transform:translate(-1px,0)} 33%,41%{transform:translate(-1px,1px)} 42%,49%{transform:translate(0,-1px)} 50%,82%{transform:translate(1px,0)} 83%,91%{transform:translate(1px,1px)} 92%,100%{transform:translate(0,-1px)} }
+@keyframes rain-left { 0%,32%{transform:translate(1px,-3px)} 33%,49%{transform:translate(0,-1px)} 50%,82%{transform:translate(0,1px)} 83%,100%{transform:translate(1px,-1px)} }
+@keyframes rain-right { 0%,32%{transform:translate(0,1px)} 33%,49%{transform:translate(-1px,-1px)} 50%,82%{transform:translate(-1px,-3px)} 83%,100%{transform:translate(0,-1px)} }
+@keyframes rain-drop-a { 0%,13%{opacity:0;transform:translateY(-4px)} 14%,42%{opacity:1;transform:translateY(2px)} 43%,70%{opacity:1;transform:translateY(7px)} 71%,85%{opacity:1;transform:translate(-2px,11px)} 86%,100%{opacity:0;transform:translate(-4px,13px)} }
+@keyframes rain-drop-b { 0%,28%{opacity:1;transform:translateY(7px)} 29%,42%{opacity:1;transform:translate(2px,11px)} 43%,56%{opacity:0;transform:translate(4px,13px)} 57%,70%{opacity:0;transform:translateY(-4px)} 71%,100%{opacity:1;transform:translateY(2px)} }
+@keyframes rain-drop-c { 0%,16%{opacity:0;transform:translateY(-4px)} 17%,49%{opacity:1;transform:translateY(3px)} 50%,82%{opacity:1;transform:translateY(8px)} 83%,100%{opacity:0;transform:translate(3px,12px)} }
+@keyframes rain-eyes { 0%,28%{transform:translate(-1px,-1px)} 29%,42%{transform:translate(0,-1px)} 43%,70%{transform:translate(1px,-1px)} 71%,100%{transform:translate(0,0)} }
+@keyframes rain-blink { 0%,66%{transform:scaleY(1)} 67%,74%{transform:scaleY(.15)} 75%,100%{transform:scaleY(1)} }
 
 /* === 生成区结束 === */

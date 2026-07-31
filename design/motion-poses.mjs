@@ -1066,3 +1066,348 @@ ANIMATIONS.push(
     ],
   },
 );
+
+// ============================================================================
+// working 的候选方案（供挑选，选定后删掉落选的）
+//
+// 四个走**不同的运动语汇**，不是同一个东西换皮：
+//   A 流动 — 材料进场、被处理、离场（当前的 Tile Feed）
+//   B 往复 — 双爪对称往复，没有材料运输，靠节奏本身表意
+//   C 累积 — 身侧的成果一层层长高，进度可见
+//   D 用力 — 单一材料被反复压揉，靠压扁回弹表达力气
+//
+// 四个都守同一组约束：循环内无静止姿态、首尾姿态不同、道具不遮脸。
+// ============================================================================
+
+ANIMATIONS.push(
+  {
+    state: 'work-b',
+    svg: {
+      file: 'work-b-stitch.svg',
+      title: 'Stitch Pair',
+      desc: 'Two needles dip alternately into the yarn below; the work never pauses.',
+      // 针与线团都在眼睛以下，脸全程不被遮
+      // 针要 2 单位宽才看得见（1 单位 = 3px，小尺寸下等于没有），
+      // 而且不能悬在眼睛正下方——那读起来像流口水。
+      propsAfter: '<g class="needle-l motion"><rect x="2" y="12" width="2" height="5" fill="#E7DCF2"/>'
+        + '<rect x="2" y="12" width="2" height="1" fill="#B9A1D9"/></g>'
+        + '<g class="needle-r motion"><rect x="11" y="12" width="2" height="5" fill="#E7DCF2"/>'
+        + '<rect x="11" y="12" width="2" height="1" fill="#B9A1D9"/></g>'
+        + '<g class="yarn motion"><rect x="4" y="16" width="7" height="4" fill="#F6C85F"/>'
+        + '<rect x="5" y="17" width="5" height="1" fill="#FFE3A3"/></g>',
+    },
+    duration: 3400,
+    comment: '织。双爪各持一针交替下扎，线团随节奏被带动。\n'
+      + '   往复本身就是无限的，不需要材料进出场——这是与 A 最本质的区别。',
+    layers: [
+      // 权重差要拉开：扎下去的那一拍停久（着力），抬起来快速掠过。
+      { sel: '.actor', name: 'stitch-body', poses: [
+        p('translate(0,-1px)', 4), p('translate(-1px,0)', 2), p('translate(-1px,-1px)', 1),
+        p('translate(0,-1px)', 4), p('translate(1px,0)', 2), p('translate(1px,-1px)', 1) ] },
+      { sel: '.left-claw', name: 'stitch-left', period: 1700, poses: [
+        p('translate(3px,0)', 2), p('translate(3px,2px)', 2), p('translate(3px,1px)', 1),
+        p('translate(3px,-1px)', 2), p('translate(3px,-2px)', 1) ] },
+      { sel: '.right-claw', name: 'stitch-right', period: 1700, poses: [
+        p('translate(-3px,-1px)', 2), p('translate(-3px,-2px)', 1), p('translate(-3px,0)', 2),
+        p('translate(-3px,2px)', 2), p('translate(-3px,1px)', 1) ] },
+      { sel: '.needle-l', name: 'stitch-needle-l', period: 1700, poses: [
+        p('translateY(0)', 2), p('translateY(2px)', 2), p('translateY(1px)', 1),
+        p('translateY(-1px)', 2), p('translateY(-2px)', 1) ] },
+      { sel: '.needle-r', name: 'stitch-needle-r', period: 1700, poses: [
+        p('translateY(-1px)', 2), p('translateY(-2px)', 1), p('translateY(0)', 2),
+        p('translateY(2px)', 2), p('translateY(1px)', 1) ] },
+      { sel: '.yarn', name: 'stitch-yarn', period: 1700,
+        origin: '7.5px 20px', poses: [
+          p('scaleY(1)', 2), p('scaleY(.82)', 2), p('scaleY(1.08)', 1), p('scaleY(1)', 3) ] },
+      { sel: '.eyes', name: 'stitch-eyes', period: 2900, poses: [
+        p('translate(0,1px)', 3), p('translate(0,0)', 2), p('translate(0,1px)', 2),
+        p('translate(-1px,1px)', 2) ] },
+      { sel: '.blink', name: 'stitch-blink', period: 4700, poses: [
+        p('scaleY(1)', 11), p('scaleY(.15)', 1), p('scaleY(1)', 4) ] },
+    ],
+  },
+
+  {
+    state: 'work-c',
+    svg: {
+      file: 'work-c-stack.svg',
+      title: 'Stack Up',
+      desc: 'Finished pieces pile up beside the body until the stack is carried off and a new one begins.',
+      propsAfter: '<g class="piece motion"><rect x="5" y="11" width="4" height="3" fill="#7BC8C4"/>'
+        + '<rect x="6" y="12" width="2" height="1" fill="#BDE7E4"/></g>'
+        + '<g class="pile motion"><rect x="14" y="9" width="5" height="6" fill="#B9A1D9"/>'
+        + '<rect x="15" y="10" width="3" height="1" fill="#E7DCF2"/></g>',
+    },
+    duration: 3400,
+    comment: '累积。做好一块就搁到身侧，那一摞一层层长高，满了整摞搬走再来。\n'
+      + '   与 A、B 的区别是**进度可见**——你能看出它已经干了多少。',
+    layers: [
+      { sel: '.actor', name: 'stack-body', poses: [
+        p('translate(0,-1px)', 4), p('translate(-1px,1px)', 1), p('translate(0,-1px)', 2),
+        p('translate(1px,0)', 3), p('translate(1px,-1px)', 1), p('translate(0,1px)', 2),
+        p('translate(-1px,0)', 1) ] },
+      { sel: '.left-claw', name: 'stack-left', period: 1700, poses: [
+        p('translate(3px,1px)', 2), p('translate(3px,2px)', 2), p('translate(2px,0)', 1),
+        p('translate(2px,-1px)', 2), p('translate(3px,0)', 1) ] },
+      { sel: '.right-claw', name: 'stack-right', period: 1700, poses: [
+        p('translate(-2px,-1px)', 2), p('translate(-1px,-2px)', 1), p('translate(1px,-2px)', 2),
+        p('translate(0,0)', 2), p('translate(-2px,0)', 1) ] },
+      { sel: '.piece', name: 'stack-piece', period: 1700, poses: [
+        p('opacity:0;transform:translateY(4px)', 1), p('opacity:1;transform:translateY(2px)', 2),
+        p('opacity:1;transform:translateY(0)', 2), p('opacity:1;transform:translate(3px,-1px)', 2),
+        p('opacity:0;transform:translate(6px,0)', 1) ] },
+      // 摞：从一层长到四层，满了整摞淡出重来
+      // 起点不能太矮：scaleY(.25) 下这摞只剩 1.5 单位，看着像根线不像一摞。
+      { sel: '.pile', name: 'stack-pile', origin: '16.5px 15px', poses: [
+        p('opacity:1;transform:scaleY(.5)', 3), p('opacity:1;transform:scaleY(.67)', 3),
+        p('opacity:1;transform:scaleY(.84)', 3), p('opacity:1;transform:scaleY(1)', 3),
+        p('opacity:0;transform:scaleY(1) translateY(-3px)', 1) ] },
+      { sel: '.eyes', name: 'stack-eyes', period: 2900, poses: [
+        p('translate(0,1px)', 3), p('translate(1px,0)', 2), p('translate(1px,1px)', 2),
+        p('translate(0,0)', 2) ] },
+      { sel: '.blink', name: 'stack-blink', period: 4700, poses: [
+        p('scaleY(1)', 11), p('scaleY(.15)', 1), p('scaleY(1)', 4) ] },
+    ],
+  },
+
+  {
+    state: 'work-d',
+    svg: {
+      file: 'work-d-knead.svg',
+      title: 'Knead',
+      desc: 'Both claws press a single lump in turn; it squashes and springs back without pause.',
+      propsAfter: '<g class="lump motion"><rect x="4" y="12" width="7" height="4" fill="#F6C85F"/>'
+        + '<rect x="5" y="13" width="5" height="1" fill="#FFE3A3"/></g>',
+    },
+    duration: 3400,
+    comment: '揉。双爪交替下压同一团材料，压扁、回弹、再压。\n'
+      + '   道具最少、幅度最大——压扁回弹是小尺寸下最容易读懂的动画原理，\n'
+      + '   也是四个里体力感最强的一个。',
+    layers: [
+      // 压下去停久、弹回来快——这个对比就是「用力」的读感。
+      { sel: '.actor', name: 'knead-body', poses: [
+        p('translate(0,-1px)', 2), p('translate(-1px,1px)', 4), p('translate(-1px,0)', 1),
+        p('translate(0,-1px)', 2), p('translate(1px,1px)', 4), p('translate(1px,0)', 1) ] },
+      { sel: '.left-claw', name: 'knead-left', period: 1700, poses: [
+        p('translate(3px,-1px)', 2), p('translate(3px,2px)', 2), p('translate(3px,3px)', 1),
+        p('translate(3px,1px)', 2), p('translate(3px,-1px)', 1) ] },
+      { sel: '.right-claw', name: 'knead-right', period: 1700, poses: [
+        p('translate(-3px,3px)', 1), p('translate(-3px,1px)', 2), p('translate(-3px,-1px)', 2),
+        p('translate(-3px,2px)', 2), p('translate(-3px,3px)', 1) ] },
+      { sel: '.lump', name: 'knead-lump', period: 1700, origin: '7.5px 16px', poses: [
+        p('scaleY(1) scaleX(1)', 2), p('scaleY(.6) scaleX(1.2)', 2),
+        p('scaleY(1.2) scaleX(.9)', 1), p('scaleY(.95) scaleX(1.05)', 2),
+        p('scaleY(1.05) scaleX(1)', 1) ] },
+      { sel: '.eyes', name: 'knead-eyes', period: 2900, poses: [
+        p('translate(0,1px)', 3), p('translate(0,2px)', 2), p('translate(0,1px)', 2),
+        p('translate(0,0)', 2) ] },
+      { sel: '.blink', name: 'knead-blink', period: 4700, poses: [
+        p('scaleY(1)', 11), p('scaleY(.15)', 1), p('scaleY(1)', 4) ] },
+    ],
+  },
+);
+
+// ============================================================================
+// working 候选第二批
+//
+// 第一批（A–D）的问题：只换了道具，**姿态语汇是同一套**——
+// 都是站着、正面、双爪在身前对称交替。变的是拿什么，没变的是怎么站。
+//
+// 这一批换掉真正没变过的轴：
+//   E 无道具，全身发力，**腿是主角**
+//   F 道具**比角色大**，角色被活儿淹没，只露上半身
+//   G 道具在**头顶**（前四个全在下方），全身在做平衡
+//   H **多个**小件从天而降，双爪高频应对，节奏是急的
+// ============================================================================
+
+ANIMATIONS.push(
+  {
+    state: 'work-e',
+    svg: {
+      file: 'work-e-haul.svg',
+      title: 'Full Haul',
+      desc: 'No prop at all: the whole body leans into an unseen load, four legs driving in turn.',
+      splitLegs: true,
+    },
+    duration: 3400,
+    comment: '全身拉拽。**一个道具都没有**——发力感全靠身体拱动与四条腿交替蹬地。\n'
+      + '   前四个候选里腿是完全不动的，这里腿是主角。',
+    layers: [
+      // 无道具时「在使劲」全靠姿态：压低 + 前倾 + 回弹。
+      // 幅度必须够大，scaleY .82 到 1.06 之间来回，小了就读成原地扭动。
+      { sel: '.actor', name: 'haul-body', poses: [
+        p('translate(-2px,2px) scaleY(.82)', 4), p('translate(-1px,1px) scaleY(.9)', 1),
+        p('translate(1px,-1px) scaleY(1.06)', 2), p('translate(1px,0) scaleY(1)', 1),
+        p('translate(0,1px) scaleY(.9)', 3), p('translate(-1px,2px) scaleY(.84)', 1),
+        p('translate(-2px,1px) scaleY(.88)', 2) ] },
+      // 向左位移会让爪子和躯干拉开一条缝。有道具时那读作「伸手去够」，
+      // 这个动作没有道具可够，离体的爪子只会读成断肢——只能向前下方撑。
+      { sel: '.left-claw', name: 'haul-left', poses: [
+        p('translate(2px,4px)', 4), p('translate(2px,2px)', 1), p('translate(1px,-1px)', 2),
+        p('translate(1px,0)', 1), p('translate(2px,3px)', 3), p('translate(2px,4px)', 1),
+        p('translate(2px,3px)', 2) ] },
+      { sel: '.right-claw', name: 'haul-right', poses: [
+        p('translate(-2px,4px)', 4), p('translate(-2px,2px)', 1), p('translate(-1px,-1px)', 2),
+        p('translate(-1px,0)', 1), p('translate(-2px,3px)', 3), p('translate(-2px,4px)', 1),
+        p('translate(-2px,3px)', 2) ] },
+      // 四条腿依次蹬地，相位各差四分之一拍——同时动会读成跳
+      { sel: '.leg-a', name: 'haul-leg-a', period: 1700, poses: [
+        p('translate(0,0)', 3), p('translate(1px,-1px)', 1), p('translate(1px,0)', 1),
+        p('translate(0,0)', 3) ] },
+      { sel: '.leg-b', name: 'haul-leg-b', period: 1700, poses: [
+        p('translate(0,0)', 5), p('translate(1px,-1px)', 1), p('translate(1px,0)', 1),
+        p('translate(0,0)', 1) ] },
+      { sel: '.leg-c', name: 'haul-leg-c', period: 1700, poses: [
+        p('translate(1px,0)', 1), p('translate(0,0)', 4), p('translate(1px,-1px)', 1),
+        p('translate(1px,0)', 2) ] },
+      { sel: '.leg-d', name: 'haul-leg-d', period: 1700, poses: [
+        p('translate(1px,-1px)', 1), p('translate(1px,0)', 2), p('translate(0,0)', 4),
+        p('translate(0,-1px)', 1) ] },
+      { sel: '.eyes', name: 'haul-eyes', poses: [
+        p('translateY(1px) scaleY(.5)', 5), p('translateY(1px) scaleY(.35)', 3),
+        p('translateY(0) scaleY(.6)', 2), p('translateY(1px) scaleY(.5)', 4) ] },
+      { sel: '.blink', name: 'haul-blink', period: 4700, poses: [
+        p('scaleY(1)', 11), p('scaleY(.15)', 1), p('scaleY(1)', 4) ] },
+    ],
+  },
+
+  {
+    state: 'work-f',
+    svg: {
+      file: 'work-f-buried.svg',
+      title: 'Buried',
+      desc: 'A pile of work larger than the character swallows the lower body; only the head and one digging claw stay above it.',
+      // 道具画在角色**之后**才能盖住下半身。这是四批候选里唯一
+      // 角色不是画面主体的构图——活儿比它大。
+      propsAfter: '<g class="heap motion">'
+        + '<rect x="-3" y="14" width="21" height="6" fill="#B9A1D9"/>'
+        + '<rect x="-1" y="12" width="6" height="2" fill="#B9A1D9"/>'
+        + '<rect x="10" y="12" width="7" height="2" fill="#B9A1D9"/>'
+        + '<rect x="0" y="14" width="4" height="1" fill="#E7DCF2"/>'
+        + '<rect x="7" y="16" width="5" height="1" fill="#E7DCF2"/>'
+        + '<rect x="13" y="13" width="3" height="1" fill="#E7DCF2"/></g>'
+        + '<g class="dig-claw motion"><rect x="0" y="7" width="3" height="3" fill="#DE886D"/></g>',
+    },
+    duration: 3400,
+    comment: '埋在活里。道具比角色还大，把下半身整个吞掉，只露出头和一只扒拉的爪。\n'
+      + '   这是唯一一个**角色不是画面主体**的构图——活儿才是。',
+    layers: [
+      { sel: '.actor', name: 'buried-body', poses: [
+        p('translate(0,-1px)', 3), p('translate(-1px,0)', 1), p('translate(-1px,1px)', 2),
+        p('translate(0,0)', 1), p('translate(1px,-1px)', 3), p('translate(1px,0)', 1),
+        p('translate(0,1px)', 2) ] },
+      { sel: '.dig-claw', name: 'buried-dig', period: 1130, poses: [
+        p('translate(0,0)', 3), p('translate(1px,2px)', 1), p('translate(2px,4px)', 2),
+        p('translate(1px,2px)', 1), p('translate(0,-1px)', 1) ] },
+      { sel: '.heap', name: 'buried-heap', period: 1700, origin: '7.5px 20px', poses: [
+        p('scaleY(1)', 3), p('scaleY(1.04) translateX(-1px)', 1), p('scaleY(.96)', 2),
+        p('scaleY(1.02) translateX(1px)', 1), p('scaleY(1)', 2) ] },
+      { sel: '.eyes', name: 'buried-eyes', period: 2900, poses: [
+        p('translate(0,0)', 3), p('translate(-1px,1px)', 2), p('translate(0,1px)', 2),
+        p('translate(1px,0)', 2) ] },
+      { sel: '.blink', name: 'buried-blink', period: 4300, poses: [
+        p('scaleY(1)', 9), p('scaleY(.15)', 1), p('scaleY(1)', 4) ] },
+    ],
+  },
+
+  {
+    state: 'work-g',
+    svg: {
+      file: 'work-g-carry.svg',
+      title: 'Head Carry',
+      desc: 'A stack rides on top of the head; the whole body works to keep it balanced while the legs take small steps.',
+      splitLegs: true,
+      // 道具在**头顶**——前四个候选全在身体下方。
+      // 这块空间本来一直是空的（取景上方 69% 从没用过）。
+      propsAfter: '<g class="load motion">'
+        + '<rect x="3" y="3" width="9" height="3" fill="#7BC8C4"/>'
+        + '<rect x="4" y="4" width="3" height="1" fill="#BDE7E4"/>'
+        + '<rect x="4" y="0" width="7" height="3" fill="#F6C85F"/>'
+        + '<rect x="5" y="1" width="3" height="1" fill="#FFE3A3"/>'
+        + '<rect x="5" y="-3" width="5" height="3" fill="#B9A1D9"/>'
+        + '<rect x="6" y="-2" width="2" height="1" fill="#E7DCF2"/></g>',
+    },
+    duration: 3400,
+    comment: '顶运。头顶一摞东西，全身在做持续的平衡补偿，腿在小步挪。\n'
+      + '   摞的倾斜与身体的补偿**方向相反**——那个反向才是「在稳住」的读感。\n'
+      + '   顺带用上了取景上方那 69% 一直空着的空间。',
+    layers: [
+      { sel: '.actor', name: 'carry-body', poses: [
+        p('translate(2px,0)', 3), p('translate(1px,-1px)', 1), p('translate(0,-1px)', 2),
+        p('translate(-2px,0)', 3), p('translate(-1px,-1px)', 1), p('translate(0,-1px)', 2),
+        p('translate(1px,-1px)', 1) ] },
+      // 摞往左倒，身体就往右挪去接住——反相是这个动作全部的意思
+      // ±4° 在 135px 下几乎看不出来，读成戴了顶不动的帽子。加到 ±11°。
+      { sel: '.load', name: 'carry-load', origin: '7.5px 6px', poses: [
+        p('rotate(-11deg) translateX(-1px)', 3), p('rotate(-5deg)', 1), p('rotate(0)', 2),
+        p('rotate(11deg) translateX(1px)', 3), p('rotate(5deg)', 1), p('rotate(0)', 2),
+        p('rotate(-5deg)', 1) ] },
+      { sel: '.left-claw', name: 'carry-left', period: 1700, poses: [
+        p('translate(0,-2px)', 3), p('translate(-1px,-3px)', 2), p('translate(-1px,-2px)', 2),
+        p('translate(0,-1px)', 1) ] },
+      { sel: '.right-claw', name: 'carry-right', period: 1700, poses: [
+        p('translate(0,-1px)', 1), p('translate(0,-2px)', 3), p('translate(1px,-3px)', 2),
+        p('translate(1px,-2px)', 2) ] },
+      { sel: '.leg-a', name: 'carry-leg-a', period: 1130, poses: [
+        p('translateY(0)', 4), p('translateY(-1px)', 1), p('translateY(0)', 3) ] },
+      { sel: '.leg-b', name: 'carry-leg-b', period: 1130, poses: [
+        p('translateY(0)', 6), p('translateY(-1px)', 1), p('translateY(0)', 1) ] },
+      { sel: '.leg-c', name: 'carry-leg-c', period: 1130, poses: [
+        p('translateY(-1px)', 1), p('translateY(0)', 5), p('translateY(0)', 2) ] },
+      { sel: '.leg-d', name: 'carry-leg-d', period: 1130, poses: [
+        p('translateY(0)', 2), p('translateY(-1px)', 1), p('translateY(0)', 5) ] },
+      { sel: '.eyes', name: 'carry-eyes', period: 2300, poses: [
+        p('translate(0,-1px)', 4), p('translate(0,0)', 2), p('translate(0,-1px)', 3) ] },
+      { sel: '.blink', name: 'carry-blink', period: 5300, poses: [
+        p('scaleY(1)', 12), p('scaleY(.15)', 1), p('scaleY(1)', 4) ] },
+    ],
+  },
+
+  {
+    state: 'work-h',
+    svg: {
+      file: 'work-h-rain.svg',
+      title: 'Task Rain',
+      desc: 'Small tasks fall from above without pause; both claws bat them away in quick succession.',
+      // 四个小件、从**上方**落、相位各不相同——前四个候选都是单件、从下方来。
+      propsAfter: '<g class="drop-a motion"><rect x="2" y="-3" width="4" height="3" fill="#7BC8C4"/>'
+        + '<rect x="3" y="-2" width="2" height="1" fill="#BDE7E4"/></g>'
+        + '<g class="drop-b motion"><rect x="9" y="-3" width="4" height="3" fill="#F6C85F"/>'
+        + '<rect x="10" y="-2" width="2" height="1" fill="#FFE3A3"/></g>'
+        + '<g class="drop-c motion"><rect x="5" y="-3" width="4" height="3" fill="#B9A1D9"/>'
+        + '<rect x="6" y="-2" width="2" height="1" fill="#E7DCF2"/></g>',
+    },
+    duration: 3400,
+    comment: '任务雨。小件不停从上方掉下来，双爪快速拨挡。\n'
+      + '   四个候选里节奏最急的一个：件多、来得快、应对是反射式的。\n'
+      + '   语义也最直白——活儿是外面丢进来的，不是自己找的。',
+    layers: [
+      // 挡一下要顿住（吃到力），回位快速掠过——匀速会读成机械摆动。
+      { sel: '.actor', name: 'rain-body', poses: [
+        p('translate(-1px,0)', 4), p('translate(-1px,1px)', 1), p('translate(0,-1px)', 1),
+        p('translate(1px,0)', 4), p('translate(1px,1px)', 1), p('translate(0,-1px)', 1) ] },
+      { sel: '.left-claw', name: 'rain-left', period: 1130, poses: [
+        p('translate(1px,-3px)', 2), p('translate(0,-1px)', 1), p('translate(0,1px)', 2),
+        p('translate(1px,-1px)', 1) ] },
+      { sel: '.right-claw', name: 'rain-right', period: 1130, poses: [
+        p('translate(0,1px)', 2), p('translate(-1px,-1px)', 1), p('translate(-1px,-3px)', 2),
+        p('translate(0,-1px)', 1) ] },
+      { sel: '.drop-a', name: 'rain-drop-a', period: 1700, poses: [
+        p('opacity:0;transform:translateY(-4px)', 1), p('opacity:1;transform:translateY(2px)', 2),
+        p('opacity:1;transform:translateY(7px)', 2), p('opacity:1;transform:translate(-2px,11px)', 1),
+        p('opacity:0;transform:translate(-4px,13px)', 1) ] },
+      { sel: '.drop-b', name: 'rain-drop-b', period: 1700, poses: [
+        p('opacity:1;transform:translateY(7px)', 2), p('opacity:1;transform:translate(2px,11px)', 1),
+        p('opacity:0;transform:translate(4px,13px)', 1), p('opacity:0;transform:translateY(-4px)', 1),
+        p('opacity:1;transform:translateY(2px)', 2) ] },
+      { sel: '.drop-c', name: 'rain-drop-c', period: 2550, poses: [
+        p('opacity:0;transform:translateY(-4px)', 1), p('opacity:1;transform:translateY(3px)', 2),
+        p('opacity:1;transform:translateY(8px)', 2), p('opacity:0;transform:translate(3px,12px)', 1) ] },
+      { sel: '.eyes', name: 'rain-eyes', period: 1900, poses: [
+        p('translate(-1px,-1px)', 2), p('translate(0,-1px)', 1), p('translate(1px,-1px)', 2),
+        p('translate(0,0)', 2) ] },
+      { sel: '.blink', name: 'rain-blink', period: 3700, poses: [
+        p('scaleY(1)', 8), p('scaleY(.15)', 1), p('scaleY(1)', 3) ] },
+    ],
+  },
+);
