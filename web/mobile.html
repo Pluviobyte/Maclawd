@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f4f1ea">
+<title>Maclawd</title>
+<style>
+  :root{
+    color-scheme:light;
+    --bg:#f4f1ea; --ink:#1e1e2e; --muted:#626271; --accent:#c67a62; --body:#DE886D;
+    --card:#fbfaf7; --line:rgba(30,30,46,.11);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    padding:max(20px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom));}
+  main{max-width:520px;margin:0 auto;}
+  .card{border:1px solid var(--line);border-radius:22px;background:var(--card);
+    padding:20px;margin-bottom:14px;}
+  .hero{text-align:center;}
+  .stage{width:132px;height:132px;margin:0 auto 10px;border-radius:20px;
+    background:linear-gradient(rgba(30,30,46,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(30,30,46,.035) 1px,transparent 1px),#fff;
+    background-size:18px 18px;overflow:hidden;}
+  .stage object{width:100%;height:100%;image-rendering:pixelated;}
+  .state{margin:0;font-size:21px;font-weight:650;letter-spacing:-.01em;}
+  .story{margin:5px 0 0;font-size:13px;color:var(--muted);line-height:1.5;}
+  .rate{margin-top:14px;display:flex;align-items:center;gap:10px;justify-content:center;
+    font-size:12px;color:var(--muted);}
+  .bar{height:8px;width:150px;border-radius:99px;background:rgba(30,30,46,.08);overflow:hidden;}
+  .bar i{display:block;height:100%;background:var(--body);transition:width .6s ease;}
+  .big{font-size:40px;line-height:1;letter-spacing:-.03em;font-weight:700;}
+  .big small{font-size:13px;font-weight:600;color:var(--muted);margin-left:7px;letter-spacing:0;}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px;
+    padding-top:18px;border-top:1px solid var(--line);}
+  .kv{font-size:11.5px;color:var(--muted);line-height:1.6;}
+  .kv b{display:block;color:var(--ink);font-size:16px;font-weight:650;}
+  .spark{font:12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:1.5px;
+    color:var(--accent);white-space:pre;overflow-x:auto;margin-top:4px;}
+  .axis{font-size:10px;color:var(--muted);display:flex;justify-content:space-between;margin-top:5px;}
+  h2{font-size:13px;margin:0 0 10px;font-weight:650;}
+  .rows{font-size:13.5px;}
+  .row{display:flex;justify-content:space-between;gap:12px;padding:7px 0;
+    border-bottom:1px solid rgba(30,30,46,.06);}
+  .row:last-child{border-bottom:0;}
+  .row span:last-child{color:var(--muted);font-variant-numeric:tabular-nums;}
+  .note{font-size:11.5px;color:var(--muted);line-height:1.6;text-align:center;margin:18px 0 0;}
+  .err{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px;line-height:1.7;}
+  .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#bbb;
+    margin-right:6px;vertical-align:1px;}
+  .dot.live{background:#4caf50;}
+</style>
+</head>
+<body>
+<main id="app">
+  <div class="card hero">
+    <div class="stage"><object id="svg" type="image/svg+xml"></object></div>
+    <p class="state" id="state">连接中…</p>
+    <p class="story" id="story"></p>
+    <div class="rate">
+      <span class="bar"><i id="bar" style="width:0%"></i></span>
+      <span id="rate">—</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="big"><span id="today">—</span><small id="unit">计费 tokens</small></div>
+    <div class="kv" id="compare" style="margin-top:6px"></div>
+    <div class="grid">
+      <div class="kv"><b id="cost">—</b>成本</div>
+      <div class="kv"><b id="hit">—</b>缓存命中</div>
+      <div class="kv"><b id="active">—</b>活跃</div>
+    </div>
+    <div class="spark" id="hours"></div>
+    <div class="axis"><span>0</span><span>12</span><span>23</span></div>
+  </div>
+
+  <div class="card">
+    <h2>今日项目</h2>
+    <div class="rows" id="projects"></div>
+  </div>
+
+  <p class="note">
+    <span class="dot" id="livedot"></span><span id="footer">只读镜像 · 局域网内</span><br>
+    手机端不能对这台电脑做任何操作。
+  </p>
+</main>
+
+<script>
+const params = new URLSearchParams(location.search);
+const token = params.get('t') || '';
+const el = (id) => document.getElementById(id);
+const fmt = (n) => {
+  n = Number(n) || 0;
+  if (n >= 1e9) return (n/1e9).toFixed(2)+'B';
+  if (n >= 1e6) return (n/1e6).toFixed(2)+'M';
+  if (n >= 1e3) return (n/1e3).toFixed(1)+'K';
+  return String(Math.round(n));
+};
+const pct = (x) => (x*100).toFixed(0)+'%';
+const dur = (s) => { s=Math.round(s||0); const h=Math.floor(s/3600), m=Math.round((s%3600)/60);
+  return h>0 ? h+'h '+m+'m' : m+'m'; };
+
+async function api(path){
+  const sep = path.includes('?') ? '&' : '?';
+  const res = await fetch(path + (token ? sep+'t='+encodeURIComponent(token) : ''));
+  if (!res.ok) throw new Error((await res.json().catch(()=>({}))).error || ('HTTP '+res.status));
+  return res.json();
+}
+
+function fail(message){
+  document.getElementById('app').innerHTML =
+    '<div class="err"><strong>无法连接</strong><br>' + message +
+    '<br><br>请确认手机与电脑在同一 Wi-Fi，且电脑上已开启「局域网镜像」。</div>';
+}
+
+let ok = true;
+async function tick(){
+  try{
+    const [state, live, summary] = await Promise.all([
+      api('/api/state'), api('/api/live'), api('/api/summary?range=today'),
+    ]);
+    ok = true;
+    el('livedot').className = 'dot live';
+
+    if (state.plan){
+      el('svg').data = '/' + state.plan.source + (token ? '?t='+encodeURIComponent(token) : '');
+      el('state').textContent = state.plan.name;
+    }
+    const detail = [];
+    if (state.state?.variant) detail.push(state.state.variant);
+    if (state.state?.actionId) detail.push(state.state.actionId);
+    el('story').textContent = detail.join(' · ');
+
+    el('bar').style.width = ((live.intensity||0)*100).toFixed(0)+'%';
+    el('rate').textContent = live.disabled ? '记录已关闭' : fmt(live.tokensPerMin)+'/min';
+
+    if (summary.empty){
+      el('today').textContent = '—';
+      el('footer').textContent = summary.stale ? '数据需要在电脑上重新扫描' : '今日暂无数据';
+      return;
+    }
+    const s = summary.summary;
+    const useThroughput = summary.settings?.primaryMetric === 'throughput';
+    el('today').textContent = fmt(useThroughput ? s.throughput : s.billable);
+    el('unit').textContent = useThroughput ? '吞吐 tokens' : '计费 tokens';
+    el('cost').textContent = (summary.settings?.showCost && s.cost != null)
+      ? '$'+s.cost.toFixed(2) : '—';
+    el('hit').textContent = pct(s.hitRate);
+    el('active').textContent = dur(summary.sessions?.activeSeconds);
+
+    if (summary.baseline && s.throughput > 0){
+      const d = (s.throughput - summary.baseline) / summary.baseline;
+      el('compare').textContent = '比平时' + (d>=0?'多':'少') + ' ' + pct(Math.abs(d));
+    } else el('compare').textContent = '';
+
+    if (s.hoursAvailable){
+      const blocks='▁▂▃▄▅▆▇█', max=Math.max(...s.hours,1);
+      el('hours').textContent = s.hours.map(v => v===0?' ':blocks[Math.min(7,Math.floor(v/max*7.999))]).join('');
+    }
+
+    const hidden = new Set(summary.settings?.hiddenProjects ?? []);
+    const bill = (b) => (b.input||0)+(b.write5m||0)+(b.write1h||0)+(b.output||0);
+    const rows = Object.entries(s.byProject)
+      .filter(([k]) => !hidden.has(k))
+      .map(([k,b]) => [k, bill(b)])
+      .sort((a,b)=>b[1]-a[1]).slice(0,6);
+    el('projects').innerHTML = rows.length
+      ? rows.map(([k,v]) => '<div class="row"><span>'+
+          k.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])) +
+          '</span><span>'+fmt(v)+'</span></div>').join('')
+      : '<div class="row"><span style="color:var(--muted)">今天还没有记录</span></div>';
+  } catch (err) {
+    el('livedot').className = 'dot';
+    if (ok) { ok = false; return; }   // 单次失败先忍一轮，避免抖动
+    fail(err.message);
+  }
+}
+
+tick();
+setInterval(tick, 3000);
+</script>
+</body>
+</html>

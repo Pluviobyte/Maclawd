@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maclawd — 宠物管理</title>
+<style>
+  :root{
+    color-scheme:light;
+    --bg:#f4f1ea; --ink:#1e1e2e; --muted:#626271; --accent:#c67a62; --body:#DE886D;
+    --card:#fbfaf7; --line:rgba(30,30,46,.11);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;padding:32px 24px 72px;background:var(--bg);color:var(--ink);}
+  main{width:min(1080px,100%);margin:0 auto;}
+  .nav{display:flex;gap:16px;align-items:center;margin-bottom:24px;font-size:13px;}
+  .nav b{font-size:15px;}
+  .nav a{text-decoration:none;padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--accent);}
+  .nav a[aria-current]{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .card{border:1px solid var(--line);border-radius:24px;background:var(--card);padding:22px 24px;margin-bottom:16px;}
+  h2{font-size:15px;margin:0 0 12px;}
+  h2 span{font-weight:500;color:var(--muted);font-size:12px;margin-left:6px;}
+  .split{display:grid;grid-template-columns:300px 1fr;gap:16px;align-items:start;}
+  .stage{aspect-ratio:1;border-radius:20px;
+    background:linear-gradient(rgba(30,30,46,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(30,30,46,.035) 1px,transparent 1px),#fff;
+    background-size:20px 20px;overflow:hidden;}
+  .stage object{width:100%;height:100%;image-rendering:pixelated;}
+  .sizes{display:flex;gap:14px;align-items:flex-end;margin-top:12px;}
+  .sizes figure{margin:0;text-align:center;}
+  .sizes .box{border-radius:8px;background:#fff;border:1px solid var(--line);overflow:hidden;}
+  .sizes object{display:block;image-rendering:pixelated;}
+  .sizes figcaption{font-size:10px;color:var(--muted);margin-top:4px;}
+  .meta{font-size:12.5px;color:var(--muted);line-height:1.9;}
+  .meta b{color:var(--ink);}
+  .list{max-height:520px;overflow-y:auto;padding-right:4px;}
+  .group{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.08em;
+    text-transform:uppercase;margin:14px 0 6px;}
+  .group:first-child{margin-top:0;}
+  .item{display:flex;justify-content:space-between;gap:8px;align-items:baseline;
+    padding:6px 10px;border-radius:10px;cursor:pointer;font-size:13px;}
+  .item:hover{background:rgba(198,122,98,.08);}
+  .item[aria-current="true"]{background:var(--ink);color:#fff;}
+  .item code{font:10.5px ui-monospace,SFMono-Regular,Menlo,monospace;opacity:.65;}
+  .chain{display:flex;flex-wrap:wrap;gap:8px;}
+  .chip{padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:#fff;
+    font-size:12px;font-weight:650;cursor:pointer;}
+  .chip:hover{border-color:var(--accent);color:var(--accent);}
+  .row{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;
+    padding:13px 0;border-bottom:1px solid rgba(30,30,46,.06);}
+  .row:last-child{border-bottom:0;}
+  .row p{margin:3px 0 0;font-size:12px;color:var(--muted);line-height:1.55;max-width:560px;}
+  .row strong{font-size:13.5px;font-weight:650;}
+  .badge{font-size:10px;padding:2px 7px;border-radius:99px;background:rgba(30,30,46,.06);
+    color:var(--muted);margin-left:7px;vertical-align:2px;}
+  /* 开关 */
+  .sw{position:relative;width:42px;height:24px;flex:0 0 42px;border-radius:99px;
+    background:rgba(30,30,46,.16);cursor:pointer;transition:background .18s;border:0;padding:0;}
+  .sw::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;
+    background:#fff;transition:transform .18s;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+  .sw[aria-checked="true"]{background:var(--body);}
+  .sw[aria-checked="true"]::after{transform:translateX(18px);}
+  .sw:disabled{opacity:.4;cursor:not-allowed;}
+  .bar{height:7px;border-radius:99px;background:rgba(30,30,46,.08);overflow:hidden;max-width:240px;}
+  .bar i{display:block;height:100%;background:var(--body);transition:width .5s;}
+  .tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;}
+  .tool{font-size:12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;}
+  .tool span{display:block;color:var(--muted);font-size:10.5px;margin-top:3px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .danger{border-color:rgba(165,95,76,.35);}
+  .danger button{border:1px solid rgba(165,95,76,.5);background:#fff;color:#a55f4c;
+    border-radius:10px;padding:7px 13px;font-size:12px;cursor:pointer;}
+  .note{font-size:12px;color:var(--muted);line-height:1.6;}
+  @media(max-width:820px){.split{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<main>
+  <div class="nav">
+    <b>Maclawd</b>
+    <a href="/" aria-current="page">宠物管理</a>
+    <a href="/usage">用量统计</a>
+  </div>
+
+  <div class="card split">
+    <div>
+      <div class="stage"><object id="preview" type="image/svg+xml"></object></div>
+      <div class="sizes">
+        <figure><div class="box"><object id="p96" type="image/svg+xml" width="96" height="96"></object></div>
+          <figcaption>96px</figcaption></figure>
+        <figure><div class="box"><object id="p64" type="image/svg+xml" width="64" height="64"></object></div>
+          <figcaption>64px</figcaption></figure>
+        <figure><div class="box"><object id="p22" type="image/svg+xml" width="22" height="22"></object></div>
+          <figcaption>22px 菜单栏</figcaption></figure>
+      </div>
+      <p class="note" style="margin-top:12px">
+        22px 是菜单栏实际尺寸，现有 QA 只覆盖 64/96px。缩到这一档基本不可读——
+        需要独立设计一枚简化标记，见 <code>design/token-experience.md</code> 待决事项 1。
+      </p>
+    </div>
+    <div>
+      <h2 id="curName">—</h2>
+      <div class="meta" id="curMeta"></div>
+      <div class="list" id="list"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>运行时状态 <span>由真实用量与事件驱动</span></h2>
+    <div class="row">
+      <div style="flex:1">
+        <strong id="liveState">—</strong><span class="badge" id="liveReason"></span>
+        <p id="liveDetail"></p>
+      </div>
+      <div class="meta" style="text-align:right"><b id="liveAway">—</b>away 阈值</div>
+    </div>
+    <div class="chain" id="events" style="margin-top:4px"></div>
+    <p class="note" style="margin-top:10px">
+      按钮模拟 Claude Code 的 hook 事件，用来验证状态机与仲裁优先级。
+      hook 通道接上后同一个引擎直接消费真实事件，不需要改结构。
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>状态链演示 <span>验证转场是否连续</span></h2>
+    <div class="chain" id="chains"></div>
+    <p class="note" id="chainNote" style="margin-top:12px">
+      休眠链 <code>away → sleeping → waking</code> 共用同一条毛毯；
+      <code>needs_owner → owner_resolved</code> 共用罐子；<code>error → recovering</code> 共用篮子。
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>感知与体力 <span>由真实 token 用量驱动</span></h2>
+    <div class="row">
+      <div style="flex:1">
+        <strong>实时强度</strong>
+        <p>近 5 分钟的 token 速率映射成 [0,1] 的饱和曲线，驱动状态选择。</p>
+        <div class="bar" style="margin-top:8px"><i id="intensityBar" style="width:0%"></i></div>
+      </div>
+      <div class="meta" style="text-align:right"><b id="rateText">0/min</b></div>
+    </div>
+    <div class="row">
+      <div style="flex:1">
+        <strong>体力 energy</strong>
+        <p>
+          <code>1 − min(1, 今日吞吐 ÷ 过去 14 天中位数)</code>。
+          体力越低，<code>idle.drowsy</code> 权重越高、<code>away</code> 静默阈值越短。
+          基线取个人中位数而非固定值，否则重度用户从早上就一直「疲劳」。
+        </p>
+        <div class="bar" style="margin-top:8px"><i id="energyBar" style="width:100%"></i></div>
+      </div>
+      <div class="meta" style="text-align:right"><b id="energyText">—</b></div>
+    </div>
+    <p class="note">
+      体力条只在本诊断页显示。产品面板里它通过角色行为体现——画成进度条会把「陪伴」降级成「指标」。
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>Claude Code 事件通道 <span>让 32 个事件驱动的动作真正可达</span></h2>
+    <div class="row">
+      <div style="flex:1">
+        <strong id="hookState">检查中…</strong>
+        <p id="hookDetail"></p>
+      </div>
+      <div><button class="chip" id="hookBtn">安装</button></div>
+    </div>
+    <p class="note">
+      以 <code>async</code> 注册——Claude Code 不等 hook 返回，不会拖慢你的 agent。
+      <strong>只订阅状态事件</strong>；Bash 命令在写入器进程内就地分类，
+      命令原文永不离开该进程。安装会修改 <code>~/.claude/settings.json</code>（先备份），
+      卸载只移除自己写入的条目。
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>权限气泡 <span>在桌宠上批准，默认关闭</span></h2>
+    <div id="permList" class="note">通道关闭时，权限决策完全留在 Claude Code 自己的流程里。</div>
+    <p class="note" style="margin-top:10px">
+      超时一律「不表态」，绝不自动允许也绝不自动拒绝——
+      桌宠没人看的时候，正确行为是把决策权原样交回去。
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>局域网镜像 <span>手机上看一眼，只读</span></h2>
+    <div class="row">
+      <div style="flex:1">
+        <strong id="lanState">已关闭</strong>
+        <p id="lanUrls">开启后在同一 Wi-Fi 的手机上打开配对链接即可。手机端不能对这台电脑做任何操作。</p>
+      </div>
+      <div><button class="chip" id="lanRotate">重置令牌</button></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>设置</h2>
+    <div id="settings"></div>
+  </div>
+
+  <div class="card">
+    <h2>检测到的工具</h2>
+    <div class="tools" id="tools"></div>
+  </div>
+
+  <div class="card danger">
+    <h2>危险区</h2>
+    <div class="row">
+      <div style="flex:1">
+        <strong>删除全部用量记录</strong>
+        <p>清空聚合数据与解析缓存。本机日志不受影响，重新扫描即可全量重建。
+          关闭开关 ≠ 删除数据，所以这是独立操作。</p>
+      </div>
+      <button id="reset">删除…</button>
+    </div>
+  </div>
+</main>
+
+<script>
+const GROUP_LABELS = { primary:'主状态', modifier:'工作修饰', interaction:'互动与环境', lifecycle:'运行时生命周期' };
+const SETTING_ROWS = [
+  ['recordUsage','记录 token 用量','读取本机 AI 编程工具日志。纯只读、不联网，所以默认开启。关闭后立即停止扫描与跟读并释放文件句柄，已有数据保留。',null],
+  ['petEnergy','用用量影响桌宠行为','累计用量让 Maclawd 逐渐变困：偏移 idle 变体权重与 away 阈值。关闭后 energy 恒为 1，角色仍会在长时间静默后入睡。','recordUsage'],
+  ['hookEnhancement','启用 Claude Code 事件增强','让 Maclawd 准确知道 Claude 在思考、调用工具还是在等你决定。需要修改 ~/.claude/settings.json——这是在动你另一个工具的配置，所以默认关闭，且卸载时只移除自己写入的条目。',null],
+  ['showCost','显示成本估算','按 API 单价估算，与订阅费无关。价格表当前有缺口（未知模型不猜价格），所以默认不展示。',null],
+  ['reducedMotion','减弱动效','道具与身体动作停止，只保留低频眨眼。动作时长由契约锁定，不会因此改变。',null],
+  ['permissionBubble','在桌宠上批准权限','拦截 Claude Code 的权限请求并在桌宠上给出 Allow / Deny。这是很重的行为，默认关闭；超时或未开启时一律不表态，决策原样交回 Claude Code。需要单独安装 HTTP hook。',null],
+  ['lanMirror','局域网只读镜像','允许同一 Wi-Fi 的手机打开只读页面查看桌宠状态与今日用量。开启后服务才会监听外部地址，且需要配对令牌。',null],
+  ['cursorCloud','Cursor 云端用量','Cursor 本地不存用量，只能联网拉它自己的 dashboard CSV。这是除「更新价格表」之外唯一的对外请求，所以默认关闭——关闭时一个请求都不发。',null],
+];
+const EVENTS = [
+  ['提问', { type: 'UserPromptSubmit' }],
+  ['读文件', { type: 'PreToolUse', toolName: 'Read' }],
+  ['写文件', { type: 'PreToolUse', toolName: 'Edit' }],
+  ['跑测试', { type: 'PreToolUse', toolName: 'Bash', command: 'npm test' }],
+  ['起子代理', { type: 'SubagentStart', agentId: 'a1' }],
+  ['再起一个', { type: 'SubagentStart', agentId: 'a2' }],
+  ['压缩上下文', { type: 'PreCompact' }],
+  ['要权限', { type: 'PermissionRequest' }],
+  ['批准', { type: 'PermissionResolved' }],
+  ['出错', { type: 'StopFailure', matcher: 'rate_limit' }],
+  ['恢复', { type: 'ErrorResolved' }],
+  ['完成', { type: 'Stop' }],
+];
+const CHAINS = [
+  ['休眠链', ['away','sleeping','waking','idle']],
+  ['需要主人', ['needs_owner','owner_resolved','idle']],
+  ['出错恢复', ['error','recovering','idle']],
+  ['工作流', ['thinking','working','delegating','success']],
+  ['生命周期', ['launching','waiting','paused','quitting']],
+];
+
+const el = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = (n) => { n = Number(n)||0;
+  return n>=1e9?(n/1e9).toFixed(2)+'B':n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':String(Math.round(n)); };
+
+let actions = [], settings = {}, current = null, chainTimer = null;
+
+function show(action){
+  if (!action?.source) return;
+  current = action;
+  for (const id of ['preview','p96','p64','p22']) el(id).data = '/'+action.source;
+  el('curName').innerHTML = esc(action.name)
+    + `<span class="badge">${esc(action.id)}</span>`
+    + (action.mode ? `<span class="badge">${esc(action.mode)}</span>` : '');
+  el('curMeta').innerHTML = [
+    action.durationMs ? ['时长', (action.durationMs/1000).toFixed(1)+'s'] : null,
+    action.accessory ? ['道具', action.accessory] : null,
+    action.action ? ['动作', action.action] : null,
+    action.trigger ? ['触发', action.trigger] : null,
+    action.exit ? ['退出', action.exit] : null,
+    action.variants ? ['变体', action.variants.join(' / ')] : null,
+    ['源文件', action.source],
+  ].filter(Boolean).map(([k,v]) => `<div><b>${k}</b> ${esc(v)}</div>`).join('');
+  document.querySelectorAll('.item').forEach(n =>
+    n.setAttribute('aria-current', String(n.dataset.key === action.group+':'+action.id)));
+}
+
+function renderList(){
+  const groups = {};
+  for (const a of actions) (groups[a.group] ??= []).push(a);
+  el('list').innerHTML = Object.entries(groups).map(([g, items]) =>
+    `<div class="group">${GROUP_LABELS[g] ?? g} · ${items.length}</div>`
+    + items.map(a => `<div class="item" data-key="${esc(a.group+':'+a.id)}">
+        <span>${esc(a.name)}</span><code>${esc(a.id)}</code></div>`).join('')).join('');
+  el('list').querySelectorAll('.item').forEach(node => {
+    node.onclick = () => {
+      const a = actions.find(x => x.group+':'+x.id === node.dataset.key);
+      if (a?.source) show(a); else el('curMeta').innerHTML = '<div>该动作没有独立 SVG（通常是别名）。</div>';
+    };
+  });
+}
+
+function renderChains(){
+  el('chains').innerHTML = CHAINS.map(([label], i) =>
+    `<button class="chip" data-chain="${i}">${label}</button>`).join('');
+  el('chains').querySelectorAll('button').forEach(b => {
+    b.onclick = () => {
+      clearTimeout(chainTimer);
+      const ids = CHAINS[Number(b.dataset.chain)][1];
+      let i = 0;
+      const step = () => {
+        const a = actions.find(x => x.id === ids[i] && x.source);
+        if (a) show(a);
+        el('chainNote').textContent = `播放 ${CHAINS[Number(b.dataset.chain)][0]}：`
+          + ids.map((id, k) => k===i ? `【${id}】` : id).join(' → ');
+        i++;
+        if (i < ids.length) chainTimer = setTimeout(step, Math.max(1600, (a?.durationMs ?? 2000)));
+      };
+      step();
+    };
+  });
+}
+
+function renderSettings(){
+  el('settings').innerHTML = SETTING_ROWS.map(([key, title, desc, dep]) => {
+    const disabled = dep && !settings[dep];
+    return `<div class="row">
+      <div style="flex:1"><strong>${title}</strong>${disabled?'<span class="badge">依赖上一项</span>':''}
+        <p>${desc}</p></div>
+      <button class="sw" role="switch" data-key="${key}"
+        aria-checked="${!!settings[key]}" ${disabled?'disabled':''}></button>
+    </div>`;
+  }).join('') + `<div class="row">
+      <div style="flex:1"><strong>面板主口径</strong>
+        <p>计费量不含缓存读，吞吐量四项全加。实测两者可差 20 倍以上，所以任何数字都必须标注口径。</p></div>
+      <select id="metric" style="padding:6px 10px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:12px">
+        <option value="billable"${settings.primaryMetric==='billable'?' selected':''}>计费量 billable</option>
+        <option value="throughput"${settings.primaryMetric==='throughput'?' selected':''}>吞吐量 throughput</option>
+      </select></div>`;
+
+  el('settings').querySelectorAll('.sw').forEach(sw => {
+    sw.onclick = async () => {
+      const key = sw.dataset.key;
+      await patch({ [key]: !settings[key] });
+    };
+  });
+  el('metric').onchange = (e) => patch({ primaryMetric: e.target.value });
+}
+
+async function patch(body){
+  const r = await (await fetch('/api/settings', { method:'POST', body: JSON.stringify(body) })).json();
+  settings = r.settings;
+  renderSettings();
+}
+
+async function loadHooks(){
+  try{
+    const st = await (await fetch('/api/hooks')).json();
+    const total = st.installed.length + st.missing.length;
+    const on = st.installed.length === total && total > 0;
+    el('hookState').textContent = on ? `已安装 ${st.installed.length} 个事件` : `未安装（${st.installed.length}/${total}）`;
+    el('hookDetail').textContent = st.error ? st.error : st.path;
+    el('hookBtn').textContent = on ? '卸载' : '安装';
+    el('hookBtn').dataset.action = on ? 'uninstall' : 'install';
+  } catch {}
+}
+
+el('hookBtn').onclick = async () => {
+  const action = el('hookBtn').dataset.action || 'install';
+  el('hookBtn').textContent = '处理中…';
+  try{
+    await fetch('/api/hooks', { method:'POST', body: JSON.stringify({ action }) });
+  } catch {}
+  await loadHooks();
+};
+
+async function loadPermissions(){
+  try{
+    const d = await (await fetch('/api/permissions')).json();
+    if (!d.enabled){
+      el('permList').textContent = '通道关闭时，权限决策完全留在 Claude Code 自己的流程里。';
+      return;
+    }
+    if (!d.pending.length){
+      el('permList').textContent = '通道已开启，当前没有等待中的权限请求。';
+      return;
+    }
+    el('permList').innerHTML = d.pending.map(p => `<div class="row">
+      <div style="flex:1"><strong>${esc(p.tool)}</strong>
+        <p>${esc(p.detail || '（无可展示的细节）')}</p></div>
+      <div class="chain">
+        <button class="chip" data-allow="${esc(p.id)}">允许</button>
+        <button class="chip" data-deny="${esc(p.id)}">拒绝</button>
+      </div></div>`).join('');
+    el('permList').querySelectorAll('[data-allow],[data-deny]').forEach(b => {
+      b.onclick = async () => {
+        const id = b.dataset.allow ?? b.dataset.deny;
+        const decision = b.dataset.allow ? 'allow' : 'deny';
+        await fetch('/api/permissions', { method:'POST', body: JSON.stringify({ id, decision }) });
+        loadPermissions();
+      };
+    });
+  } catch {}
+}
+
+async function loadLan(){
+  try{
+    const d = await (await fetch('/api/lan')).json();
+    el('lanState').textContent = d.enabled ? '已开启' : '已关闭';
+    if (d.enabled && d.urls.length){
+      el('lanUrls').innerHTML = d.urls.map(u =>
+        `<code style="word-break:break-all">${esc(u)}</code>`).join('<br>');
+    } else if (d.enabled){
+      el('lanUrls').textContent = '没有检测到局域网地址。';
+    }
+  } catch {}
+}
+
+el('lanRotate').onclick = async () => {
+  if (!confirm('重置配对令牌？已配对的手机需要重新打开新链接。')) return;
+  await fetch('/api/lan', { method:'POST', body: JSON.stringify({ action:'reset' }) });
+  loadLan();
+};
+
+async function loadTools(){
+  const { tools } = await (await fetch('/api/tools')).json();
+  el('tools').innerHTML = tools.map(t =>
+    `<div class="tool">${t.installed?'✓':'·'} ${esc(t.label)}
+      ${t.installed?'':'<span>未安装</span>'}
+      <span title="${esc(t.dirs.join('\n'))}">${esc(t.dirs[0] ?? '')}</span></div>`).join('');
+}
+
+async function loadEnergy(){
+  const d = await (await fetch('/api/summary?range=today')).json();
+  if (d.empty) { el('energyText').textContent = '无数据'; return; }
+  const tp = d.summary.throughput;
+  // 与桌宠运行时同一个公式：基线取个人 14 天中位数。
+  const energy = d.baseline ? Math.max(0, 1 - Math.min(1, tp / d.baseline)) : 1;
+  el('energyBar').style.width = (energy*100).toFixed(0)+'%';
+  el('energyText').textContent = d.baseline
+    ? `${(energy*100).toFixed(0)}% · 今日 ${fmt(tp)} / 基线 ${fmt(d.baseline)}`
+    : '基线不足（需要至少一天历史）';
+}
+
+function renderEvents(){
+  el('events').innerHTML = EVENTS.map(([label], i) =>
+    `<button class="chip" data-ev="${i}">${label}</button>`).join('');
+  el('events').querySelectorAll('button').forEach(b => {
+    b.onclick = async () => {
+      const [, payload] = EVENTS[Number(b.dataset.ev)];
+      const s = await (await fetch('/api/event', {
+        method: 'POST', body: JSON.stringify({ ...payload, sessionId: 'demo' }),
+      })).json();
+      applyState(s);
+    };
+  });
+}
+
+function applyState(s){
+  if (!s?.state) return;
+  el('liveState').textContent = `${s.plan?.name ?? s.state.actionId}`;
+  el('liveReason').textContent = s.state.reason;
+  const parts = [`状态 ${s.state.actionId}`];
+  if (s.state.variant) parts.push(`变体 ${s.state.variant}`);
+  if (s.plan?.fellBackFrom) parts.push(`回落自 ${s.plan.fellBackFrom}`);
+  if (s.plan?.mode) parts.push(s.plan.mode === 'oneshot' ? '一次性' : '循环');
+  if (s.plan?.next) parts.push(`结束后 → ${s.plan.next}`);
+  if (s.plan && s.plan.motion === false) parts.push('减弱动效：道具与位移已停');
+  el('liveDetail').textContent = parts.join(' · ');
+  el('liveAway').textContent = `${Math.round((s.debug?.awayThresholdMs ?? 0)/1000)}s`;
+  // 预览台跟随运行时状态
+  if (s.plan?.source) {
+    const action = actions.find(a => a.id === s.plan.actionId && a.source);
+    if (action) show(action);
+  }
+}
+
+async function live(){
+  try{
+    const [r, st] = await Promise.all([
+      (await fetch('/api/live')).json(),
+      (await fetch('/api/state')).json(),
+    ]);
+    el('intensityBar').style.width = (r.intensity*100).toFixed(0)+'%';
+    el('rateText').textContent = fmt(r.tokensPerMin)+'/min'
+      + (r.disabled ? '（记录已关闭）' : '');
+    applyState(st);
+  } catch {}
+}
+
+el('reset').onclick = async () => {
+  if (!confirm('删除全部用量记录？\n\n本机日志不受影响，重新扫描可以全量重建。')) return;
+  el('reset').textContent = '删除中…';
+  const r = await (await fetch('/api/reset', { method:'POST' })).json();
+  el('reset').textContent = r.ok ? '已删除' : '失败';
+  setTimeout(() => { el('reset').textContent = '删除…'; }, 1600);
+};
+
+(async () => {
+  const [a, s] = await Promise.all([
+    (await fetch('/api/actions')).json(),
+    (await fetch('/api/settings')).json(),
+  ]);
+  actions = a.actions.filter(x => x.id);
+  settings = s.settings;
+  renderList();
+  renderChains();
+  renderEvents();
+  renderSettings();
+  show(actions.find(x => x.id === 'idle' && x.source) ?? actions.find(x => x.source));
+  loadTools();
+  loadHooks();
+  loadPermissions();
+  loadLan();
+  setInterval(loadPermissions, 2000);
+  loadEnergy();
+  live();
+  setInterval(live, 3000);
+  setInterval(loadEnergy, 30000);
+})();
+</script>
+</body>
+</html>

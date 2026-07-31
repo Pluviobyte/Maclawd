@@ -3,3 +3,8 @@ node_modules/
 dist/
 build/
 *.log
+mac/.build/
+mac/Maclawd.app/
+mac/*.dmg
+mac/AppIcon.icns
+mac/AppIcon.iconset/
