@@ -206,6 +206,61 @@ test('体力越低越早进入 away', () => {
   assert.ok(tiredThreshold < restedThreshold, `${tiredThreshold} 应小于 ${restedThreshold}`);
 });
 
+// ---------- 睡眠链与等待 ----------
+
+test('从睡眠中被唤醒会插播 Morning Stretch，闭合睡眠链', () => {
+  // 契约里 away → sleeping → waking 共用同一条毛毯，是一条连续的故事。
+  // 此前 waking 没有任何触发源，引擎从 sleeping 直接跳到工作态，
+  // 三个动作里有一个永远看不到。
+  const e = engine({ awayMs: 10 * SEC, sleepMs: 5 * SEC });
+  e.observeEvent({ type: 'Stop', sessionId: 's' }, SEC);
+  e.tick(30 * SEC);
+  assert.equal(e.current().actionId, 'sleeping');
+
+  e.observeEvent({ type: 'UserPromptSubmit', sessionId: 's' }, 31 * SEC);
+  assert.equal(e.current().actionId, 'waking', '醒来必须先伸个懒腰');
+  e.tick(36 * SEC);
+  assert.equal(e.current().actionId, 'thinking', '插播结束回到真实状态');
+});
+
+test('速率推断同样能唤醒', () => {
+  const e = engine({ awayMs: 10 * SEC, sleepMs: 5 * SEC });
+  e.observeEvent({ type: 'Stop', sessionId: 's' }, SEC);
+  e.tick(30 * SEC);
+  e.observeRate(90_000, 31 * SEC);
+  assert.equal(e.current().actionId, 'waking');
+});
+
+test('刚醒来时不叠加 launching，两个开场动作不打架', () => {
+  const e = engine({ awayMs: 10 * SEC, sleepMs: 5 * SEC });
+  e.observeEvent({ type: 'Stop', sessionId: 's' }, SEC);
+  e.tick(30 * SEC);
+  e.observeEvent({ type: 'SessionStart', sessionId: 'new' }, 31 * SEC);
+  assert.equal(e.current().actionId, 'waking');
+});
+
+test('没睡着时 SessionStart 正常播 launching', () => {
+  const e = engine();
+  e.observeEvent({ type: 'SessionStart', sessionId: 's' }, SEC);
+  assert.equal(e.current().actionId, 'launching');
+});
+
+test('waiting 必须能赢得仲裁——此前它从未能显示', () => {
+  // 它不在 PRIORITY 表里时会取默认 idle(8)，而仲裁会把 >= idle 的全部过滤掉
+  const e = engine();
+  e.observeEvent({ type: 'TeammateIdle', sessionId: 's' }, SEC);
+  assert.equal(e.current().actionId, 'waiting');
+});
+
+test('waiting 压过工作修饰，但让位于要人决定', () => {
+  const e = engine();
+  e.observeEvent({ type: 'PreToolUse', sessionId: 'a', toolName: 'Read' }, SEC);
+  e.observeEvent({ type: 'TeammateIdle', sessionId: 'b' }, 2 * SEC);
+  assert.equal(e.current().actionId, 'waiting', 'agent 在等外部信号时显示「正在读文件」是错的');
+  e.observeEvent({ type: 'PermissionRequest', sessionId: 'a' }, 3 * SEC);
+  assert.equal(e.current().actionId, 'needs_owner');
+});
+
 // ---------- 体力与 idle 权重 ----------
 
 test('energyFrom 用个人基线，无基线时满体力', () => {

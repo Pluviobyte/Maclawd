@@ -12,6 +12,11 @@ export const PRIORITY = {
   error: 2,
   compacting: 3,
   delegating: 4,
+  // Claw Tap Wait。此前**从未能显示**：它不在这张表里，仲裁时取默认值
+  // PRIORITY.idle(8)，而 resolve() 会把 >= idle 的状态全部过滤掉。
+  // 位置在委派之下、工作修饰之上——agent 在等外部信号时，
+  // 显示「正在读文件」是错的。
+  waiting: 4.6,
   'working.reading': 5,
   'working.writing': 5,
   'working.building': 5,
@@ -60,10 +65,10 @@ export const SHELL_ACTIONS = {
 };
 
 /**
- * 外壳事件的优先级。介于「要人决定」与「工作中」之间：
+ * 外壳事件的优先级。介于「委派」与「等待」之间：
  * 用户戳了桌宠一下，那个反馈必须立刻可见，但不该盖过「卡住等你决定」。
  */
-const SHELL_PRIORITY = 4.5;
+const SHELL_PRIORITY = 4.3;
 
 /**
  * 工具名 → 工作修饰。主状态契约要求「详细修饰必须有可靠外部事件」，
@@ -197,6 +202,21 @@ export function createStateEngine(options = {}) {
    * Hook 事件 → 会话状态。事件名沿用 Claude Code 的 hook 名称，
    * 映射表见 design/token-tracking.md。
    */
+  /**
+   * 从 away / sleeping 被唤醒时插播 Morning Stretch。
+   *
+   * 此前 `waking` **没有任何触发源**：引擎从 sleeping 直接跳到 working，
+   * 把契约里 `away → sleeping → waking → idle` 那条共用同一条毛毯的
+   * 连续故事切断了——三个动作里有一个永远看不到。
+   */
+  function wakeIfAsleep(now) {
+    if (current.actionId === 'sleeping' || current.actionId === 'away') {
+      pushOneshot('waking', now);
+      return true;
+    }
+    return false;
+  }
+
   function observeEvent(event, now = 0) {
     const { type, sessionId = 'default' } = event ?? {};
     if (!type) return;
@@ -220,12 +240,16 @@ export function createStateEngine(options = {}) {
 
     const s = session(sessionId);
     s.at = now;
+    // 先判断再更新时间戳：wakeIfAsleep 要看的是「醒来之前」的状态
+    const wasAsleep = wakeIfAsleep(now);
     lastActivityAt = now;
 
     switch (type) {
       case 'SessionStart':
         s.state = 'thinking';
-        pushOneshot('launching', now);
+        // 刚被唤醒时优先播 Morning Stretch，那是睡眠链的收尾；
+        // 再叠一个 Hello Unfold 会让两个开场动作打架。
+        if (!wasAsleep) pushOneshot('launching', now);
         break;
       case 'UserPromptSubmit':
         s.state = 'thinking';
@@ -328,6 +352,7 @@ export function createStateEngine(options = {}) {
   function observeRate(tokensPerMin, now = 0) {
     rate = Number.isFinite(tokensPerMin) ? tokensPerMin : 0;
     if (rate >= config.workingRateThreshold) {
+      wakeIfAsleep(now);
       lastActivityAt = now;
       const s = session('rate');
       // 速率推断只敢下「通用忙碌」，绝不臆造具体任务——契约要求可靠事件才细分。
