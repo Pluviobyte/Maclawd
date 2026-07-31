@@ -31,19 +31,6 @@
       "exit": "hidden"
     },
     {
-      "id": "moving",
-      "name": "Sideways Scuttle",
-      "mode": "oneshot",
-      "durationMs": 1800,
-      "source": "src/animations/sideways-scuttle.svg",
-      "trigger": "pet changes desktop position",
-      "variants": [
-        "screen-left",
-        "screen-right"
-      ],
-      "exit": "previous stable state"
-    },
-    {
       "id": "waiting",
       "name": "Claw Tap Wait",
       "mode": "loop",
@@ -60,15 +47,6 @@
       "source": "src/animations/statue-pause.svg",
       "trigger": "owner or runtime explicitly pauses work",
       "exit": "event-driven"
-    },
-    {
-      "id": "cancelled",
-      "name": "Tiny Shrug",
-      "mode": "oneshot",
-      "durationMs": 2800,
-      "source": "src/animations/tiny-shrug.svg",
-      "trigger": "a reliable cancellation event is received",
-      "exit": "idle"
     },
     {
       "id": "owner_resolved",
@@ -127,29 +105,12 @@
       "trigger": "pointer enters pet attention radius"
     },
     {
-      "id": "ambient.notification",
-      "name": "Attention Turn",
-      "mode": "oneshot",
-      "durationMs": 2600,
-      "source": "src/animations/attention-turn.svg",
-      "trigger": "Maclawd notification is delivered"
-    },
-    {
       "id": "ambient.offline",
       "name": "Signal Listen",
       "mode": "loop",
       "durationMs": 5200,
       "source": "src/animations/signal-listen.svg",
       "trigger": "configured service connection is unavailable"
-    },
-    {
-      "id": "ambient.reconnecting",
-      "name": "Ready Wiggle",
-      "mode": "oneshot",
-      "durationMs": 3000,
-      "source": "src/animations/ready-wiggle.svg",
-      "trigger": "configured service connection is restored",
-      "exit": "previous stable state"
     }
   ],
   "aliases": [

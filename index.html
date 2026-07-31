@@ -42,7 +42,7 @@
       <header>
         <p class="eyebrow">Maclawd · Complete motion lab</p>
         <h1>状态会变化，<br>角色还是它。</h1>
-        <p>身体、眼睛、颜色与坐标保持不变；动作以身体表演为主，道具只贴身出现或纵向叠放，不再为每个状态铺一块横向舞台。这里汇总 38 个动作：主状态、工作修饰、运行时生命周期，以及让桌宠更像活物的互动和环境反应。</p>
+        <p>身体、眼睛、颜色与坐标保持不变；动作以身体表演为主，道具只贴身出现或纵向叠放，不再为每个状态铺一块横向舞台。这里汇总 39 个动作：31 个主形态（主状态、工作修饰、运行时生命周期、互动与环境反应）与 8 个贴边收起的 mini。渲染尺寸取 45 单位取景的整数倍（主形态 135px、mini 48px），非整数倍会让 1 单位宽的矩形忽宽忽窄，角色轮廓每移动一格就抖一次。</p>
       </header>
       <div id="lab"></div>
       <p class="note">旧的机械候选仍保留在 <a href="design/concepts/all-primary-states.html">静态概念档案</a>；当前页面展示的是新的趣味动作方向。</p>
@@ -50,7 +50,7 @@
     <script>
       const groups = [
         {
-          title: "12 个主状态",
+          title: "11 个主状态",
           copy: "用于表达 owner 与 Agent 的稳定主状态；休眠链、任务链和结果链都有明确转场。",
           items: [
             ["idle","Quiet Watch","calm-calibration.svg","5.6s loop","不带道具，安静呼吸、观察和眨眼"],
@@ -62,20 +62,16 @@
             ["delegating","Parcel Stack","hatchling-parade.svg","5.0s loop","把包裹递给身侧纵向接力的助手"],
             ["needs_owner","Stuck Jar","stuck-jar.svg","4.8s loop","拧不开罐子后把它推给主人"],
             ["compacting","Suitcase Fold","accordion-fold.svg","4.8s loop","把大条纹布逐折塞进行李箱"],
-            ["workspace","Workspace Folder","pop-up-studio.svg","4.2s transition","在身侧弹开竖直工作文件夹"],
             ["success","Self High-five","self-high-five.svg","2.9s reaction","直接起跳，双爪在头顶碰到"],
             ["error","Basket Rescue","yarn-tangle.svg","4.8s loop","被大篮子扣住，挣脱后又被碰倒"]
           ]
         },
         {
-          title: "5 个 working 活动修饰",
-          copy: "只有拿到可靠的活动类别时才覆盖 generic working；command 不单独画一套，统一回退到 Tile Stack。",
+          title: "2 个 working 活动修饰",
+          copy: "只保留跑得够久、看得见的两个。Read/Edit 几毫秒就返回，修饰一闪而过，真机试跑时实测看不见——判据是能不能被看见，不是好不好看。其余统一回退到 Tile Stack。",
           items: [
-            ["working.reading","Pocket Book","card-browsing.svg","5.0s loop","抱着一本身体宽度的书翻页"],
-            ["working.writing","Letter Note","note-stitching.svg","4.6s loop","在身前握住信纸并用长铅笔书写"],
             ["working.building","Block Stack","block-tower.svg","5.0s loop","在身侧纵向叠好两块积木"],
             ["working.testing","Toy Check","wobble-test.svg","4.8s loop","轻推身侧不倒翁并观察回正"],
-            ["working.syncing","Spool Sync","relay-bead.svg","4.4s loop","双爪间把条纹线轴沿竖绳拉起"]
           ]
         },
         {
@@ -91,30 +87,26 @@
           ]
         },
         {
-          title: "8 个运行时补全动作",
+          title: "6 个运行时补全动作",
           copy: "补齐启动、退出、移动、等待和状态收尾；只响应可靠事件，不根据不可见推理猜任务。",
           items: [
             ["launching","Hello Unfold","hello-unfold.svg","2.8s transition","从压扁小团展开，双爪打开后站稳"],
             ["quitting","Goodbye Tuck","goodbye-tuck.svg","2.8s transition","挥一次小爪，闭眼并把身体收回小团"],
-            ["moving","Sideways Scuttle","sideways-scuttle.svg","1.8s loop","四条腿交替横移，眼睛先看向移动方向"],
             ["waiting","Claw Tap Wait","claw-tap-wait.svg","4.2s loop","身体保持原位，一只爪连续轻点三次"],
             ["paused","Statue Pause","statue-pause.svg","6.0s loop","双爪内收，几乎静止，只留下慢呼吸和眨眼"],
-            ["cancelled","Tiny Shrug","tiny-shrug.svg","2.8s reaction","双爪一摊、身体左右轻晃，然后安静复位"],
             ["owner_resolved","Jar Click","jar-click.svg","3.2s transition","罐盖咔哒松开，扶稳罐子并放心眨眼"],
             ["recovering","Basket Breakout","basket-breakout.svg","3.4s transition","把篮子从身上推开，抖一抖重新站稳"]
           ]
         },
         {
-          title: "7 个生命感与环境动作",
+          title: "5 个生命感与环境动作",
           copy: "低频 idle 彩蛋和 Mac 自己能观察到的环境事件；不绘制光标、通知图标或网络图标。",
           items: [
             ["idle.grooming","Claw Groom","idle-claw-groom.svg","5.2s idle variant","低头用一只爪仔细擦另一只爪"],
             ["idle.leg_shuffle","Leg Shuffle","idle-leg-shuffle.svg","4.8s idle variant","四条小腿依次挪动，重新找舒服站姿"],
             ["idle.drowsy","Drowsy Nod","idle-drowsy-nod.svg","6.0s idle variant","慢慢打瞌睡，忽然点醒再恢复站姿"],
             ["interaction.hover","Cursor Gaze","hover-gaze.svg","3.0s held loop","不画光标，只用眼神、重心和一只爪跟随"],
-            ["ambient.notification","Attention Turn","attention-turn.svg","2.6s reaction","突然转向声音来源，抬爪确认后放松"],
             ["ambient.offline","Signal Listen","signal-listen.svg","5.2s loop","没有信号图标，停下来向左右仔细听"],
-            ["ambient.reconnecting","Ready Wiggle","ready-wiggle.svg","3.0s reaction","连接恢复后左右摆动，双爪重新打开"]
           ]
         },
         {
@@ -143,7 +135,7 @@
           // mini 的舞台画一条屏幕边界线：不标出「边在哪」，
           // 「被裁掉半个身子」会看起来像素材画坏了。
           const stage = group.mini ? "stage edge-stage" : "stage";
-          const size = group.mini ? "48px checked" : "96px checked";
+          const size = group.mini ? "48px checked" : "135px checked";
           article.innerHTML = `<div class="${stage}"><object data="src/animations/${file}" type="image/svg+xml">${name}</object></div><div class="copy"><span class="state-id">${id}</span><h3>${name}</h3><p>${story}</p><div class="chips"><span class="chip">${timing}</span><span class="chip">${size}</span></div></div>`;
           grid.append(article);
         }

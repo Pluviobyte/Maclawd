@@ -17,11 +17,10 @@ export const PRIORITY = {
   // 位置在委派之下、工作修饰之上——agent 在等外部信号时，
   // 显示「正在读文件」是错的。
   waiting: 4.6,
-  'working.reading': 5,
-  'working.writing': 5,
+  // 只保留跑得够久、看得见的两个。Read/Edit 几毫秒就返回，
+  // 修饰一闪而过，真机试跑时实测看不见——为它们各画一套是白费。
   'working.building': 5,
   'working.testing': 5,
-  'working.syncing': 5,
   working: 6,
   thinking: 7,
   idle: 8,
@@ -32,13 +31,12 @@ export const PRIORITY = {
 /** 一次性动作：插播完毕回到当前最高优先级的循环态。 */
 export const ONESHOT = new Set([
   'launching', 'quitting', 'success', 'owner_resolved',
-  'recovering', 'cancelled', 'workspace', 'waking',
-  // 交互与环境反应也是插播：摸一下、吓一跳、落地、注意到通知
+  'recovering', 'waking',
+  // 交互反应也是插播：摸一下、吓一跳、落地
   'interaction.click', 'interaction.double_click', 'interaction.drop',
   // interaction.hover 不在此列：契约里它是 held——悬停持续期间保持，
   // 鼠标移开才结束。当成 oneshot 会让它播完就走，与「注视」这个语义相反。
-  'ambient.notification', 'ambient.power_connected',
-  'ambient.reconnecting', 'moving',
+  'ambient.power_connected',
 ]);
 
 /**
@@ -57,13 +55,14 @@ export const SHELL_ACTIONS = {
   'shell.hover': 'interaction.hover',
   // held 必须成对：没有退出信号，注视状态会一直挂着不走
   'shell.hoverEnd': 'idle',
-  'shell.move': 'moving',
   'shell.screenEdge': 'ambient.edge',
   'shell.lowBattery': 'ambient.low_battery',
   'shell.powerConnected': 'ambient.power_connected',
-  'shell.notification': 'ambient.notification',
   'shell.offline': 'ambient.offline',
-  'shell.reconnected': 'ambient.reconnecting',
+  // 网络恢复不给专门动作：回到之前的状态本身就是信号。
+  // （offline / needs_owner / error 之所以有收尾动作，是因为它们开了道具环要闭合；
+  //   reconnected 没开过任何环。）走 hoverEnd 同一条路：清掉 shell 会话。
+  'shell.reconnected': 'idle',
   'shell.paused': 'paused',
   'shell.resumed': 'idle',
 };
@@ -78,17 +77,19 @@ const SHELL_PRIORITY = 4.3;
  * 工具名 → 工作修饰。主状态契约要求「详细修饰必须有可靠外部事件」，
  * tool_name 就是那个可靠事件。
  */
-export const TOOL_MODIFIERS = {
-  Read: 'working.reading',
-  Grep: 'working.reading',
-  Glob: 'working.reading',
-  NotebookRead: 'working.reading',
-  Write: 'working.writing',
-  Edit: 'working.writing',
-  NotebookEdit: 'working.writing',
-  WebFetch: 'working.syncing',
-  WebSearch: 'working.syncing',
-};
+/**
+ * 工具 → 工作修饰。
+ *
+ * 刻意**留空**。这里原本把 Read/Grep 映射到 working.reading、
+ * Write/Edit 映射到 working.writing——但这些工具几毫秒就返回，
+ * 修饰在屏幕上一闪而过，真机试跑时根本看不见。
+ * 为看不见的东西各画一套动作是白费；它们统一回落通用 Tile Stack。
+ *
+ * 仍然保留修饰的只有 Bash 分类出的 building / testing（见下方 BASH_PATTERNS）：
+ * 那些命令跑几十秒，有足够时间被看到，而且「测试在跑」是用户
+ * 会据此决定等不等的信息。判据是**能不能被看见**，不是好不好看。
+ */
+export const TOOL_MODIFIERS = {};
 
 /**
  * Bash 命令的三分类是**启发式**，不是可靠事件。按契约精神，只有高置信度模式
@@ -99,7 +100,6 @@ export const TOOL_MODIFIERS = {
 const BASH_PATTERNS = [
   [/\b(?:npm|yarn|pnpm|bun)\s+(?:run\s+)?(?:test|jest|vitest)\b|\bpytest\b|\bgo\s+test\b|\bcargo\s+test\b/, 'working.testing'],
   [/\b(?:npm|yarn|pnpm|bun)\s+(?:run\s+)?build\b|\bmake\b|\bcargo\s+build\b|\bgo\s+build\b|\btsc\b|\bwebpack\b|\bvite\s+build\b/, 'working.building'],
-  [/\bgit\s+(?:push|pull|fetch|clone)\b|\b(?:curl|wget|rsync|scp)\b|\bdocker\s+push\b/, 'working.syncing'],
 ];
 
 export function classifyBash(command) {
@@ -253,7 +253,8 @@ export function createStateEngine(options = {}) {
         s.state = shellAction;
         s.at = now;
         // 持续态（拖拽中、贴边、低电量、暂停）要能被主动清除
-        if (type === 'shell.resumed' || type === 'shell.hoverEnd') sessions.delete('shell');
+        if (type === 'shell.resumed' || type === 'shell.hoverEnd'
+          || type === 'shell.reconnected') sessions.delete('shell');
       }
       resolve(now);
       return;
@@ -347,7 +348,8 @@ export function createStateEngine(options = {}) {
         s.state = 'working';
         break;
       case 'CwdChanged':
-        pushOneshot('workspace', now);
+        // 不再插播 workspace（Workspace Folder）。切工作目录是低信息事件，
+        // 而 oneshot 插播会**打断**真正在演的动作——代价大于收益。
         s.state = 'working';
         break;
       case 'TeammateIdle':

@@ -23,8 +23,8 @@ test('优先级顺序符合设计：要人决定最高', () => {
   assert.ok(PRIORITY.needs_owner < PRIORITY.error);
   assert.ok(PRIORITY.error < PRIORITY.compacting);
   assert.ok(PRIORITY.compacting < PRIORITY.delegating);
-  assert.ok(PRIORITY.delegating < PRIORITY['working.reading']);
-  assert.ok(PRIORITY['working.reading'] < PRIORITY.working);
+  assert.ok(PRIORITY.delegating < PRIORITY['working.testing']);
+  assert.ok(PRIORITY['working.testing'] < PRIORITY.working);
   assert.ok(PRIORITY.working < PRIORITY.thinking);
   assert.ok(PRIORITY.thinking < PRIORITY.idle);
 });
@@ -32,8 +32,8 @@ test('优先级顺序符合设计：要人决定最高', () => {
 test('多会话取优先级最高的那个', () => {
   const e = engine();
   e.observeEvent({ type: 'UserPromptSubmit', sessionId: 'a' }, 1 * SEC);
-  e.observeEvent({ type: 'PreToolUse', sessionId: 'b', toolName: 'Read' }, 2 * SEC);
-  assert.equal(e.current().actionId, 'working.reading', 'b 的工作修饰压过 a 的 thinking');
+  e.observeEvent({ type: 'PreToolUse', sessionId: 'b', toolName: 'Bash', command: 'npm test' }, 2 * SEC);
+  assert.equal(e.current().actionId, 'working.testing', 'b 的工作修饰压过 a 的 thinking');
 
   // a 卡住等人 → 立刻抢占
   e.observeEvent({ type: 'PermissionRequest', sessionId: 'a' }, 3 * SEC);
@@ -43,10 +43,10 @@ test('多会话取优先级最高的那个', () => {
 
 test('同优先级取最近事件的会话', () => {
   const e = engine();
-  e.observeEvent({ type: 'PreToolUse', sessionId: 'a', toolName: 'Read' }, 1 * SEC);
-  e.observeEvent({ type: 'PreToolUse', sessionId: 'b', toolName: 'Write' }, 2 * SEC);
+  e.observeEvent({ type: 'PreToolUse', sessionId: 'a', toolName: 'Bash', command: 'npm run build' }, 1 * SEC);
+  e.observeEvent({ type: 'PreToolUse', sessionId: 'b', toolName: 'Bash', command: 'npm test' }, 2 * SEC);
   assert.equal(e.current().sessionId, 'b');
-  assert.equal(e.current().actionId, 'working.writing');
+  assert.equal(e.current().actionId, 'working.testing');
 });
 
 test('会话静默后退出活跃集，不会永远占着状态', () => {
@@ -59,19 +59,16 @@ test('会话静默后退出活跃集，不会永远占着状态', () => {
 
 // ---------- 工具名 → 修饰 ----------
 
-test('可靠的 tool_name 直接升级到具体修饰', () => {
+test('毫秒级工具不再升级修饰，统一回落通用 working', () => {
+  // TOOL_MODIFIERS 现在刻意留空。Read/Grep/Edit/WebFetch 几毫秒就返回，
+  // 修饰在屏幕上一闪而过，真机试跑时根本看不见——为看不见的东西
+  // 各画一套动作是白费。判据是能不能被看见，不是好不好看。
   const e = engine();
-  const cases = [
-    ['Read', 'working.reading'],
-    ['Grep', 'working.reading'],
-    ['Edit', 'working.writing'],
-    ['WebFetch', 'working.syncing'],
-  ];
   let t = 0;
-  for (const [tool, expected] of cases) {
+  for (const tool of ['Read', 'Grep', 'Edit', 'WebFetch', 'NotebookRead']) {
     t += SEC;
     e.observeEvent({ type: 'PreToolUse', sessionId: 's', toolName: tool }, t);
-    assert.equal(e.current().actionId, expected, tool);
+    assert.equal(e.current().actionId, 'working', tool);
   }
 });
 
@@ -86,7 +83,8 @@ test('Bash 只在高置信度模式下细分，否则回落通用', () => {
   assert.equal(classifyBash('pytest -q tests/'), 'working.testing');
   assert.equal(classifyBash('npm run build'), 'working.building');
   assert.equal(classifyBash('cargo build --release'), 'working.building');
-  assert.equal(classifyBash('git push origin main'), 'working.syncing');
+  // 同步类已退役：git/curl 与通用 working 无实质信息差
+  assert.equal(classifyBash('git push origin main'), 'working');
   // 这些看不出意图，必须回落——契约不允许从不可靠信号编出任务
   assert.equal(classifyBash('ls -la'), 'working');
   assert.equal(classifyBash('echo hello'), 'working');
@@ -149,10 +147,11 @@ test('StopFailure 进入 error 并带上 matcher 变体', () => {
   assert.equal(e.current().actionId, 'recovering');
 });
 
-test('CwdChanged 插播 workspace', () => {
+test('CwdChanged 不再插播 workspace，只进入 working', () => {
+  // 切工作目录是低信息事件，而 oneshot 插播会打断真正在演的动作。
   const e = engine();
   e.observeEvent({ type: 'CwdChanged', sessionId: 's' }, SEC);
-  assert.equal(e.current().actionId, 'workspace');
+  assert.equal(e.current().actionId, 'working');
 });
 
 // ---------- 无 hook 的降级路径 ----------
@@ -377,19 +376,22 @@ test('没有任何动作时 plan 返回 null 而不是抛错', () => {
 
 test('同级状态在驻留期内不被顶掉——否则修饰只闪一下人眼看不到', () => {
   const e = createStateEngine({ random: fixed(0.999), minDwellMs: 1200 });
-  e.observeEvent({ type: 'PreToolUse', sessionId: 's', toolName: 'Read' }, 1000);
-  assert.equal(e.current().actionId, 'working.reading');
-  // 200ms 后换工具：同优先级，驻留期未满，保持不变
-  e.observeEvent({ type: 'PreToolUse', sessionId: 's', toolName: 'Edit' }, 1200);
-  assert.equal(e.current().actionId, 'working.reading');
+  const bash = (command, at) => e.observeEvent(
+    { type: 'PreToolUse', sessionId: 's', toolName: 'Bash', command }, at,
+  );
+  bash('npm run build', 1000);
+  assert.equal(e.current().actionId, 'working.building');
+  // 200ms 后换命令：同优先级，驻留期未满，保持不变
+  bash('npm test', 1200);
+  assert.equal(e.current().actionId, 'working.building');
   // 驻留期满后才切换
-  e.observeEvent({ type: 'PreToolUse', sessionId: 's', toolName: 'Edit' }, 3000);
-  assert.equal(e.current().actionId, 'working.writing');
+  bash('npm test', 3000);
+  assert.equal(e.current().actionId, 'working.testing');
 });
 
 test('更高优先级永远可以立刻抢占，不受驻留限制', () => {
   const e = createStateEngine({ random: fixed(0.999), minDwellMs: 5000 });
-  e.observeEvent({ type: 'PreToolUse', sessionId: 's', toolName: 'Read' }, 1000);
+  e.observeEvent({ type: 'PreToolUse', sessionId: 's', toolName: 'Bash', command: 'npm test' }, 1000);
   // 要人决定必须立刻可见——让用户多等 5 秒才知道卡住了是不可接受的
   e.observeEvent({ type: 'PermissionRequest', sessionId: 's' }, 1100);
   assert.equal(e.current().actionId, 'needs_owner');
@@ -403,11 +405,12 @@ test('一次性插播不受驻留限制', () => {
 });
 
 test('PostToolUse 保留当前工作修饰，而不是重置回通用', () => {
-  // 工具往往几百毫秒就结束，重置回通用会让 5 个修饰动作等于白画
+  // Bash 命令往往跑几十秒，但 PostToolUse 一到就重置回通用的话，
+  // 保留下来的两个修饰同样等于白画
   const e = engine();
-  e.observeEvent({ type: 'PreToolUse', sessionId: 's', toolName: 'Read' }, 1000);
+  e.observeEvent({ type: 'PreToolUse', sessionId: 's', toolName: 'Bash', command: 'npm test' }, 1000);
   e.observeEvent({ type: 'PostToolUse', sessionId: 's' }, 1200);
-  assert.equal(e.current().actionId, 'working.reading');
+  assert.equal(e.current().actionId, 'working.testing');
 });
 
 test('PostToolUse 在非工作态时才回到通用 working', () => {
@@ -456,9 +459,9 @@ test('PostToolUseFailure 脱离具体修饰但不升级成 error', () => {
 
 test('hover 是 held：必须成对，否则注视态永远挂着', () => {
   const e = engine();
-  e.observeEvent({ type: 'PreToolUse', sessionId: 's', toolName: 'Read' }, SEC);
+  e.observeEvent({ type: 'PreToolUse', sessionId: 's', toolName: 'Bash', command: 'npm test' }, SEC);
   e.observeEvent({ type: 'shell.hover' }, 2 * SEC);
   assert.equal(e.current().actionId, 'interaction.hover');
   e.observeEvent({ type: 'shell.hoverEnd' }, 3 * SEC);
-  assert.equal(e.current().actionId, 'working.reading', '移开后应回到底下真实的状态');
+  assert.equal(e.current().actionId, 'working.testing', '移开后应回到底下真实的状态');
 });

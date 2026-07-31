@@ -29,7 +29,17 @@ final class PetWindow: NSWindow {
     private let mainSize: CGFloat
     private let miniSize: CGFloat = 48
 
-    init(repoRoot: URL, size: CGFloat = 128) {
+    /**
+     主形态 135px 而不是 128px。
+
+     取景是 45 单位：135 ÷ 45 = **3.000** px/单位，128 ÷ 45 = 2.844。
+     非整数比下，1 单位宽的矩形（腿、眼睛）会因落点不同被渲成 2px 或 3px——
+     45 个整数单位位置里有 7 个会掉到 2px，于是角色每做一次单位位移，
+     轮廓宽度就变一次，看起来像在抖。Retina 2× 同理（270÷45=6.000）。
+
+     135 与 128 只差 7pt，桌面上感知不到大小变化，但抖动会完全消失。
+     */
+    init(repoRoot: URL, size: CGFloat = 135) {
         self.repoRoot = repoRoot
         self.mainSize = size
 

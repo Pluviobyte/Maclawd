@@ -24,7 +24,8 @@
       "glows",
       "shadows"
     ],
-    "transitionsMandatory": "主形态与 mini 之间不允许瞬切，必须经过 mini.enter / mini.exit。瞬切看起来像闪烁的 bug。"
+    "transitionsMandatory": "主形态与 mini 之间不允许瞬切，必须经过 mini.enter / mini.exit。瞬切看起来像闪烁的 bug。",
+    "pixelGrid": "同主形态：渲染尺寸必须是取景单位数（16）的整数倍。48÷16=3.000，96÷16=6.000。"
   },
   "states": [
     {
@@ -120,43 +121,29 @@
     "away": "mini.idle",
     "sleeping": "mini.idle",
     "paused": "mini.idle",
-    "cancelled": "mini.idle",
     "ambient.edge": "mini.idle",
-
     "thinking": "mini.busy",
     "working": "mini.busy",
-    "working.reading": "mini.busy",
-    "working.writing": "mini.busy",
     "working.building": "mini.busy",
     "working.testing": "mini.busy",
-    "working.syncing": "mini.busy",
     "delegating": "mini.busy",
     "compacting": "mini.busy",
     "recovering": "mini.busy",
-    "ambient.reconnecting": "mini.busy",
-
     "waking": "mini.peek",
-    "workspace": "mini.peek",
     "launching": "mini.peek",
-    "moving": "mini.peek",
     "interaction.hover": "mini.peek",
     "interaction.click": "mini.peek",
     "interaction.drag": "mini.peek",
     "interaction.drop": "mini.peek",
-
     "needs_owner": "mini.alert",
     "waiting": "mini.alert",
-    "ambient.notification": "mini.alert",
     "ambient.low_battery": "mini.alert",
-
     "error": "mini.error",
     "ambient.offline": "mini.error",
-
     "success": "mini.happy",
     "owner_resolved": "mini.happy",
     "interaction.double_click": "mini.happy",
     "ambient.power_connected": "mini.happy",
-
     "quitting": "mini.enter"
   },
   "openQuestions": [

@@ -62,9 +62,11 @@
       "sleeping may use the user-approved hard-edged pixel Zzz sequence"
     ],
     "qaSizes": [
-      64,
-      96
-    ]
+      90,
+      135,
+      180
+    ],
+    "pixelGrid": "渲染尺寸必须是取景单位数（45）的整数倍，否则 1 单位宽的矩形会因落点不同被渲成 2px 或 3px，角色每移动一格轮廓就抖一次。128px÷45=2.844（旧值，45 个单位位置里 7 个渲成 2px）；135px÷45=3.000。"
   },
   "states": [
     {
@@ -165,16 +167,6 @@
       "action": "Fold the cloth progressively into the suitcase.",
       "source": "src/animations/accordion-fold.svg",
       "exit": "event-driven"
-    },
-    {
-      "id": "workspace",
-      "name": "Workspace Folder",
-      "mode": "oneshot",
-      "durationMs": 4200,
-      "accessory": "one upright folder beside the body",
-      "action": "Pop the folder open vertically and settle into the new workspace.",
-      "source": "src/animations/pop-up-studio.svg",
-      "exit": "working"
     },
     {
       "id": "success",

@@ -167,18 +167,6 @@
 @keyframes fold-eyes { 0%,78%,100%{transform:translate(0,1px)} 79%,86%{transform:scaleY(.15)} 87%,99%{transform:translate(0,1px)} }
 @keyframes fold-accordion { 0%,12%,100%{transform:translateY(0) scaleY(1)} 13%,34%{transform:translateY(3px) scaleY(.78)} 35%,56%{transform:translateY(6px) scaleY(.55)} 57%,78%{transform:translateY(9px) scaleY(.28)} 79%,99%{transform:translateY(0) scaleY(1)} }
 
-.state-workspace { --duration: 4.2s; }
-.state-workspace .actor { animation-name: mat-body; }
-.state-workspace .left-claw { animation-name: mat-left; }
-.state-workspace .right-claw { animation-name: mat-right; }
-.state-workspace .mat { transform-origin: 13px 18px; animation-name: mat-roll; }
-.state-workspace .roll { transform-origin: 11px 5px; animation-name: mat-end; }
-@keyframes mat-body { 0%,12%,100%{transform:translate(-1px,0)} 13%,32%{transform:translate(0,-1px)} 33%,52%{transform:translate(-1px,-1px)} 53%,72%{transform:translate(0,-1px)} 73%,88%{transform:translate(0,-2px)} 89%,99%{transform:translate(-1px,0)} }
-@keyframes mat-left { 0%,12%,100%{transform:translate(0,0)} 13%,32%{transform:translate(2px,-2px)} 33%,52%{transform:translate(1px,-1px)} 53%,72%{transform:translate(0,0)} 73%,88%{transform:translate(1px,-1px)} 89%,99%{transform:translate(0,0)} }
-@keyframes mat-right { 0%,12%,100%{transform:translate(0,0)} 13%,32%{transform:translate(3px,-1px)} 33%,52%{transform:translate(4px,-3px)} 53%,72%{transform:translate(3px,-1px)} 73%,88%{transform:translate(2px,-2px)} 89%,99%{transform:translate(0,0)} }
-@keyframes mat-roll { 0%,12%,100%{transform:scaleY(.22)} 13%,32%{transform:scaleY(.48)} 33%,52%{transform:scaleY(.72)} 53%,88%{transform:scaleY(1)} 89%,99%{transform:scaleY(.22)} }
-@keyframes mat-end { 0%,12%,100%{transform:translateY(10px)} 13%,32%{transform:translateY(6px)} 33%,52%{transform:translateY(3px)} 53%,88%{transform:translateY(0)} 89%,99%{transform:translateY(10px)} }
-
 .state-success { --duration: 2.9s; }
 .state-success .actor { animation-name: highfive-body; }
 .state-success .left-claw { animation-name: highfive-left; }
@@ -204,32 +192,6 @@
 @keyframes fail-basket { 0%,12%,100%{transform:translate(3px,-8px) rotate(10deg)} 13%,30%{transform:translate(1px,-3px) rotate(-6deg)} 31%,48%{transform:translate(0,-1px) rotate(4deg)} 49%,66%{transform:translate(-1px,2px) rotate(-7deg)} 67%,82%{transform:translate(1px,-2px) rotate(7deg)} 83%,90%{transform:translate(2px,1px) rotate(10deg)} 91%,99%{transform:translate(3px,-8px) rotate(10deg)} }
 
 /* Working activity modifiers ------------------------------------------- */
-.state-reading { --duration: 5s; }
-.state-reading .actor { animation-name: read-body; }
-.state-reading .left-claw { animation-name: read-left; }
-.state-reading .right-claw { animation-name: read-right; }
-.state-reading .eyes { animation-name: read-eyes; }
-.state-reading .book { transform-origin: 7.5px 16px; animation-name: read-book; }
-.state-reading .page { transform-origin: 8px 15px; animation-name: read-page; }
-@keyframes read-body { 0%,14%,100%{transform:translateY(-1px)} 15%,34%{transform:translate(-1px,-1px)} 35%,54%{transform:translate(1px,-1px)} 55%,74%{transform:translate(0,-2px)} 75%,99%{transform:translateY(-1px)} }
-@keyframes read-left { 0%,14%,100%{transform:translate(2px,2px)} 15%,54%{transform:translate(3px,1px)} 55%,74%{transform:translate(4px,-1px)} 75%,99%{transform:translate(2px,2px)} }
-@keyframes read-right { 0%,14%,100%{transform:translate(-2px,2px)} 15%,54%{transform:translate(-3px,1px)} 55%,74%{transform:translate(-4px,-1px)} 75%,99%{transform:translate(-2px,2px)} }
-@keyframes read-eyes { 0%,14%,100%{transform:translate(-1px,1px)} 15%,34%{transform:translate(0,1px)} 35%,54%{transform:translate(1px,1px)} 55%,74%{transform:translateY(0)} 75%,99%{transform:translate(-1px,1px)} }
-@keyframes read-book { 0%,14%,100%{transform:rotate(-2deg)} 15%,34%{transform:rotate(1deg)} 35%,54%{transform:rotate(-1deg)} 55%,74%{transform:translateY(-1px)} 75%,99%{transform:rotate(-2deg)} }
-@keyframes read-page { 0%,34%,100%{transform:scaleX(1)} 35%,54%{transform:scaleX(.15)} 55%,74%{transform:scaleX(-1)} 75%,99%{transform:scaleX(1)} }
-
-.state-writing { --duration: 4.6s; }
-.state-writing .actor { animation-name: write-body; }
-.state-writing .right-claw { animation-name: write-claw; }
-.state-writing .eyes { animation-name: write-eyes; }
-.state-writing .pencil { transform-origin: 11px 12px; animation-name: write-pencil; }
-.state-writing .sheet { transform-origin: 6px 17px; animation-name: write-sheet; }
-@keyframes write-body { 0%,12%,100%{transform:translateY(-1px)} 13%,64%{transform:translate(-1px,-2px)} 65%,82%{transform:translate(1px,-2px)} 83%,99%{transform:translateY(-1px)} }
-@keyframes write-claw { 0%,12%,100%{transform:translate(-1px,1px)} 13%,25%{transform:translate(-4px,1px)} 26%,38%{transform:translate(-2px,3px)} 39%,51%{transform:translate(-5px,1px)} 52%,64%{transform:translate(-3px,3px)} 65%,82%{transform:translate(-3px,-1px)} 83%,99%{transform:translate(-1px,1px)} }
-@keyframes write-eyes { 0%,64%,100%{transform:translate(1px,1px)} 65%,82%{transform:translate(0,0)} 83%,99%{transform:translate(1px,1px)} }
-@keyframes write-pencil { 0%,12%,100%{transform:rotate(34deg)} 13%,25%{transform:translate(-1px,1px) rotate(28deg)} 26%,38%{transform:translate(1px,0) rotate(40deg)} 39%,51%{transform:translate(-1px,1px) rotate(28deg)} 52%,64%{transform:translate(1px,0) rotate(40deg)} 65%,82%{transform:translateY(-3px) rotate(20deg)} 83%,99%{transform:rotate(34deg)} }
-@keyframes write-sheet { 0%,12%,100%{transform:scaleX(.85)} 13%,64%{transform:scaleX(1)} 65%,82%{transform:translateY(-1px) scaleX(1)} 83%,99%{transform:scaleX(.85)} }
-
 /* command is intentionally a semantic alias of generic working. */
 .state-command { --duration: 3.4s; }
 .state-command .actor { animation-name: work-body; }
@@ -257,18 +219,6 @@
 @keyframes test-claw { 0%,12%,100%{transform:translate(0,0)} 13%,34%{transform:translate(-8px,2px)} 35%,56%{transform:translate(-5px,0)} 57%,76%{transform:translate(-7px,-1px)} 77%,99%{transform:translate(0,0)} }
 @keyframes test-eyes { 0%,12%,100%{transform:translate(-1px,1px)} 13%,34%{transform:translate(-2px,1px)} 35%,56%{transform:translate(-1px,1px)} 57%,76%{transform:translate(-2px,0)} 77%,99%{transform:translate(-1px,1px)} }
 @keyframes test-toy { 0%,12%,100%{transform:rotate(0)} 13%,24%{transform:rotate(-16deg)} 25%,34%{transform:rotate(14deg)} 35%,44%{transform:rotate(-10deg)} 45%,56%{transform:rotate(8deg)} 57%,76%{transform:rotate(0)} 77%,99%{transform:rotate(0)} }
-
-.state-syncing { --duration: 4.4s; }
-.state-syncing .actor { animation-name: sync-body; }
-.state-syncing .left-claw { animation-name: sync-left; }
-.state-syncing .right-claw { animation-name: sync-right; }
-.state-syncing .bead { transform-origin: 8px 10px; animation-name: sync-bead; }
-.state-syncing .cord { transform-origin: 8px 17px; animation-name: sync-cord; }
-@keyframes sync-body { 0%,12%,100%{transform:translateY(0)} 13%,34%{transform:translateX(-1px)} 35%,56%{transform:translateY(-1px)} 57%,78%{transform:translateX(1px)} 79%,99%{transform:translateY(0)} }
-@keyframes sync-left { 0%,12%,100%{transform:translate(0,0)} 13%,34%{transform:translate(3px,-1px)} 35%,56%{transform:translate(5px,-2px)} 57%,78%{transform:translate(3px,-1px)} 79%,99%{transform:translate(0,0)} }
-@keyframes sync-right { 0%,12%,100%{transform:translate(0,0)} 13%,34%{transform:translate(-3px,-1px)} 35%,56%{transform:translate(-5px,-2px)} 57%,78%{transform:translate(-3px,-1px)} 79%,99%{transform:translate(0,0)} }
-@keyframes sync-bead { 0%,12%,100%{transform:translateY(5px)} 13%,34%{transform:translateY(2px)} 35%,56%{transform:translateY(-2px)} 57%,78%{transform:translateY(-6px)} 79%,99%{transform:translateY(5px)} }
-@keyframes sync-cord { 0%,34%,100%{transform:scaleY(.82)} 35%,56%{transform:scaleY(1)} 57%,78%{transform:scaleY(.9)} 79%,99%{transform:scaleY(.82)} }
 
 /* Interaction and ambient actions -------------------------------------- */
 .state-click { --duration: 2.2s; }
@@ -362,22 +312,6 @@
 @keyframes quit-legs { 0%,48%,100%{transform:translateY(0) scaleX(1)} 49%,66%{transform:translateY(-1px) scaleX(.72)} 67%,99%{transform:translateY(-3px) scaleX(.5)} }
 @keyframes quit-eyes { 0%,40%,100%{transform:scaleY(1)} 41%,48%{transform:scaleY(.15)} 49%,99%{transform:scaleY(.12)} }
 
-.state-moving { --duration: 1.8s; }
-.state-moving .travel-direction { transform-box:view-box; transform-origin:7.5px 15px; }
-.state-moving[data-direction="left"] .travel-direction { transform:scaleX(-1); }
-.state-moving .actor { animation-name: moving-body; }
-.state-moving .left-claw { animation-name: moving-left; }
-.state-moving .right-claw { animation-name: moving-right; }
-.state-moving .scuttle-leg-a { animation-name: moving-leg-a; }
-.state-moving .scuttle-leg-b { animation-name: moving-leg-b; }
-.state-moving .eyes { animation-name: moving-eyes; }
-@keyframes moving-body { 0%,100%{transform:translate(-3px,0)} 20%{transform:translate(-1px,-1px)} 40%{transform:translate(1px,0)} 60%{transform:translate(3px,-1px)} 80%{transform:translate(1px,0)} }
-@keyframes moving-left { 0%,40%,80%,100%{transform:translate(1px,0)} 20%,60%{transform:translate(-2px,-1px)} }
-@keyframes moving-right { 0%,40%,80%,100%{transform:translate(2px,-1px)} 20%,60%{transform:translate(-1px,0)} }
-@keyframes moving-leg-a { 0%,40%,80%,100%{transform:translate(-1px,-1px)} 20%,60%{transform:translate(1px,0)} }
-@keyframes moving-leg-b { 0%,40%,80%,100%{transform:translate(1px,0)} 20%,60%{transform:translate(-1px,-1px)} }
-@keyframes moving-eyes { 0%,72%,100%{transform:translateX(1px)} 73%,80%{transform:translateX(1px) scaleY(.15)} 81%,99%{transform:translateX(1px)} }
-
 .state-waiting { --duration: 4.2s; }
 .state-waiting .actor { animation-name: waiting-body; }
 .state-waiting .left-claw { animation-name: waiting-left; }
@@ -397,16 +331,6 @@
 @keyframes paused-left { 0%,100%{transform:translate(3px,1px)} }
 @keyframes paused-right { 0%,100%{transform:translate(-3px,1px)} }
 @keyframes paused-eyes { 0%,68%,82%,100%{transform:scaleY(.75)} 69%,81%{transform:scaleY(.15)} }
-
-.state-cancelled { --duration: 2.8s; }
-.state-cancelled .actor { animation-name: cancelled-body; }
-.state-cancelled .left-claw { animation-name: cancelled-left; }
-.state-cancelled .right-claw { animation-name: cancelled-right; }
-.state-cancelled .eyes { animation-name: cancelled-eyes; }
-@keyframes cancelled-body { 0%,14%,100%{transform:translate(0,0)} 15%,32%{transform:translateY(1px) scaleY(.92)} 33%,50%{transform:translate(-1px,-1px) rotate(-3deg)} 51%,68%{transform:translate(1px,-1px) rotate(3deg)} 69%,84%{transform:translateY(1px) scaleY(.94)} 85%,99%{transform:translate(0,0)} }
-@keyframes cancelled-left { 0%,14%,100%{transform:translate(0,0)} 15%,68%{transform:translate(-3px,-3px) rotate(-15deg)} 69%,84%{transform:translate(-1px,0)} 85%,99%{transform:translate(0,0)} }
-@keyframes cancelled-right { 0%,14%,100%{transform:translate(0,0)} 15%,68%{transform:translate(3px,-3px) rotate(15deg)} 69%,84%{transform:translate(1px,0)} 85%,99%{transform:translate(0,0)} }
-@keyframes cancelled-eyes { 0%,14%,68%,100%{transform:scaleY(1)} 15%,32%{transform:scaleY(.2)} 33%,67%{transform:translateY(1px) scaleY(.55)} 69%,99%{transform:scaleY(1)} }
 
 .state-owner-resolved { --duration: 3.2s; }
 .state-owner-resolved .actor { animation-name: resolved-body; }
@@ -479,16 +403,6 @@
 @keyframes hover-right { 0%,56%,100%{transform:translate(0,0)} 57%,76%{transform:translate(2px,-1px)} 77%,99%{transform:translate(0,0)} }
 @keyframes hover-eyes { 0%,14%,100%{transform:translate(0,0)} 15%,34%{transform:translate(-1px,0)} 35%,56%{transform:translate(1px,0)} 57%,76%{transform:translate(1px,-1px)} 77%,84%{transform:scaleY(.15)} 85%,99%{transform:translate(0,0)} }
 
-.state-notification { --duration: 2.6s; }
-.state-notification .actor { animation-name: notify-body; }
-.state-notification .left-claw { animation-name: notify-left; }
-.state-notification .right-claw { animation-name: notify-right; }
-.state-notification .eyes { animation-name: notify-eyes; }
-@keyframes notify-body { 0%,12%,100%{transform:translate(0,0)} 13%,32%{transform:translate(-2px,-1px) rotate(-4deg)} 33%,50%{transform:translate(1px,-2px) rotate(3deg)} 51%,70%{transform:translate(0,-1px)} 71%,99%{transform:translate(0,0)} }
-@keyframes notify-left { 0%,12%,100%{transform:translate(0,0)} 13%,50%{transform:translate(-3px,-3px)} 51%,70%{transform:translate(-1px,-1px)} 71%,99%{transform:translate(0,0)} }
-@keyframes notify-right { 0%,12%,100%{transform:translate(0,0)} 13%,32%{transform:translate(-1px,0)} 33%,50%{transform:translate(3px,-4px)} 51%,70%{transform:translate(2px,-2px)} 71%,99%{transform:translate(0,0)} }
-@keyframes notify-eyes { 0%,12%,50%,100%{transform:scaleY(.72)} 13%,32%{transform:translate(-1px,-1px) scaleY(1.15)} 33%,49%{transform:translate(1px,-1px) scaleY(1.15)} 51%,60%{transform:scaleY(.15)} 61%,99%{transform:scaleY(1)} }
-
 .state-offline { --duration: 5.2s; }
 .state-offline .actor { animation-name: offline-body; }
 .state-offline .left-claw { animation-name: offline-left; }
@@ -498,16 +412,6 @@
 @keyframes offline-left { 0%,14%,100%{transform:translate(2px,1px)} 15%,48%{transform:translate(1px,-2px)} 49%,84%{transform:translate(3px,0)} 85%,99%{transform:translate(2px,1px)} }
 @keyframes offline-right { 0%,14%,100%{transform:translate(-2px,1px)} 15%,48%{transform:translate(-3px,0)} 49%,84%{transform:translate(-1px,-2px)} 85%,99%{transform:translate(-2px,1px)} }
 @keyframes offline-eyes { 0%,14%,100%{transform:translate(0,0)} 15%,48%{transform:translate(-1px,0)} 49%,70%{transform:translate(1px,0)} 71%,78%{transform:translate(1px,0) scaleY(.15)} 79%,84%{transform:translate(1px,0)} 85%,99%{transform:translate(0,0)} }
-
-.state-reconnecting { --duration: 3s; }
-.state-reconnecting .actor { animation-name: reconnect-body; }
-.state-reconnecting .left-claw { animation-name: reconnect-left; }
-.state-reconnecting .right-claw { animation-name: reconnect-right; }
-.state-reconnecting .eyes { animation-name: reconnect-eyes; }
-@keyframes reconnect-body { 0%,12%,100%{transform:translateY(2px) scaleY(.88)} 13%,30%{transform:translate(-2px,-1px) rotate(-4deg)} 31%,48%{transform:translate(2px,-1px) rotate(4deg)} 49%,64%{transform:translate(-1px,-2px) rotate(-2deg)} 65%,80%{transform:translate(1px,-2px) rotate(2deg)} 81%,99%{transform:translate(0,0)} }
-@keyframes reconnect-left { 0%,12%,100%{transform:translate(2px,1px)} 13%,30%{transform:translate(-3px,-2px)} 31%,48%{transform:translate(-1px,-1px)} 49%,80%{transform:translate(-3px,-2px)} 81%,99%{transform:translate(0,0)} }
-@keyframes reconnect-right { 0%,12%,100%{transform:translate(-2px,1px)} 13%,30%{transform:translate(1px,-1px)} 31%,48%{transform:translate(3px,-2px)} 49%,80%{transform:translate(3px,-2px)} 81%,99%{transform:translate(0,0)} }
-@keyframes reconnect-eyes { 0%,12%,100%{transform:scaleY(.45)} 13%,64%{transform:scaleY(1)} 65%,72%{transform:scaleY(.15)} 73%,99%{transform:scaleY(1)} }
 
 @media (prefers-reduced-motion: reduce) {
   .motion { animation: none !important; }

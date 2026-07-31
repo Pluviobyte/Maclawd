@@ -77,17 +77,16 @@ test('真的无处可归时标 unmapped，而不是静默兜底', () => {
 });
 
 test('不开 mini 时收敛不生效', () => {
-  const plan = orchestrator.plan('working.reading');
-  assert.equal(plan.actionId, 'working.reading');
+  const plan = orchestrator.plan('working.testing');
+  assert.equal(plan.actionId, 'working.testing');
   assert.equal(plan.convergedFrom, null);
   assert.equal(plan.unmapped, false);
 });
 
 test('语义相近的动作收敛到同一档，相远的不会', () => {
   const mini = (id) => orchestrator.plan(id, { mini: true }).actionId;
-  // 五个工作修饰的区别全在道具上，mini 没有道具，合并是对的
-  for (const id of ['working.reading', 'working.writing', 'working.building',
-    'working.testing', 'working.syncing']) {
+  // 保留下来的两个工作修饰，区别全在道具上；mini 没有道具，合并是对的
+  for (const id of ['working', 'working.building', 'working.testing']) {
     assert.equal(mini(id), 'mini.busy', id);
   }
   // 「要你决定」和「出错了」刻意不合并：前者需要立刻响应，后者不一定

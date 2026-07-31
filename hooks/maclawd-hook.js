@@ -35,7 +35,6 @@ function exitQuietly() {
 const BASH_PATTERNS = [
   [/\b(?:npm|yarn|pnpm|bun)\s+(?:run\s+)?(?:test|jest|vitest)\b|\bpytest\b|\bgo\s+test\b|\bcargo\s+test\b/, 'working.testing'],
   [/\b(?:npm|yarn|pnpm|bun)\s+(?:run\s+)?build\b|\bmake\b|\bcargo\s+build\b|\bgo\s+build\b|\btsc\b|\bwebpack\b|\bvite\s+build\b/, 'working.building'],
-  [/\bgit\s+(?:push|pull|fetch|clone)\b|\b(?:curl|wget|rsync|scp)\b|\bdocker\s+push\b/, 'working.syncing'],
 ];
 
 function classifyCommand(command) {
