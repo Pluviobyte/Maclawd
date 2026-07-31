@@ -24,8 +24,16 @@ export function fallbackChain(actionId) {
   return chain;
 }
 
-export function createOrchestrator({ actions = [], reducedMotion = false } = {}) {
+/** mini 收敛不到任何一档时的兜底。宁可演错也不能白屏。 */
+const MINI_DEFAULT = 'mini.idle';
+
+export function createOrchestrator({ actions = [], reducedMotion = false, convergence = {} } = {}) {
   const byId = new Map();
+  // 39 → 8 的收敛表来自 design/mini-actions.json，**穷举声明**。
+  // 不靠 id 前缀推断：那在 `idle.drowsy`（该收敛到 idle 档）与
+  // `interaction.drag`（该收敛到 peek 档）这类地方一定会猜错，
+  // 而且新增动作时会静默落到默认档，没人会发现。
+  const mini = new Map(Object.entries(convergence).filter(([key]) => !key.startsWith('_')));
   // 契约里的显式别名。`ambient.power_connected` 就刻意复用 `waking`
   // （Morning Stretch）——「能量回来了」本身就读得懂，不需要再加充电器道具。
   // 早先版本忽略了 mapsTo，于是它一路回落到 idle，别名等于没生效。
@@ -53,13 +61,43 @@ export function createOrchestrator({ actions = [], reducedMotion = false } = {})
   }
 
   /**
+   * 把主形态动作收敛到 mini 档。
+   *
+   * 表里没有直接命中时，沿回落链找有映射的祖先
+   * （`working.something-new` → `working` → mini.busy），
+   * 这样新增修饰不会立刻掉档。真的一个都找不到才用默认档，
+   * 但会标 `unmapped`——**静默兜底等于把缺口藏起来**，
+   * 探针和测试要能看见它。
+   */
+  function converge(actionId) {
+    const id = String(actionId ?? '');
+    // fallbackChain 末尾无条件补一个 `idle`，那是「找不到资产时别白屏」的兜底。
+    // 收敛**不能**把它当成一次成功匹配：否则任何未知 id 都会静默变成 mini.idle，
+    // unmapped 永远为假，缺口就再也看不见了。只有 idle 本来就是这个 id 的
+    // 祖先（`idle` / `idle.*`）时才算数。
+    const idleIsAncestor = id === 'idle' || id.startsWith('idle.');
+    const chain = fallbackChain(id).filter((c) => c !== 'idle' || idleIsAncestor);
+    for (const candidate of chain) {
+      const hit = mini.get(candidate);
+      if (hit) {
+        return { id: hit, convergedFrom: id, unmapped: false, inexact: candidate !== id };
+      }
+    }
+    return { id: MINI_DEFAULT, convergedFrom: id, unmapped: true, inexact: true };
+  }
+
+  /**
    * @returns {null | {
    *   actionId, name, source, durationMs, mode, variant,
-   *   next: string|null, motion: boolean, fellBackFrom: string|null
+   *   next: string|null, motion: boolean, fellBackFrom: string|null,
+   *   convergedFrom: string|null, unmapped: boolean
    * }}
    */
-  function plan(actionId, { variant = null, reduced = reducedMotion } = {}) {
-    const found = resolve(actionId);
+  function plan(actionId, { variant = null, reduced = reducedMotion, mini: miniMode = false } = {}) {
+    // mini 是主状态的**投影**，不是第二套状态机——引擎照常产出 39 档之一，
+    // 收敛只发生在这一步。绝不为 mini 建独立状态机，那必然漂移。
+    const converged = miniMode ? converge(actionId) : null;
+    const found = resolve(converged ? converged.id : actionId);
     if (!found) return null;
     const { action, fellBackFrom, aliasedFrom } = found;
 
@@ -83,13 +121,18 @@ export function createOrchestrator({ actions = [], reducedMotion = false } = {})
       fellBackFrom,
       // 别名与回落是两回事：别名是契约指定的复用，回落是找不到资产的兜底。
       aliasedFrom: aliasedFrom ?? null,
+      // 收敛与回落也是两回事：收敛是 mini 档的刻意合并，不是缺资产。
+      convergedFrom: converged && converged.inexact ? converged.convergedFrom : null,
+      unmapped: converged ? converged.unmapped : false,
     };
   }
 
   return {
     plan,
     resolve,
+    converge,
     has: (actionId) => byId.has(actionId),
     ids: () => [...byId.keys()],
+    miniIds: () => [...new Set(mini.values())],
   };
 }

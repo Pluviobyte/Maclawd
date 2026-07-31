@@ -64,6 +64,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         client.onUpdate = { [weak self] in
             guard let self else { return }
             self.menuBar.render()
+            // 尺寸档要先切：窗口还是 128 却在播 mini 资产，角色会缩在角落里。
+            self.pet.setMini(self.client.state.mini)
             self.pet.show(source: self.client.state.source,
                           motion: self.client.state.motion,
                           variant: self.client.state.variant)

@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 2,
+  "status": "implemented-mini-v1-peek-composition",
+  "miniContract": {
+    "viewBox": "0 3 16 16",
+    "windowSize": 48,
+    "unitsPerPixel": 3,
+    "tuckOffsetX": 7,
+    "designedEdge": "right",
+    "mirrorPolicy": "外壳在左边缘时对整个 svg 施加 scaleX(-1)；不为左边缘另画一套。",
+    "rationale": "mini 不是把角色缩小，而是把镜头推近、裁掉场景只留演员。主形态 128px ÷ 45 单位 ≈ 2.84px/单位，mini 48px ÷ 16 单位 = 3px/单位——角色在屏幕上的实际大小几乎不变，一个像素都不用重画。",
+    "expressiveMeans": "只有姿态与露出多少。贴边位角色右半边被 viewBox 右界裁掉，所以静止时只露出一只眼睛，探出来才看得到两只。",
+    "noAccessories": "mini 一律不带道具。道具承载的是主形态 39 档的区分度，收敛到 8 档后那几个像素是白费的。"
+  },
+  "designRules": {
+    "qaSizes": [
+      48
+    ],
+    "forbidden": [
+      "text",
+      "UI panels",
+      "props",
+      "scene bases",
+      "glows",
+      "shadows"
+    ],
+    "transitionsMandatory": "主形态与 mini 之间不允许瞬切，必须经过 mini.enter / mini.exit。瞬切看起来像闪烁的 bug。"
+  },
+  "states": [
+    {
+      "id": "mini.idle",
+      "name": "Edge Doze",
+      "mode": "loop",
+      "durationMs": 5200,
+      "accessory": "none",
+      "action": "Breathe slowly against the edge with one drowsy eye showing.",
+      "source": "src/animations/mini-idle.svg",
+      "exit": "event-driven"
+    },
+    {
+      "id": "mini.busy",
+      "name": "Edge Bob",
+      "mode": "loop",
+      "durationMs": 3200,
+      "accessory": "none",
+      "action": "Bob with a working rhythm, claw stirring.",
+      "source": "src/animations/mini-busy.svg",
+      "exit": "event-driven"
+    },
+    {
+      "id": "mini.peek",
+      "name": "Edge Peek",
+      "mode": "loop",
+      "durationMs": 3600,
+      "accessory": "none",
+      "action": "Lean out until both eyes clear the frame, then ease back.",
+      "source": "src/animations/mini-peek.svg",
+      "exit": "event-driven"
+    },
+    {
+      "id": "mini.alert",
+      "name": "Edge Tap",
+      "mode": "loop",
+      "durationMs": 2400,
+      "accessory": "none",
+      "action": "Lean out and tap the edge twice.",
+      "source": "src/animations/mini-alert.svg",
+      "exit": "event-driven"
+    },
+    {
+      "id": "mini.error",
+      "name": "Edge Slump",
+      "mode": "loop",
+      "durationMs": 4400,
+      "accessory": "none",
+      "action": "Slump against the edge and rock slowly.",
+      "source": "src/animations/mini-error.svg",
+      "exit": "event-driven"
+    },
+    {
+      "id": "mini.happy",
+      "name": "Edge Bounce",
+      "mode": "oneshot",
+      "durationMs": 2400,
+      "accessory": "none",
+      "action": "Spring out once and settle back.",
+      "source": "src/animations/mini-happy.svg",
+      "exit": "timeout",
+      "next": "mini.idle"
+    },
+    {
+      "id": "mini.enter",
+      "name": "Tuck In",
+      "mode": "oneshot",
+      "durationMs": 1600,
+      "accessory": "none",
+      "action": "Slide from the main-form centre into the tucked edge position.",
+      "source": "src/animations/mini-enter.svg",
+      "exit": "timeout",
+      "next": "mini.idle"
+    },
+    {
+      "id": "mini.exit",
+      "name": "Pop Out",
+      "mode": "oneshot",
+      "durationMs": 1600,
+      "accessory": "none",
+      "action": "Slide out of the tucked edge position toward the main form.",
+      "source": "src/animations/mini-exit.svg",
+      "exit": "timeout",
+      "next": null
+    }
+  ],
+  "convergence": {
+    "_comment": "主形态 39 个动作 → mini 8 档。必须穷举声明，不允许靠 id 前缀推断——前缀推断在 `idle.drowsy` 与 `interaction.drag` 这种地方一定会猜错，而且新增动作时会静默落到默认档，没人会发现。测试会断言这张表覆盖全部主形态动作。",
+    "idle": "mini.idle",
+    "idle.grooming": "mini.idle",
+    "idle.leg_shuffle": "mini.idle",
+    "idle.drowsy": "mini.idle",
+    "away": "mini.idle",
+    "sleeping": "mini.idle",
+    "paused": "mini.idle",
+    "cancelled": "mini.idle",
+    "ambient.edge": "mini.idle",
+
+    "thinking": "mini.busy",
+    "working": "mini.busy",
+    "working.reading": "mini.busy",
+    "working.writing": "mini.busy",
+    "working.building": "mini.busy",
+    "working.testing": "mini.busy",
+    "working.syncing": "mini.busy",
+    "delegating": "mini.busy",
+    "compacting": "mini.busy",
+    "recovering": "mini.busy",
+    "ambient.reconnecting": "mini.busy",
+
+    "waking": "mini.peek",
+    "workspace": "mini.peek",
+    "launching": "mini.peek",
+    "moving": "mini.peek",
+    "interaction.hover": "mini.peek",
+    "interaction.click": "mini.peek",
+    "interaction.drag": "mini.peek",
+    "interaction.drop": "mini.peek",
+
+    "needs_owner": "mini.alert",
+    "waiting": "mini.alert",
+    "ambient.notification": "mini.alert",
+    "ambient.low_battery": "mini.alert",
+
+    "error": "mini.error",
+    "ambient.offline": "mini.error",
+
+    "success": "mini.happy",
+    "owner_resolved": "mini.happy",
+    "interaction.double_click": "mini.happy",
+    "ambient.power_connected": "mini.happy",
+
+    "quitting": "mini.enter"
+  },
+  "openQuestions": [
+    "48px 下 idle 与 sleeping 都收敛到 Edge Doze，只靠眼睛开合区分。真机跑一天后确认是否需要拆开。",
+    "left-edge 镜像目前由外壳做 scaleX(-1)。若将来出现左右不对称的 mini 动作，这条策略要改成两套资产。"
+  ]
+}

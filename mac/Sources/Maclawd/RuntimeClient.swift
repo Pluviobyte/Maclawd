@@ -10,6 +10,8 @@ struct RuntimeState {
     var mode: String = "loop"
     var next: String?
     var motion: Bool = true
+    /// 是否处于 mini（贴边）尺寸档。由运行时决定，外壳只跟随。
+    var mini: Bool = false
     var reason: String = ""
     var tokensPerMin: Int = 0
     var disabled: Bool = false
@@ -170,6 +172,7 @@ final class RuntimeClient {
                 next.next = p["next"] as? String
                 next.motion = p["motion"] as? Bool ?? true
             }
+            next.mini = json["mini"] as? Bool ?? false
             if let d = json["debug"] as? [String: Any] {
                 next.energy = d["energy"] as? Double ?? 1
                 next.tokensPerMin = d["rate"] as? Int ?? 0

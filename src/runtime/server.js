@@ -237,6 +237,7 @@ export function loadActions() {
     ['modifier', 'design/activity-modifiers.json'],
     ['interaction', 'design/interaction-actions.json'],
     ['lifecycle', 'design/runtime-lifecycle-actions.json'],
+    ['mini', 'design/mini-actions.json'],
   ];
   const actions = [];
   const seen = new Set();
@@ -294,6 +295,16 @@ function characterContract() {
   }
 }
 
+/** 39 → 8 的 mini 收敛表。读不到就是空表，编排器会把每一档都标成 unmapped。 */
+export function loadConvergence() {
+  try {
+    const full = join(REPO_ROOT, 'design/mini-actions.json');
+    return JSON.parse(readFileSync(full, 'utf-8')).convergence ?? {};
+  } catch {
+    return {};
+  }
+}
+
 // ---------- 打开项目 ----------
 
 const OPENERS = {
@@ -329,7 +340,34 @@ export function createUsageServer({ collector = null } = {}) {
   // 状态引擎 + 编排器：目前只有「速率推断」这条降级路径在喂它，
   // hook 通道接上后同一个引擎直接消费 hook 事件，不需要改结构。
   const engine = createStateEngine();
-  const orchestrator = createOrchestrator({ actions: loadActions() });
+  const orchestrator = createOrchestrator({
+    actions: loadActions(),
+    convergence: loadConvergence(),
+  });
+  // 贴边收起时切到 mini 尺寸档。这是**尺寸模式**不是状态——
+  // 状态引擎照常产出 39 档之一，由编排器投影到 8 档 mini。
+  let miniMode = false;
+  // 收起 / 展开的转场。同样放在这一层而不是状态引擎的 oneshot 里：
+  // 引擎关心「Claude 在做什么」，窗口多大是外壳的事。混在一起会让
+  // 引擎的仲裁表冒出不属于任何会话的条目，把最该说清的东西弄浑。
+  let miniTransition = null; // { id, until }
+
+  function beginMiniTransition(id, now) {
+    const p = orchestrator.plan(id);
+    miniTransition = { id, until: now + (p?.durationMs ?? 1600) };
+  }
+
+  /** 契约要求主形态与 mini 之间不允许瞬切——那看起来像闪烁的 bug。 */
+  function setMiniMode(wantMini, now) {
+    if (wantMini === miniMode && !miniTransition) return;
+    if (wantMini) {
+      miniMode = true;
+      beginMiniTransition('mini.enter', now);
+    } else {
+      // 先播完展开转场才真正离开 mini，所以这里不动 miniMode。
+      beginMiniTransition('mini.exit', now);
+    }
+  }
   const permissions = createPermissionBroker();
   // 配对链接要带端口，服务启动后回填。
   let currentPort = 4173;
@@ -352,11 +390,30 @@ export function createUsageServer({ collector = null } = {}) {
 
     engine.observeRate(live.disabled ? 0 : live.tokensPerMin, now);
     const state = engine.tick(now);
+
+    // 转场进行中：直接播转场，绕过收敛。播完 mini.exit 才真正回到主形态。
+    if (miniTransition) {
+      if (now < miniTransition.until) {
+        return {
+          state,
+          plan: orchestrator.plan(miniTransition.id, { reduced: settings.reducedMotion }),
+          mini: true,
+          energyEnabled: settings.petEnergy,
+          debug: engine.debug(),
+        };
+      }
+      if (miniTransition.id === 'mini.exit') miniMode = false;
+      miniTransition = null;
+    }
+
     const plan = orchestrator.plan(state.actionId, {
       variant: state.variant,
       reduced: settings.reducedMotion,
+      mini: miniMode,
     });
-    return { state, plan, energyEnabled: settings.petEnergy, debug: engine.debug() };
+    return {
+      state, plan, mini: miniMode, energyEnabled: settings.petEnergy, debug: engine.debug(),
+    };
   }
 
   const server = createServer(async (req, res) => {
@@ -415,7 +472,12 @@ export function createUsageServer({ collector = null } = {}) {
       if (pathname === '/api/event' && req.method === 'POST') {
         // hook 写入器将来往这里投事件；现在先让面板可以手动触发以验证状态机。
         const event = JSON.parse((await readBody(req)) || '{}');
-        engine.observeEvent(event, Date.now());
+        // 尺寸模式不经过状态引擎——见 setMiniMode 上方的说明。
+        if (event.type === 'shell.miniEnter' || event.type === 'shell.miniExit') {
+          setMiniMode(event.type === 'shell.miniEnter', Date.now());
+        } else {
+          engine.observeEvent(event, Date.now());
+        }
         sendJson(res, 200, currentPlan());
         return;
       }

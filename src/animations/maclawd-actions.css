@@ -523,3 +523,94 @@
 .state-delegating[data-variant="one-subagent"] .helper-b {
   display: none;
 }
+
+/* Mini（贴边）尺寸档 ------------------------------------------------------
+   mini 不是「把角色缩小」，而是**把镜头推近、裁掉场景只留演员**：
+   主形态 128px ÷ 45 单位 ≈ 2.84px/单位；mini 48px ÷ 16 单位 = 3px/单位。
+   角色在屏幕上的实际大小几乎不变，一个像素都不用重画——
+   变的是取景，这和整套 scene-first 语言同源。
+
+   `.tuck` 把角色推到贴边位（+7），右半边被 viewBox 右界裁掉。
+   于是**贴着时只露出一只眼睛，探出来才看得到两只**——
+   这就是 mini 全部的表意手段：姿态与露出多少，没有道具。
+   动画一律作用在 .actor 上，相对贴边位移动，所以不与 .tuck 冲突。 */
+.mini .tuck { transform: translateX(7px); transform-box: view-box; }
+
+.state-mini-idle { --duration: 5.2s; }
+.state-mini-idle .actor { animation-name: mini-idle-body; }
+.state-mini-idle .eyes { animation-name: mini-idle-eyes; }
+.state-mini-idle .left-claw { animation-name: mini-idle-claw; }
+@keyframes mini-idle-body { 0%,44%,100%{transform:translateY(0)} 45%,88%{transform:translateY(-1px)} 89%,99%{transform:translateY(0)} }
+@keyframes mini-idle-eyes { 0%,30%{transform:scaleY(.5)} 31%,58%{transform:scaleY(1)} 59%,74%{transform:scaleY(.15)} 75%,100%{transform:scaleY(.5)} }
+@keyframes mini-idle-claw { 0%,52%,100%{transform:translateY(0)} 53%,92%{transform:translateY(-1px)} 93%,99%{transform:translateY(0)} }
+
+.state-mini-busy { --duration: 3.2s; }
+.state-mini-busy .actor { animation-name: mini-busy-body; }
+.state-mini-busy .eyes { animation-name: mini-busy-eyes; }
+.state-mini-busy .left-claw { animation-name: mini-busy-claw; }
+@keyframes mini-busy-body { 0%,11%,100%{transform:translate(0,0)} 12%,30%{transform:translate(-1px,-1px)} 31%,49%{transform:translate(0,-2px)} 50%,68%{transform:translate(-1px,-1px)} 69%,87%{transform:translate(0,-2px)} 88%,99%{transform:translate(0,0)} }
+@keyframes mini-busy-eyes { 0%,68%,100%{transform:translateY(1px)} 69%,79%{transform:translateY(0)} 80%,87%{transform:scaleY(.15)} 88%,99%{transform:translateY(1px)} }
+@keyframes mini-busy-claw { 0%,11%,100%{transform:translate(0,0)} 12%,30%{transform:translate(1px,-2px)} 31%,49%{transform:translate(0,1px)} 50%,68%{transform:translate(1px,-2px)} 69%,87%{transform:translate(0,1px)} 88%,99%{transform:translate(0,0)} }
+
+/* 探出：向左离开贴边位，右眼因此进入画面。 */
+.state-mini-peek { --duration: 3.6s; }
+.state-mini-peek .actor { animation-name: mini-peek-body; }
+.state-mini-peek .eyes { animation-name: mini-peek-eyes; }
+.state-mini-peek .left-claw { animation-name: mini-peek-claw; }
+@keyframes mini-peek-body { 0%,10%,100%{transform:translate(0,0)} 11%,26%{transform:translate(-3px,0)} 27%,64%{transform:translate(-5px,-1px)} 65%,80%{transform:translate(-4px,0)} 81%,99%{transform:translate(-1px,0)} }
+@keyframes mini-peek-eyes { 0%,10%{transform:scaleY(.5)} 11%,64%{transform:scaleY(1)} 65%,72%{transform:scaleY(.15)} 73%,88%{transform:scaleY(1)} 89%,100%{transform:scaleY(.5)} }
+@keyframes mini-peek-claw { 0%,10%,100%{transform:translate(0,0)} 11%,26%{transform:translate(1px,1px)} 27%,64%{transform:translate(2px,0)} 65%,80%{transform:translate(1px,1px)} 81%,99%{transform:translate(0,0)} }
+
+/* 告警：探出一点，用左爪连续敲边框。节奏比其余 mini 动作都急。 */
+.state-mini-alert { --duration: 2.4s; }
+.state-mini-alert .actor { animation-name: mini-alert-body; }
+.state-mini-alert .eyes { animation-name: mini-alert-eyes; }
+.state-mini-alert .left-claw { animation-name: mini-alert-claw; }
+@keyframes mini-alert-body { 0%,14%,100%{transform:translate(-2px,0)} 15%,29%{transform:translate(-2px,-1px)} 30%,44%{transform:translate(-2px,0)} 45%,59%{transform:translate(-2px,-1px)} 60%,99%{transform:translate(-2px,0)} }
+@keyframes mini-alert-eyes { 0%,59%,100%{transform:scaleY(1)} 60%,68%{transform:scaleY(.15)} 69%,99%{transform:scaleY(1)} }
+/* 敲击只走纵向。爪根紧贴躯干左沿，任何向左的位移都会在两者之间
+   拉开一条缝——在带道具的主形态里那读作「伸手去够」，
+   但 mini 没有道具可够，一只离体的爪子只会读作渲染错误。 */
+@keyframes mini-alert-claw { 0%,14%,100%{transform:translateY(0)} 15%,29%{transform:translateY(2px)} 30%,44%{transform:translateY(0)} 45%,59%{transform:translateY(2px)} 60%,99%{transform:translateY(0)} }
+
+/* 出错：塌下去并缓慢左右晃。与告警的区别是「慢且塌」而不是「快且敲」。
+
+   刻意**不用旋转**。整套动作是轴对齐的像素矩形，主形态里 body 旋转
+   只出现过一次（recovering-body，且是瞬时的 ±5°）。让躯干整个循环
+   斜着，在 crispEdges 下会渲染成锯齿平行四边形，看起来像素材画坏了。
+   改用低电量那套「下沉 + 纵向压缩」的词汇——它已经是这套语言里
+   表达「垮掉」的说法。 */
+.state-mini-error { --duration: 4.4s; }
+.state-mini-error .actor { animation-name: mini-error-body; }
+.state-mini-error .eyes { animation-name: mini-error-eyes; }
+.state-mini-error .left-claw { animation-name: mini-error-claw; }
+@keyframes mini-error-body { 0%,22%,100%{transform:translate(0,2px) scaleY(.88)} 23%,48%{transform:translate(-1px,3px) scaleY(.84)} 49%,74%{transform:translate(0,2px) scaleY(.88)} 75%,99%{transform:translate(1px,3px) scaleY(.84)} }
+@keyframes mini-error-eyes { 0%,48%,100%{transform:translateY(1px) scaleY(.4)} 49%,74%{transform:translateY(1px) scaleY(.15)} 75%,99%{transform:translateY(1px) scaleY(.4)} }
+@keyframes mini-error-claw { 0%,22%,100%{transform:translateY(2px)} 23%,74%{transform:translateY(3px)} 75%,99%{transform:translateY(2px)} }
+
+/* 完成：探出并弹一下。oneshot，由运行时在时长结束后换回。 */
+.state-mini-happy { --duration: 2.4s; }
+.state-mini-happy .actor { animation-name: mini-happy-body; }
+.state-mini-happy .eyes { animation-name: mini-happy-eyes; }
+.state-mini-happy .left-claw { animation-name: mini-happy-claw; }
+@keyframes mini-happy-body { 0%,12%,100%{transform:translate(0,0)} 13%,30%{transform:translate(-3px,-3px)} 31%,48%{transform:translate(-4px,-1px)} 49%,64%{transform:translate(-4px,-3px)} 65%,82%{transform:translate(-3px,0)} 83%,99%{transform:translate(-1px,0)} }
+@keyframes mini-happy-eyes { 0%,12%{transform:scaleY(.5)} 13%,82%{transform:scaleY(1)} 83%,90%{transform:scaleY(.15)} 91%,100%{transform:scaleY(1)} }
+@keyframes mini-happy-claw { 0%,12%,100%{transform:translate(0,0)} 13%,30%{transform:translate(1px,-2px)} 31%,48%{transform:translate(2px,-1px)} 49%,64%{transform:translate(1px,-3px)} 65%,99%{transform:translate(0,0)} }
+
+/* 收起 / 展开：主形态与 mini 之间**不允许瞬切**——那会看起来像闪烁的 bug。
+   两个都是 oneshot 转场，起止位置刻意互为镜像。 */
+.state-mini-enter { --duration: 1.6s; }
+.state-mini-enter .actor { animation-name: mini-enter-body; }
+.state-mini-enter .eyes { animation-name: mini-enter-eyes; }
+.state-mini-enter .left-claw { animation-name: mini-enter-claw; }
+@keyframes mini-enter-body { 0%,18%{transform:translate(-7px,0)} 19%,40%{transform:translate(-5px,-1px)} 41%,64%{transform:translate(-2px,0)} 65%,82%{transform:translate(1px,0)} 83%,100%{transform:translate(0,0)} }
+@keyframes mini-enter-eyes { 0%,64%{transform:scaleY(1)} 65%,78%{transform:scaleY(.15)} 79%,100%{transform:scaleY(.5)} }
+@keyframes mini-enter-claw { 0%,18%{transform:translate(0,0)} 19%,40%{transform:translate(2px,0)} 41%,64%{transform:translate(1px,1px)} 65%,100%{transform:translate(0,0)} }
+
+.state-mini-exit { --duration: 1.6s; }
+.state-mini-exit .actor { animation-name: mini-exit-body; }
+.state-mini-exit .eyes { animation-name: mini-exit-eyes; }
+.state-mini-exit .left-claw { animation-name: mini-exit-claw; }
+@keyframes mini-exit-body { 0%,18%{transform:translate(0,0)} 19%,40%{transform:translate(1px,-1px)} 41%,64%{transform:translate(-2px,-1px)} 65%,82%{transform:translate(-5px,0)} 83%,100%{transform:translate(-7px,0)} }
+@keyframes mini-exit-eyes { 0%,18%{transform:scaleY(.5)} 19%,32%{transform:scaleY(.15)} 33%,100%{transform:scaleY(1)} }
+@keyframes mini-exit-claw { 0%,18%{transform:translate(0,0)} 19%,40%{transform:translate(0,1px)} 41%,82%{transform:translate(1px,0)} 83%,100%{transform:translate(0,0)} }

@@ -21,6 +21,9 @@
       .motion-card { overflow:hidden; border:1px solid rgba(30,30,46,.11); border-radius:26px; background:#fbfaf7; box-shadow:0 16px 46px rgba(30,30,46,.075); }
       .stage { aspect-ratio:1; background:linear-gradient(rgba(30,30,46,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(30,30,46,.035) 1px,transparent 1px),#fbfaf7; background-size:24px 24px; }
       object { width:100%; height:100%; image-rendering:pixelated; }
+      /* mini 舞台右侧那条实线代表屏幕边缘——角色的右半边正是被它裁掉的。 */
+      .edge-stage { position:relative; }
+      .edge-stage::after { content:""; position:absolute; inset:0 0 0 auto; width:3px; background:#c67a62; }
       .copy { padding:0 19px 21px; }
       .copy h3 { margin:2px 0 7px; font-size:20px; }
       .copy p { min-height:50px; margin:0; font-size:14px; }
@@ -113,6 +116,21 @@
             ["ambient.offline","Signal Listen","signal-listen.svg","5.2s loop","没有信号图标，停下来向左右仔细听"],
             ["ambient.reconnecting","Ready Wiggle","ready-wiggle.svg","3.0s reaction","连接恢复后左右摆动，双爪重新打开"]
           ]
+        },
+        {
+          title: "8 个 mini（贴边）动作",
+          copy: "拖到屏幕边缘后收起成 48px。mini 不是把角色缩小，而是把镜头推近、裁掉场景只留演员——主形态 128px÷45 单位≈2.84px/单位，mini 48px÷16 单位=3px/单位，角色在屏幕上几乎一样大。贴边位右半边被裁掉，所以静止时只露出一只眼睛，探出来才看得到两只。这一档不带任何道具。",
+          mini: true,
+          items: [
+            ["mini.idle","Edge Doze","mini-idle.svg","5.2s loop","贴边安静待命，只露一只半闭的眼睛"],
+            ["mini.busy","Edge Bob","mini-busy.svg","3.2s loop","带工作节奏地起伏，爪子在动"],
+            ["mini.peek","Edge Peek","mini-peek.svg","3.6s loop","向左探出直到两只眼睛都进画面，再缩回"],
+            ["mini.alert","Edge Tap","mini-alert.svg","2.4s loop","探出一点并连敲两下边框，要人决定"],
+            ["mini.error","Edge Slump","mini-error.svg","4.4s loop","歪靠着边框缓慢摇晃，眼睛半闭"],
+            ["mini.happy","Edge Bounce","mini-happy.svg","2.4s oneshot","从边上弹出一次再落回"],
+            ["mini.enter","Tuck In","mini-enter.svg","1.6s transition","从主形态中心滑进贴边位"],
+            ["mini.exit","Pop Out","mini-exit.svg","1.6s transition","从贴边位滑出，准备回到主形态"]
+          ]
         }
       ];
       const lab = document.querySelector("#lab");
@@ -122,7 +140,11 @@
         const grid = section.querySelector(".motion-grid");
         for (const [id,name,file,timing,story] of group.items) {
           const article = document.createElement("article"); article.className = "motion-card";
-          article.innerHTML = `<div class="stage"><object data="src/animations/${file}" type="image/svg+xml">${name}</object></div><div class="copy"><span class="state-id">${id}</span><h3>${name}</h3><p>${story}</p><div class="chips"><span class="chip">${timing}</span><span class="chip">96px checked</span></div></div>`;
+          // mini 的舞台画一条屏幕边界线：不标出「边在哪」，
+          // 「被裁掉半个身子」会看起来像素材画坏了。
+          const stage = group.mini ? "stage edge-stage" : "stage";
+          const size = group.mini ? "48px checked" : "96px checked";
+          article.innerHTML = `<div class="${stage}"><object data="src/animations/${file}" type="image/svg+xml">${name}</object></div><div class="copy"><span class="state-id">${id}</span><h3>${name}</h3><p>${story}</p><div class="chips"><span class="chip">${timing}</span><span class="chip">${size}</span></div></div>`;
           grid.append(article);
         }
         lab.append(section);

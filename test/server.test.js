@@ -165,3 +165,59 @@ test('/api/reset 删除派生数据后 summary 变空', async () => {
 test('未知 API 路径返回 404', async () => {
   assert.equal((await get('/api/不存在')).status, 404);
 });
+
+// ---------- mini（贴边）尺寸档 ----------
+
+const post = (path, body) => fetch(base + path, {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify(body),
+}).then((r) => r.json());
+
+const wait = (ms) => new Promise((r) => { setTimeout(r, ms); });
+
+test('收起与展开都必须经过转场，不允许瞬切', async () => {
+  const before = await json('/api/state');
+  assert.equal(before.mini, false);
+  assert.ok(!before.plan.actionId.startsWith('mini.'), '一开始不该在 mini 档');
+
+  // 外壳只提议；运行时决定并立刻进入收起转场
+  const entering = await post('/api/event', { type: 'shell.miniEnter' });
+  assert.equal(entering.mini, true);
+  assert.equal(entering.plan.actionId, 'mini.enter', '没有播收起转场就切了尺寸档');
+  assert.equal(entering.plan.mode, 'oneshot');
+
+  // 转场期间重复提议不该打断它
+  const during = await post('/api/event', { type: 'shell.miniEnter' });
+  assert.equal(during.plan.actionId, 'mini.enter');
+
+  await wait(entering.plan.durationMs + 120);
+  const settled = await json('/api/state');
+  assert.equal(settled.mini, true);
+  assert.ok(settled.plan.actionId.startsWith('mini.'), `转场结束后应停在 mini 档：${settled.plan.actionId}`);
+  assert.notEqual(settled.plan.actionId, 'mini.enter', '转场没有结束');
+
+  // 展开同理：先播完 mini.exit 才真正回到主形态
+  const leaving = await post('/api/event', { type: 'shell.miniExit' });
+  assert.equal(leaving.plan.actionId, 'mini.exit');
+  assert.equal(leaving.mini, true, '展开转场还没播完就报离开了 mini');
+
+  await wait(leaving.plan.durationMs + 120);
+  const back = await json('/api/state');
+  assert.equal(back.mini, false);
+  assert.ok(!back.plan.actionId.startsWith('mini.'), `应已回到主形态：${back.plan.actionId}`);
+});
+
+test('mini 档下主状态被收敛，且能看出是从哪收敛来的', async () => {
+  const entering = await post('/api/event', { type: 'shell.miniEnter' });
+  await wait(entering.plan.durationMs + 120);
+
+  // 引擎照常产出主形态状态；只有编排器把它投影到 mini 档
+  const s = await json('/api/state');
+  assert.ok(!s.state.actionId.startsWith('mini.'), 'mini 不该污染状态引擎的输出');
+  assert.ok(s.plan.actionId.startsWith('mini.'));
+  assert.equal(s.plan.unmapped, false, '落到了未映射兜底，说明收敛表有缺口');
+
+  const leaving = await post('/api/event', { type: 'shell.miniExit' });
+  await wait(leaving.plan.durationMs + 120);
+});
