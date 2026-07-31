@@ -11,7 +11,7 @@ import WebKit
 @MainActor
 final class PetWindow: NSWindow {
     private let webView: WKWebView
-    private var currentSource: String?
+    private var currentKey: String?
     private var dragOrigin: NSPoint?
     private let repoRoot: URL
     var onDoubleClick: (() -> Void)?
@@ -65,12 +65,15 @@ final class PetWindow: NSWindow {
 
     // MARK: - 渲染
 
-    func show(source: String?, motion: Bool) {
-        guard let source, source != currentSource || !motion else {
+    func show(source: String?, motion: Bool, variant: String? = nil) {
+        // 变体也要参与去重键：同一个 SVG 在不同变体下显示不同数量的助手，
+        // 只比对 source 会让变体切换不触发重渲染。
+        let key = "\(source ?? "")|\(variant ?? "")|\(motion)"
+        guard let source, key != currentKey else {
             if source == nil { webView.loadHTMLString("", baseURL: nil) }
             return
         }
-        currentSource = source
+        currentKey = key
 
         let url = repoRoot.appendingPathComponent(source)
         guard let svg = try? String(contentsOf: url, encoding: .utf8) else { return }
@@ -80,6 +83,8 @@ final class PetWindow: NSWindow {
         let reduced = motion ? "" : """
         <style>*{animation:none !important;transition:none !important}</style>
         """
+        // 变体通过祖先元素的 data-variant 驱动共享样式表里的规则
+        let variantAttr = variant.map { " data-variant=\"\($0)\"" } ?? ""
         let html = """
         <!doctype html><meta charset="utf-8">
         <style>
@@ -88,7 +93,7 @@ final class PetWindow: NSWindow {
           svg{width:100%;height:100%;image-rendering:pixelated}
         </style>
         \(reduced)
-        \(svg)
+        <div\(variantAttr) style="width:100%;height:100%;display:grid;place-items:center">\(svg)</div>
         """
         webView.loadHTMLString(html, baseURL: url.deletingLastPathComponent())
     }
@@ -128,6 +133,11 @@ final class PetWindow: NSWindow {
 
     override func mouseEntered(with event: NSEvent) {
         onShellEvent?("shell.hover")
+    }
+
+    /// hover 是 held 模式：必须成对，否则「注视」会一直挂着不走。
+    override func mouseExited(with event: NSEvent) {
+        onShellEvent?("shell.hoverEnd")
     }
 
     /// 鼠标进入时才有 hover；窗口会移动，所以每次改变 frame 都要重建追踪区。

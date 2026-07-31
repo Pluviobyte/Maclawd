@@ -35,7 +35,9 @@ export const ONESHOT = new Set([
   'recovering', 'cancelled', 'workspace', 'waking',
   // 交互与环境反应也是插播：摸一下、吓一跳、落地、注意到通知
   'interaction.click', 'interaction.double_click', 'interaction.drop',
-  'interaction.hover', 'ambient.notification', 'ambient.power_connected',
+  // interaction.hover 不在此列：契约里它是 held——悬停持续期间保持，
+  // 鼠标移开才结束。当成 oneshot 会让它播完就走，与「注视」这个语义相反。
+  'ambient.notification', 'ambient.power_connected',
   'ambient.reconnecting', 'moving',
 ]);
 
@@ -53,6 +55,8 @@ export const SHELL_ACTIONS = {
   'shell.dragStart': 'interaction.drag',
   'shell.drop': 'interaction.drop',
   'shell.hover': 'interaction.hover',
+  // held 必须成对：没有退出信号，注视状态会一直挂着不走
+  'shell.hoverEnd': 'idle',
   'shell.move': 'moving',
   'shell.screenEdge': 'ambient.edge',
   'shell.lowBattery': 'ambient.low_battery',
@@ -232,7 +236,7 @@ export function createStateEngine(options = {}) {
         s.state = shellAction;
         s.at = now;
         // 持续态（拖拽中、贴边、低电量、暂停）要能被主动清除
-        if (type === 'shell.resumed') sessions.delete('shell');
+        if (type === 'shell.resumed' || type === 'shell.hoverEnd') sessions.delete('shell');
       }
       resolve(now);
       return;
@@ -266,6 +270,11 @@ export function createStateEngine(options = {}) {
         }
         break;
       }
+      case 'PostToolUseFailure':
+        // 工具执行失败。不升级到 error（那是整轮失败），但要脱离
+        // 「正在读文件」这类具体修饰——它已经不成立了。
+        s.state = 'working';
+        break;
       case 'PostToolUse':
       case 'PostToolBatch':
         // 不要重置回通用 working。
@@ -324,7 +333,13 @@ export function createStateEngine(options = {}) {
       case 'Stop':
         s.state = 'idle';
         s.variant = null;
-        pushOneshot('success', now);
+        // 只有确认是自然收尾才庆祝。用户按 ESC 打断时 Stop 照样触发，
+        // 那时候欢呼是会烦人的。写入器读 transcript 尾部判定，
+        // 判不出来就安静收场——宁可少一个动作，不要说错话。
+        // 没有 disposition 字段时按老行为庆祝（面板手动触发、旧版写入器）。
+        if (event.disposition === undefined || event.disposition === 'complete') {
+          pushOneshot('success', now);
+        }
         break;
       case 'StopFailure':
         s.state = 'error';

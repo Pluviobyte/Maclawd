@@ -16,7 +16,11 @@
  *
  * 3. **Maclawd 没开时静默退出。** 连不上就当无事发生，退出码 0。
  *    桌宠没开不该在用户的 agent 里留下任何错误。
+ *
+ * 同理，`Stop` 的「是否真的完成」也在这里就地判定：读一次 transcript 尾部，
+ * 发出去的是一个枚举，**transcript 路径本身不越界**（它含编码过的项目目录）。
  */
+import { readStopDisposition } from '../src/runtime/stop-disposition.js';
 
 const STDIN_TIMEOUT_MS = 800;
 const POST_TIMEOUT_MS = 700;
@@ -109,6 +113,12 @@ async function post(port, body) {
   }
 }
 
+async function enrich(eventName, payload, event) {
+  // 只有 Stop 需要判定；其余事件不该为此付出一次文件读取。
+  if (eventName !== 'Stop') return;
+  event.disposition = await readStopDisposition(payload.transcript_path);
+}
+
 async function main() {
   const eventName = process.argv[2];
   if (!eventName) exitQuietly();
@@ -126,7 +136,9 @@ async function main() {
     }
   }
 
-  await post(port, buildEvent(eventName, payload));
+  const event = buildEvent(eventName, payload);
+  await enrich(eventName, payload, event);
+  await post(port, event);
   exitQuietly();
 }
 

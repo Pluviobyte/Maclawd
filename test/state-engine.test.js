@@ -417,3 +417,48 @@ test('PostToolUse 在非工作态时才回到通用 working', () => {
   e.observeEvent({ type: 'PostToolUse', sessionId: 's' }, 2000);
   assert.equal(e.current().actionId, 'working');
 });
+
+// ---------- Stop 判定：不在用户打断时欢呼 ----------
+
+test('只有确认自然收尾才庆祝', () => {
+  const e = engine();
+  e.observeEvent({ type: 'Stop', sessionId: 's', disposition: 'complete' }, SEC);
+  assert.equal(e.current().actionId, 'success');
+});
+
+test('停在工具调用上却收到 Stop —— 多半被打断，安静收场', () => {
+  // 用户按 ESC 时 Stop 照样触发。那时候欢呼是会烦人的，
+  // 而 Claude Code 没有暴露「取消」信号（stop_details 全为 null），
+  // 所以判不出来就什么都不播——宁可少一个动作，不要说错话。
+  const e = engine();
+  e.observeEvent({ type: 'Stop', sessionId: 's', disposition: 'inconclusive' }, SEC);
+  assert.notEqual(e.current().actionId, 'success');
+  const e2 = engine();
+  e2.observeEvent({ type: 'Stop', sessionId: 's', disposition: 'unknown' }, SEC);
+  assert.notEqual(e2.current().actionId, 'success');
+});
+
+test('没有 disposition 字段时按老行为庆祝（面板手动触发 / 旧写入器）', () => {
+  const e = engine();
+  e.observeEvent({ type: 'Stop', sessionId: 's' }, SEC);
+  assert.equal(e.current().actionId, 'success');
+});
+
+test('PostToolUseFailure 脱离具体修饰但不升级成 error', () => {
+  // 一次工具失败不等于整轮失败；但「正在读文件」已经不成立了
+  const e = engine();
+  e.observeEvent({ type: 'PreToolUse', sessionId: 's', toolName: 'Read' }, SEC);
+  e.observeEvent({ type: 'PostToolUseFailure', sessionId: 's' }, 2 * SEC);
+  assert.equal(e.current().actionId, 'working');
+});
+
+// ---------- held 模式 ----------
+
+test('hover 是 held：必须成对，否则注视态永远挂着', () => {
+  const e = engine();
+  e.observeEvent({ type: 'PreToolUse', sessionId: 's', toolName: 'Read' }, SEC);
+  e.observeEvent({ type: 'shell.hover' }, 2 * SEC);
+  assert.equal(e.current().actionId, 'interaction.hover');
+  e.observeEvent({ type: 'shell.hoverEnd' }, 3 * SEC);
+  assert.equal(e.current().actionId, 'working.reading', '移开后应回到底下真实的状态');
+});

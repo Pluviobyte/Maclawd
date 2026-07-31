@@ -465,6 +465,10 @@ function applyState(s){
   if (s.plan?.source) {
     const action = actions.find(a => a.id === s.plan.actionId && a.source);
     if (action) show(action);
+    // 变体驱动共享样式表里的规则（如 delegating 的助手数量）
+    const stage = el('preview').parentElement;
+    if (s.plan.variant) stage.setAttribute('data-variant', s.plan.variant);
+    else stage.removeAttribute('data-variant');
   }
 }
 

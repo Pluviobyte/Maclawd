@@ -514,3 +514,12 @@
   .blink { animation: reduced-blink 8s 1 step-end !important; }
 }
 @keyframes reduced-blink { 0%,72%,82%,100%{transform:scaleY(1)} 73%,81%{transform:scaleY(.15)} }
+
+/* 委派的变体：并发子代理数决定助手数量。
+   契约要求「一个动作最多一个场景族」，所以不拆成两个动作，
+   而是在同一个构图里增减助手——委派这件事在视觉上保持完整。
+   由渲染层在祖先元素上加 data-variant 驱动。 */
+[data-variant="one-subagent"] .state-delegating .helper-b,
+.state-delegating[data-variant="one-subagent"] .helper-b {
+  display: none;
+}

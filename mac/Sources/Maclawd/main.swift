@@ -64,7 +64,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         client.onUpdate = { [weak self] in
             guard let self else { return }
             self.menuBar.render()
-            self.pet.show(source: self.client.state.source, motion: self.client.state.motion)
+            self.pet.show(source: self.client.state.source,
+                          motion: self.client.state.motion,
+                          variant: self.client.state.variant)
         }
 
         pet.orderFront(nil)

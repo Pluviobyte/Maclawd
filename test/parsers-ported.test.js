@@ -272,3 +272,41 @@ test('Cursor 默认关闭时不产出任何候选（一个请求都不发）', (
     [],
   );
 });
+
+// ---------- Stop 判定 ----------
+
+test('stop-disposition：end_turn 才算完成', async () => {
+  const { readStopDisposition, shouldCelebrate, DISPOSITION } =
+    await import('../src/runtime/stop-disposition.js');
+  const { mkdtempSync, writeFileSync, rmSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+
+  const dir = mkdtempSync(join(tmpdir(), 'maclawd-stop-'));
+  const line = (reason) => `${JSON.stringify({
+    type: 'assistant',
+    message: { id: 'm', model: 'x', stop_reason: reason, stop_details: null },
+  })}\n`;
+  try {
+    const done = join(dir, 'done.jsonl');
+    writeFileSync(done, line('tool_use') + line('end_turn'));
+    assert.equal(await readStopDisposition(done), DISPOSITION.complete);
+    assert.equal(shouldCelebrate(await readStopDisposition(done)), true);
+
+    // 停在工具调用上 —— 模型还想继续却收到了 Stop
+    const cut = join(dir, 'cut.jsonl');
+    writeFileSync(cut, line('end_turn') + line('tool_use'));
+    assert.equal(await readStopDisposition(cut), DISPOSITION.inconclusive);
+    assert.equal(shouldCelebrate(await readStopDisposition(cut)), false);
+
+    // 读不到 / 空文件 / 没有 assistant 记录，一律 unknown 且不庆祝
+    assert.equal(await readStopDisposition(join(dir, 'nope.jsonl')), DISPOSITION.unknown);
+    const empty = join(dir, 'empty.jsonl');
+    writeFileSync(empty, '');
+    assert.equal(await readStopDisposition(empty), DISPOSITION.unknown);
+    assert.equal(await readStopDisposition(null), DISPOSITION.unknown);
+    assert.equal(shouldCelebrate(DISPOSITION.unknown), false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
