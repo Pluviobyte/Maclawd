@@ -1,0 +1,88 @@
+<meta charset="utf-8">
+<title>Maclawd 动作取帧</title>
+<!--
+  动作取帧页：把指定动作冻结在指定时刻，用于人工/截图审阅。
+
+  为什么不能用 <object> + Chrome 的 --virtual-time-budget：
+  实测那**不会**推进嵌入式 SVG 子文档里的 CSS 动画，截到的相位是任意的
+  （同一页两个不同 budget 截出字节完全相同的图）。据此下的「第 X 毫秒长这样」
+  的结论全是错的。
+
+  这里改成：把 SVG 内联进主文档，再用负的 animation-delay 把动画推到目标相位，
+  并 paused 冻住。相位由 delay 决定，与真实时间无关——可复现。
+
+  用法：motion-check.html?a=calm-calibration,token-knitting&t=0,600,1200&z=6
+    a  资产文件名（不带 .svg），逗号分隔
+    t  取帧时刻（毫秒），逗号分隔，每个时刻一行
+    z  放大倍数（1 单位 = z 像素）；默认 6
+-->
+<style>
+  body { margin: 0; padding: 16px; background: #f4f1ea;
+         font: 12px -apple-system, "PingFang SC", sans-serif; }
+  .strip { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 10px; }
+  .t { width: 46px; padding-top: 6px; font-weight: 700; color: #a55f4c; }
+  figure { margin: 0; text-align: center; }
+  .box { background: #fbfaf7;
+    background-image: linear-gradient(rgba(0,0,0,.05) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(0,0,0,.05) 1px, transparent 1px); }
+  svg { display: block; image-rendering: pixelated; }
+  figcaption { margin-top: 4px; font-size: 11px; color: #50505e; }
+</style>
+<div id="out"></div>
+<script>
+const q = new URLSearchParams(location.search);
+const assets = (q.get('a') || 'calm-calibration').split(',').filter(Boolean);
+const times = (q.get('t') || '0').split(',').map(Number);
+const zoom = Number(q.get('z') || 6);
+
+// 两个坑，都踩过：
+//
+// 1. 共享样式表要手动内联。DOMParser 取到的是根 <svg> 元素，而
+//    <?xml-stylesheet?> 是它的**兄弟节点**，克隆时不会跟过来。
+//    少了它整页都是静态基准姿势。
+//
+// 2. 每个样本必须放进**独立的 shadow root**。SVG 里的 <style> 不作用域隔离，
+//    直接内联时页面上所有副本会共用最后一个 animation-delay——
+//    于是每一行看起来都一样，让人误以为动画没做。
+//    这个假象比没有截图更糟：它会让人去改本来是对的动画。
+const sheet = fetch('/src/animations/maclawd-actions.css').then((r) => r.text());
+
+const load = async (name) =>
+  (await (await fetch(`/src/animations/${name}.svg`)).text());
+
+(async () => {
+  const css = await sheet;
+  const svgs = Object.fromEntries(await Promise.all(
+    assets.map(async (a) => [a, await load(a)]),
+  ));
+  const out = document.getElementById('out');
+
+  for (const t of times) {
+    const strip = document.createElement('div');
+    strip.className = 'strip';
+    strip.innerHTML = `<div class="t">${t}ms</div>`;
+    for (const name of assets) {
+      const fig = document.createElement('figure');
+      const box = document.createElement('div');
+      box.className = 'box';
+      box.style.backgroundSize = `${zoom * 3}px ${zoom * 3}px`;
+      // 负 delay 把动画推到目标相位，paused 冻住。每层各自的 period 会
+      // 自动把同一个 delay 换算成自己的相位，正是我们要的。
+      const root = box.attachShadow({ mode: 'open' });
+      root.innerHTML = `<style>${css}
+        svg{display:block;image-rendering:pixelated}
+        *{animation-delay:-${t}ms !important;animation-play-state:paused !important}</style>`
+        + svgs[name];
+      const svg = root.querySelector('svg');
+      const [, , w, h] = svg.getAttribute('viewBox').split(/\s+/).map(Number);
+      svg.setAttribute('width', w * zoom);
+      svg.setAttribute('height', h * zoom);
+      fig.append(box);
+      fig.insertAdjacentHTML('beforeend', `<figcaption>${name}</figcaption>`);
+      strip.append(fig);
+    }
+    out.append(strip);
+  }
+  document.title = 'ready';
+})();
+</script>

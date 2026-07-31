@@ -11,408 +11,12 @@
 .eyes, .blink { transform-origin: 7.5px 9px; }
 
 /* Primary states --------------------------------------------------------- */
-.state-away { --duration: 3.8s; }
-.state-away .actor { animation-name: away-body; }
-.state-away .left-claw { animation-name: away-left; }
-.state-away .right-claw { animation-name: away-right; }
-.state-away .eyes { animation-name: away-eyes; }
-.state-away .blanket { transform-origin: -5px 16px; animation-name: away-blanket; }
-@keyframes away-body {
-  0%,12%,100%{transform:translate(0,0)} 13%,30%{transform:translate(-2px,-1px)}
-  31%,48%{transform:translate(1px,-1px)} 49%,68%{transform:translate(-1px,0)}
-  69%,86%{transform:translate(0,1px) scaleY(.94)} 87%,99%{transform:translate(0,0)}
-}
-@keyframes away-left {
-  0%,12%,100%{transform:translate(0,0)} 13%,30%{transform:translate(-4px,-2px)}
-  31%,48%{transform:translate(0,-1px)} 49%,68%{transform:translate(-3px,2px)}
-  69%,86%{transform:translate(-2px,3px)} 87%,99%{transform:translate(0,0)}
-}
-@keyframes away-right {
-  0%,30%,100%{transform:translate(0,0)} 31%,48%{transform:translate(2px,-2px)}
-  49%,68%{transform:translate(-3px,1px)} 69%,86%{transform:translate(-2px,2px)}
-  87%,99%{transform:translate(0,0)}
-}
-@keyframes away-eyes { 0%,48%,100%{transform:scaleY(1)} 49%,86%{transform:translateY(1px) scaleY(.35)} 87%,99%{transform:scaleY(1)} }
-@keyframes away-blanket {
-  0%,12%,100%{transform:translate(-3px,1px) rotate(-6deg)} 13%,30%{transform:translate(-2px,0) rotate(0)}
-  31%,48%{transform:translate(0,0) rotate(5deg)} 49%,68%{transform:translate(2px,-1px) rotate(8deg)}
-  69%,86%{transform:translate(3px,-2px) rotate(10deg)} 87%,99%{transform:translate(-3px,1px) rotate(-6deg)}
-}
-
-.state-sleeping { --duration: 6.4s; }
-.state-sleeping .actor { transform-origin:7.5px 10px; animation-name: sleep-body; }
-.state-sleeping .sleep-claws { transform-origin:7.5px 12px; animation-name:sleep-claws; }
-.state-sleeping .pillow { transform-origin: 7.5px 7px; animation-name: sleep-pillow; }
-.state-sleeping .blanket { transform-origin: 7.5px 19px; animation-name: sleep-blanket; }
-.state-sleeping .z-one { animation-name: sleep-z-one; }
-.state-sleeping .z-two { animation-name: sleep-z-two; }
-.state-sleeping .z-three { animation-name: sleep-z-three; }
-@keyframes sleep-body {
-  0%,18%,55%,100%{transform:translateY(0) scaleY(.96)}
-  19%,38%{transform:translateY(-1px) scaleY(1)}
-  39%,54%{transform:translateY(0) scaleY(.98)}
-  56%,99%{transform:translateY(0) scaleY(.96)}
-}
-@keyframes sleep-claws {
-  0%,18%,55%,100%{transform:translateY(2px)}
-  19%,38%{transform:translateY(1px)}
-  39%,54%{transform:translateY(2px)}
-  56%,99%{transform:translateY(2px)}
-}
-@keyframes sleep-pillow {
-  0%,18%,55%,100%{transform:scaleY(1)}
-  19%,38%{transform:scaleY(1.04)}
-  39%,54%{transform:scaleY(1.02)}
-  56%,99%{transform:scaleY(1)}
-}
-@keyframes sleep-blanket {
-  0%,18%,55%,100%{transform:translateY(0) scaleY(1)}
-  19%,38%{transform:translateY(-1px) scaleY(1.05)}
-  39%,54%{transform:translateY(0) scaleY(1.02)}
-  56%,99%{transform:translateY(0) scaleY(1)}
-}
-@keyframes sleep-z-one {
-  0%,10%,100%{opacity:0;transform:translate(0,1px)}
-  11%,70%{opacity:1;transform:translate(0,0)}
-  71%,99%{opacity:0;transform:translate(1px,-1px)}
-}
-@keyframes sleep-z-two {
-  0%,24%,100%{opacity:0;transform:translate(0,1px)}
-  25%,82%{opacity:1;transform:translate(0,0)}
-  83%,99%{opacity:0;transform:translate(1px,-1px)}
-}
-@keyframes sleep-z-three {
-  0%,39%,100%{opacity:0;transform:translate(0,1px)}
-  40%,90%{opacity:1;transform:translate(0,0)}
-  91%,99%{opacity:0;transform:translate(1px,-1px)}
-}
-
-.state-waking { --duration: 2.6s; }
-.state-waking .actor { animation-name: wake-body; }
-.state-waking .left-claw { animation-name: wake-left; }
-.state-waking .right-claw { animation-name: wake-right; }
-.state-waking .eyes { animation-name: wake-eyes; }
-.state-waking .blanket { transform-origin: 2px 16px; animation-name: wake-blanket; }
-@keyframes wake-body { 0%,14%,100%{transform:translateY(2px) scaleY(.84)} 15%,32%{transform:translateY(-3px) scaleY(1.1)} 33%,50%{transform:translateY(-1px)} 51%,68%{transform:translateY(1px) scaleY(.95)} 69%,99%{transform:translateY(0)} }
-@keyframes wake-left { 0%,14%,100%{transform:translate(2px,1px)} 15%,32%{transform:translate(-4px,-3px)} 33%,50%{transform:translate(-3px,-1px)} 51%,68%{transform:translate(-1px,0)} 69%,99%{transform:translate(0,0)} }
-@keyframes wake-right { 0%,14%,100%{transform:translate(-2px,1px)} 15%,32%{transform:translate(4px,-3px)} 33%,50%{transform:translate(3px,-1px)} 51%,68%{transform:translate(1px,0)} 69%,99%{transform:translate(0,0)} }
-@keyframes wake-eyes { 0%,14%{transform:scaleY(.15)} 15%,54%{transform:scaleY(1)} 55%,62%{transform:scaleY(.15)} 63%,100%{transform:scaleY(1)} }
-@keyframes wake-blanket { 0%,14%,100%{transform:translate(2px,-3px) rotate(0)} 15%,32%{transform:translate(0,-4px) rotate(-6deg)} 33%,50%{transform:translate(-2px,-1px) rotate(-10deg)} 51%,99%{transform:translate(-3px,1px) rotate(-12deg)} }
-
-.state-thinking { --duration: 4.6s; }
-.state-thinking .actor { animation-name: think-body; }
-.state-thinking .left-claw { animation-name: think-left; }
-.state-thinking .right-claw { animation-name: think-right; }
-.state-thinking .eyes { animation-name: think-eyes; }
-.state-thinking .puzzle-piece { transform-origin: 8px 16px; animation-name: think-piece; }
-@keyframes think-body { 0%,12%,100%{transform:translate(0,0)} 13%,30%{transform:translate(-1px,-1px)} 31%,48%{transform:translate(1px,-1px)} 49%,66%{transform:translate(-1px,-1px)} 67%,84%{transform:translate(0,-2px)} 85%,99%{transform:translate(0,0)} }
-@keyframes think-left { 0%,12%,100%{transform:translate(0,0)} 13%,30%{transform:translate(3px,-1px)} 31%,48%{transform:translate(5px,-2px)} 49%,66%{transform:translate(3px,-3px)} 67%,84%{transform:translate(4px,-4px)} 85%,99%{transform:translate(0,0)} }
-@keyframes think-right { 0%,12%,100%{transform:translate(0,0)} 13%,30%{transform:translate(-5px,-2px)} 31%,48%{transform:translate(-3px,-1px)} 49%,66%{transform:translate(-4px,-3px)} 67%,84%{transform:translate(-4px,-4px)} 85%,99%{transform:translate(0,0)} }
-@keyframes think-eyes { 0%,12%,100%{transform:translate(0,0)} 13%,30%{transform:translate(-1px,0)} 31%,48%{transform:translate(1px,0)} 49%,66%{transform:translate(-1px,0)} 67%,84%{transform:translate(0,-1px)} 85%,89%{transform:scaleY(.15)} 90%,99%{transform:translate(0,0)} }
-@keyframes think-piece { 0%,12%,100%{transform:translate(0,0) rotate(0)} 13%,30%{transform:translate(-2px,-1px) rotate(-7deg)} 31%,48%{transform:translate(2px,-1px) rotate(7deg)} 49%,66%{transform:translate(0,-2px) rotate(0)} 67%,84%{transform:translate(3px,0) rotate(10deg)} 85%,99%{transform:translate(0,0)} }
-
-.state-working { --duration: 3.4s; }
-.state-working .actor { animation-name: work-body; }
-.state-working .left-claw { animation-name: work-left; }
-.state-working .right-claw { animation-name: work-right; }
-.state-working .eyes { animation-name: work-eyes; }
-.state-working .work-tile-a { animation-name: work-tile-a; }
-.state-working .work-tile-b { animation-name: work-tile-b; }
-@keyframes work-body { 0%,10%,100%{transform:translate(0,0)} 11%,24%{transform:translate(-1px,-1px)} 25%,38%{transform:translate(1px,-1px)} 39%,52%{transform:translate(-1px,-1px)} 53%,66%{transform:translate(1px,-1px)} 67%,82%{transform:translate(0,-2px)} 83%,99%{transform:translate(0,0)} }
-@keyframes work-left { 0%,10%,100%{transform:translate(0,0)} 11%,24%{transform:translate(5px,-3px)} 25%,38%{transform:translate(2px,2px)} 39%,52%{transform:translate(5px,-2px)} 53%,66%{transform:translate(2px,1px)} 67%,82%{transform:translate(3px,-4px)} 83%,99%{transform:translate(0,0)} }
-@keyframes work-right { 0%,10%,100%{transform:translate(0,0)} 11%,24%{transform:translate(-2px,2px)} 25%,38%{transform:translate(-5px,-3px)} 39%,52%{transform:translate(-2px,1px)} 53%,66%{transform:translate(-5px,-2px)} 67%,82%{transform:translate(-3px,-4px)} 83%,99%{transform:translate(0,0)} }
-@keyframes work-eyes { 0%,66%,100%{transform:translateY(1px)} 67%,82%{transform:translateY(0)} 83%,90%{transform:scaleY(.15)} 91%,99%{transform:translateY(1px)} }
-@keyframes work-tile-a { 0%,10%,24%,38%,52%,100%{transform:translateY(0)} 11%,23%,39%,51%{transform:translateY(1px)} }
-@keyframes work-tile-b { 0%,24%,38%,52%,66%,100%{transform:translateY(0)} 25%,37%,53%,65%{transform:translateY(1px)} }
-
-.state-delegating { --duration: 5s; }
-.state-delegating .actor { animation-name: delegate-body; }
-.state-delegating .left-claw { animation-name: delegate-left; }
-.state-delegating .right-claw { animation-name: delegate-right; }
-.state-delegating .eyes { animation-name: delegate-eyes; }
-.state-delegating .helper-a { transform-origin: -4px 15px; animation-name: helper-a; }
-.state-delegating .helper-b { transform-origin: 18px 15px; animation-name: helper-b; }
-.state-delegating .parcel { transform-origin: 7px 14px; animation-name: delegate-parcel; }
-@keyframes delegate-body { 0%,12%,100%{transform:translate(0,-1px)} 13%,34%{transform:translate(-1px,-2px)} 35%,58%{transform:translate(1px,-2px)} 59%,80%{transform:translate(0,-1px)} 81%,99%{transform:translate(0,-1px)} }
-@keyframes delegate-left { 0%,12%,100%{transform:translate(0,0)} 13%,34%{transform:translate(-4px,1px)} 35%,58%{transform:translate(3px,-2px)} 59%,80%{transform:translate(2px,-1px)} 81%,99%{transform:translate(0,0)} }
-@keyframes delegate-right { 0%,12%,100%{transform:translate(0,0)} 13%,34%{transform:translate(-3px,-2px)} 35%,58%{transform:translate(4px,1px)} 59%,80%{transform:translate(3px,-1px)} 81%,99%{transform:translate(0,0)} }
-@keyframes delegate-eyes { 0%,12%,100%{transform:translate(-1px,1px)} 13%,34%{transform:translate(-2px,1px)} 35%,80%{transform:translate(1px,1px)} 81%,88%{transform:scaleY(.15)} 89%,99%{transform:translate(-1px,1px)} }
-@keyframes helper-a { 0%,12%,100%{opacity:0;transform:translate(-1px,1px)} 13%,34%{opacity:1;transform:translate(0,0)} 35%,58%{opacity:1;transform:translate(1px,1px)} 59%,80%{opacity:1;transform:translate(2px,0)} 81%,99%{opacity:0;transform:translate(3px,1px)} }
-@keyframes helper-b { 0%,34%,100%{opacity:0;transform:translate(-3px,1px)} 35%,58%{opacity:1;transform:translate(-2px,0)} 59%,80%{opacity:1;transform:translate(-1px,1px)} 81%,94%{opacity:1;transform:translate(0,0)} 95%,99%{opacity:0;transform:translate(1px,1px)} }
-@keyframes delegate-parcel { 0%,12%,100%{opacity:0;transform:translate(-3px,1px)} 13%,34%{opacity:1;transform:translate(-1px,0)} 35%,58%{opacity:1;transform:translate(1px,-1px)} 59%,80%{opacity:1;transform:translate(3px,1px)} 81%,99%{opacity:0;transform:translate(5px,1px)} }
-
-.state-needs-owner { --duration: 4.8s; }
-.state-needs-owner .actor { animation-name: owner-body; }
-.state-needs-owner .left-claw { animation-name: owner-left; }
-.state-needs-owner .right-claw { animation-name: owner-right; }
-.state-needs-owner .eyes { animation-name: owner-eyes; }
-.state-needs-owner .jar { transform-origin: -4px 16px; animation-name: owner-jar; }
-.state-needs-owner .lid { transform-origin: -4px 8px; animation-name: owner-lid; }
-@keyframes owner-body { 0%,12%,100%{transform:translate(2px,-1px)} 13%,30%{transform:translate(1px,0) rotate(-3deg)} 31%,48%{transform:translate(3px,0) rotate(3deg)} 49%,66%{transform:translate(2px,1px) scaleY(.92)} 67%,86%{transform:translate(3px,-1px)} 87%,99%{transform:translate(2px,-1px)} }
-@keyframes owner-left { 0%,12%,100%{transform:translate(-2px,0)} 13%,48%{transform:translate(-5px,1px)} 49%,66%{transform:translate(-4px,2px)} 67%,86%{transform:translate(-6px,3px)} 87%,99%{transform:translate(-2px,0)} }
-@keyframes owner-right { 0%,48%,100%{transform:translate(0,0)} 49%,66%{transform:translate(-3px,2px)} 67%,86%{transform:translate(-4px,3px)} 87%,99%{transform:translate(0,0)} }
-@keyframes owner-eyes { 0%,48%,100%{transform:translate(-1px,1px)} 49%,66%{transform:translate(-1px,1px) scaleY(.35)} 67%,86%{transform:translate(-1px,0)} 87%,91%{transform:scaleY(.15)} 92%,99%{transform:translate(-1px,1px)} }
-@keyframes owner-jar { 0%,12%,100%{transform:translate(0,0)} 13%,30%{transform:translate(-1px,0) rotate(-5deg)} 31%,48%{transform:translate(1px,0) rotate(5deg)} 49%,66%{transform:translate(0,1px)} 67%,86%{transform:translate(4px,1px) scale(1.08)} 87%,99%{transform:translate(0,0)} }
-@keyframes owner-lid { 0%,12%,48%,100%{transform:translateX(0)} 13%,30%{transform:translateX(-1px)} 31%,47%{transform:translateX(1px)} 49%,66%{transform:translateY(1px)} 67%,86%{transform:translateY(-1px)} 87%,99%{transform:translateX(0)} }
-
-.state-compacting { --duration: 4.8s; }
-.state-compacting .actor { animation-name: fold-body; }
-.state-compacting .left-claw { animation-name: fold-left; }
-.state-compacting .right-claw { animation-name: fold-right; }
-.state-compacting .eyes { animation-name: fold-eyes; }
-.state-compacting .accordion { transform-origin: 7.5px 14px; animation-name: fold-accordion; }
-@keyframes fold-body { 0%,12%,100%{transform:translate(0,0)} 13%,34%{transform:translate(0,-1px)} 35%,56%{transform:translate(0,0)} 57%,78%{transform:translate(0,1px) scaleY(.94)} 79%,99%{transform:translate(0,0)} }
-@keyframes fold-left { 0%,12%,100%{transform:translate(0,0)} 13%,34%{transform:translate(4px,-3px)} 35%,56%{transform:translate(5px,0)} 57%,78%{transform:translate(4px,2px)} 79%,99%{transform:translate(0,0)} }
-@keyframes fold-right { 0%,12%,100%{transform:translate(0,0)} 13%,34%{transform:translate(-4px,-3px)} 35%,56%{transform:translate(-5px,0)} 57%,78%{transform:translate(-4px,2px)} 79%,99%{transform:translate(0,0)} }
-@keyframes fold-eyes { 0%,78%,100%{transform:translate(0,1px)} 79%,86%{transform:scaleY(.15)} 87%,99%{transform:translate(0,1px)} }
-@keyframes fold-accordion { 0%,12%,100%{transform:translateY(0) scaleY(1)} 13%,34%{transform:translateY(3px) scaleY(.78)} 35%,56%{transform:translateY(6px) scaleY(.55)} 57%,78%{transform:translateY(9px) scaleY(.28)} 79%,99%{transform:translateY(0) scaleY(1)} }
-
-.state-success { --duration: 2.9s; }
-.state-success .actor { animation-name: highfive-body; }
-.state-success .left-claw { animation-name: highfive-left; }
-.state-success .right-claw { animation-name: highfive-right; }
-.state-success .eyes { animation-name: highfive-eyes; }
-.state-success .cushion { transform-origin: 7px 18px; animation-name: highfive-cushion; }
-@keyframes highfive-body { 0%,12%,100%{transform:translateY(0)} 13%,28%{transform:translateY(1px) scaleY(.94)} 29%,52%{transform:translateY(-3px)} 53%,68%{transform:translateY(-2px)} 69%,84%{transform:translateY(1px) scaleY(.95)} 85%,99%{transform:translateY(0)} }
-@keyframes highfive-left { 0%,12%,100%{transform:translate(0,0)} 13%,28%{transform:translate(-2px,-1px)} 29%,52%{transform:translate(5px,-5px) rotate(25deg)} 53%,68%{transform:translate(5px,-5px) rotate(25deg)} 69%,84%{transform:translate(1px,0)} 85%,99%{transform:translate(0,0)} }
-@keyframes highfive-right { 0%,12%,100%{transform:translate(0,0)} 13%,28%{transform:translate(2px,-1px)} 29%,52%{transform:translate(-5px,-5px) rotate(-25deg)} 53%,68%{transform:translate(-5px,-5px) rotate(-25deg)} 69%,84%{transform:translate(-1px,0)} 85%,99%{transform:translate(0,0)} }
-@keyframes highfive-eyes { 0%,52%,76%,100%{transform:scaleY(1)} 53%,68%{transform:scaleY(.15)} 69%,75%{transform:scaleY(1)} }
-@keyframes highfive-cushion { 0%,12%,84%,100%{transform:scaleY(1)} 13%,28%{transform:translateY(1px) scaleY(.72)} 29%,52%{transform:scaleY(1.08)} 53%,68%{transform:scaleY(.92)} 69%,83%{transform:scaleY(1)} }
-
-.state-error { --duration: 4.8s; }
-.state-error .actor { animation-name: fail-body; }
-.state-error .left-claw { animation-name: fail-left; }
-.state-error .right-claw { animation-name: fail-right; }
-.state-error .eyes { animation-name: fail-eyes; }
-.state-error .basket { transform-origin: 8px 18px; animation-name: fail-basket; }
-@keyframes fail-body { 0%,12%,100%{transform:translate(0,0)} 13%,30%{transform:translate(-1px,-1px) rotate(-5deg)} 31%,48%{transform:translate(1px,-1px) rotate(7deg)} 49%,66%{transform:translate(-2px,3px) rotate(-12deg) scaleY(.62)} 67%,82%{transform:translate(0,0) scaleY(.92)} 83%,90%{transform:translate(2px,3px) rotate(10deg) scaleY(.62)} 91%,99%{transform:translate(0,0)} }
-@keyframes fail-left { 0%,12%,100%{transform:translate(0,0)} 13%,30%{transform:translate(-3px,-2px)} 31%,48%{transform:translate(3px,-2px)} 49%,66%{transform:translate(-2px,3px)} 67%,82%{transform:translate(3px,-3px)} 83%,90%{transform:translate(2px,3px)} 91%,99%{transform:translate(0,0)} }
-@keyframes fail-right { 0%,12%,100%{transform:translate(0,0)} 13%,30%{transform:translate(-3px,-2px)} 31%,48%{transform:translate(3px,-2px)} 49%,66%{transform:translate(-2px,3px)} 67%,82%{transform:translate(-3px,-3px)} 83%,90%{transform:translate(2px,3px)} 91%,99%{transform:translate(0,0)} }
-@keyframes fail-eyes { 0%,48%,100%{transform:scaleY(1)} 49%,66%{transform:translateY(1px) scaleY(.15)} 67%,82%{transform:translateY(0) scaleY(.45)} 83%,90%{transform:translateY(1px) scaleY(.15)} 91%,99%{transform:scaleY(1)} }
-@keyframes fail-basket { 0%,12%,100%{transform:translate(3px,-8px) rotate(10deg)} 13%,30%{transform:translate(1px,-3px) rotate(-6deg)} 31%,48%{transform:translate(0,-1px) rotate(4deg)} 49%,66%{transform:translate(-1px,2px) rotate(-7deg)} 67%,82%{transform:translate(1px,-2px) rotate(7deg)} 83%,90%{transform:translate(2px,1px) rotate(10deg)} 91%,99%{transform:translate(3px,-8px) rotate(10deg)} }
-
 /* Working activity modifiers ------------------------------------------- */
 /* command is intentionally a semantic alias of generic working. */
-.state-command { --duration: 3.4s; }
-.state-command .actor { animation-name: work-body; }
-.state-command .left-claw { animation-name: work-left; }
-.state-command .right-claw { animation-name: work-right; }
-.state-command .eyes { animation-name: work-eyes; }
-.state-command .toy, .state-command .key { display:none; }
-
-.state-building { --duration: 5s; }
-.state-building .actor { animation-name: build-body; }
-.state-building .left-claw { animation-name: build-left; }
-.state-building .right-claw { animation-name: build-right; }
-.state-building .block-top { transform-origin: -3px 15px; animation-name: build-block; }
-@keyframes build-body { 0%,12%,100%{transform:translate(4px,0)} 13%,34%{transform:translate(2px,-1px)} 35%,56%{transform:translate(4px,-1px)} 57%,76%{transform:translate(5px,-2px)} 77%,99%{transform:translate(4px,0)} }
-@keyframes build-left { 0%,12%,100%{transform:translate(0,0)} 13%,34%{transform:translate(-5px,2px)} 35%,56%{transform:translate(-7px,-2px)} 57%,76%{transform:translate(-5px,-3px)} 77%,99%{transform:translate(0,0)} }
-@keyframes build-right { 0%,12%,100%{transform:translate(0,0)} 13%,34%{transform:translate(-4px,1px)} 35%,56%{transform:translate(-6px,-2px)} 57%,76%{transform:translate(-4px,-3px)} 77%,99%{transform:translate(0,0)} }
-@keyframes build-block { 0%,12%,100%{transform:translate(10px,0)} 13%,34%{transform:translate(5px,-2px)} 35%,56%{transform:translate(1px,-5px)} 57%,76%{transform:translate(0,-6px)} 77%,99%{transform:translate(10px,0)} }
-
-.state-testing { --duration: 4.8s; }
-.state-testing .actor { animation-name: test-body; }
-.state-testing .right-claw { animation-name: test-claw; }
-.state-testing .eyes { animation-name: test-eyes; }
-.state-testing .toy { transform-origin: -4px 17px; animation-name: test-toy; }
-@keyframes test-body { 0%,12%,100%{transform:translate(3px,0)} 13%,34%{transform:translate(1px,-1px)} 35%,56%{transform:translate(3px,-1px)} 57%,76%{transform:translate(4px,-2px)} 77%,99%{transform:translate(3px,0)} }
-@keyframes test-claw { 0%,12%,100%{transform:translate(0,0)} 13%,34%{transform:translate(-8px,2px)} 35%,56%{transform:translate(-5px,0)} 57%,76%{transform:translate(-7px,-1px)} 77%,99%{transform:translate(0,0)} }
-@keyframes test-eyes { 0%,12%,100%{transform:translate(-1px,1px)} 13%,34%{transform:translate(-2px,1px)} 35%,56%{transform:translate(-1px,1px)} 57%,76%{transform:translate(-2px,0)} 77%,99%{transform:translate(-1px,1px)} }
-@keyframes test-toy { 0%,12%,100%{transform:rotate(0)} 13%,24%{transform:rotate(-16deg)} 25%,34%{transform:rotate(14deg)} 35%,44%{transform:rotate(-10deg)} 45%,56%{transform:rotate(8deg)} 57%,76%{transform:rotate(0)} 77%,99%{transform:rotate(0)} }
 
 /* Interaction and ambient actions -------------------------------------- */
-.state-click { --duration: 2.2s; }
-.state-click .actor { animation-name: click-body; }
-.state-click .left-claw { animation-name: click-left; }
-.state-click .eyes { animation-name: click-eyes; }
-.state-click .cushion { transform-origin: 7px 18px; animation-name: click-cushion; }
-@keyframes click-body { 0%,14%,100%{transform:translate(0,0)} 15%,34%{transform:translate(1px,1px) scale(.96)} 35%,54%{transform:translate(-1px,-1px)} 55%,99%{transform:translate(0,0)} }
-@keyframes click-left { 0%,14%,100%{transform:translate(0,0)} 15%,34%{transform:translate(-2px,-1px)} 35%,54%{transform:translate(-1px,-2px)} 55%,99%{transform:translate(0,0)} }
-@keyframes click-eyes { 0%,14%,54%,100%{transform:scaleY(1)} 15%,34%{transform:translateX(1px) scaleY(.2)} 35%,53%{transform:translateX(-1px) scaleY(1)} }
-@keyframes click-cushion { 0%,14%,54%,100%{transform:scaleY(1)} 15%,34%{transform:translateY(1px) scaleY(.84)} 35%,53%{transform:scaleY(1.04)} }
-
-.state-double-click { --duration: 2.4s; }
-.state-double-click .actor { animation-name: double-body; }
-.state-double-click .left-claw { animation-name: double-left; }
-.state-double-click .right-claw { animation-name: double-right; }
-.state-double-click .cushion { transform-origin: 7px 18px; animation-name: double-cushion; }
-@keyframes double-body { 0%,12%,100%{transform:translateY(0)} 13%,28%{transform:translateY(1px) scaleY(.94)} 29%,48%{transform:translateY(-3px)} 49%,64%{transform:translateY(-1px)} 65%,82%{transform:translateY(1px) scaleY(.95)} 83%,99%{transform:translateY(0)} }
-@keyframes double-left { 0%,12%,100%{transform:translate(0,0)} 13%,28%{transform:translate(-1px,1px)} 29%,48%{transform:translate(-3px,-2px)} 49%,64%{transform:translate(-2px,-1px)} 65%,99%{transform:translate(0,0)} }
-@keyframes double-right { 0%,12%,100%{transform:translate(0,0)} 13%,28%{transform:translate(1px,1px)} 29%,48%{transform:translate(3px,-2px)} 49%,64%{transform:translate(2px,-1px)} 65%,99%{transform:translate(0,0)} }
-@keyframes double-cushion { 0%,12%,64%,100%{transform:scaleY(1)} 13%,28%{transform:scaleY(.78)} 29%,48%{transform:scaleY(1.08)} 49%,63%{transform:scaleY(.9)} }
-
-.state-drag { --duration: 3.2s; }
-.state-drag .actor { animation-name: drag-body; }
-.state-drag .left-claw { animation-name: drag-left; }
-.state-drag .right-claw { animation-name: drag-right; }
-.state-drag .eyes { animation-name: drag-eyes; }
-@keyframes drag-body { 0%,16%,100%{transform:translate(0,0)} 17%,36%{transform:translate(0,-2px) rotate(-2deg)} 37%,56%{transform:translate(1px,-3px) rotate(2deg)} 57%,76%{transform:translate(-1px,-2px) rotate(-2deg)} 77%,99%{transform:translate(0,0)} }
-@keyframes drag-left { 0%,16%,100%{transform:translate(0,0)} 17%,76%{transform:translate(5px,-6px) rotate(20deg)} 77%,99%{transform:translate(0,0)} }
-@keyframes drag-right { 0%,16%,100%{transform:translate(0,0)} 17%,76%{transform:translate(-5px,-6px) rotate(-20deg)} 77%,99%{transform:translate(0,0)} }
-@keyframes drag-eyes { 0%,16%,100%{transform:translate(0,0)} 17%,36%{transform:translate(-1px,-1px)} 37%,56%{transform:translate(1px,-1px)} 57%,76%{transform:translate(0,-1px)} 77%,99%{transform:translate(0,0)} }
-
-.state-drop { --duration: 2.6s; }
-.state-drop .actor { animation-name: drop-body; }
-.state-drop .left-claw { animation-name: drop-left; }
-.state-drop .right-claw { animation-name: drop-right; }
-.state-drop .eyes { animation-name: drop-eyes; }
-.state-drop .cushion { transform-origin: 7px 18px; animation-name: drop-cushion; }
-@keyframes drop-body { 0%,12%,100%{transform:translateY(-3px)} 13%,32%{transform:translateY(2px) scaleY(.82)} 33%,48%{transform:translateY(-1px) scaleY(1.08)} 49%,66%{transform:translateY(1px) scaleY(.94)} 67%,84%{transform:translateY(0)} 85%,99%{transform:translateY(-3px)} }
-@keyframes drop-left { 0%,12%,100%{transform:translate(-2px,-1px)} 13%,32%{transform:translate(-2px,2px)} 33%,48%{transform:translate(-3px,-1px)} 49%,84%{transform:translate(0,0)} 85%,99%{transform:translate(-2px,-1px)} }
-@keyframes drop-right { 0%,12%,100%{transform:translate(2px,-1px)} 13%,32%{transform:translate(2px,2px)} 33%,48%{transform:translate(3px,-1px)} 49%,84%{transform:translate(0,0)} 85%,99%{transform:translate(2px,-1px)} }
-@keyframes drop-eyes { 0%,12%,48%,100%{transform:scaleY(1)} 13%,32%{transform:scaleY(.18)} 33%,47%{transform:scaleY(1)} 49%,66%{transform:translateY(1px)} 67%,99%{transform:translateY(0)} }
-@keyframes drop-cushion { 0%,12%,84%,100%{transform:scaleY(1)} 13%,32%{transform:translateY(1px) scaleY(.68)} 33%,48%{transform:scaleY(1.12)} 49%,66%{transform:scaleY(.9)} 67%,83%{transform:scaleY(1)} }
-
-.state-edge { --duration: 4.6s; }
-.state-edge .actor { animation-name: edge-body; }
-.state-edge .left-claw { animation-name: edge-left; }
-.state-edge .eyes { animation-name: edge-eyes; }
-@keyframes edge-body { 0%,14%,100%{transform:translateX(7px)} 15%,36%{transform:translateX(5px)} 37%,62%{transform:translateX(2px)} 63%,78%{transform:translateX(4px)} 79%,99%{transform:translateX(7px)} }
-@keyframes edge-left { 0%,14%,100%{transform:translate(0,0)} 15%,62%{transform:translate(-2px,-1px)} 63%,78%{transform:translate(-1px,0)} 79%,99%{transform:translate(0,0)} }
-@keyframes edge-eyes { 0%,14%,100%{transform:translateX(-1px)} 15%,36%{transform:translateX(-2px)} 37%,62%{transform:translateX(-1px)} 63%,78%{transform:scaleY(.18) translateX(-1px)} 79%,99%{transform:translateX(-1px)} }
-
-.state-low-battery { --duration: 6.2s; }
-.state-low-battery .actor { animation-name: battery-body; }
-.state-low-battery .left-claw { animation-name: battery-left; }
-.state-low-battery .right-claw { animation-name: battery-right; }
-.state-low-battery .eyes { animation-name: battery-eyes; }
-.state-low-battery .cushion { transform-origin: 7px 18px; animation-name: battery-cushion; }
-@keyframes battery-body { 0%,18%,58%,100%{transform:translateY(1px) scaleY(.94)} 19%,38%{transform:translateY(3px) rotate(-4deg) scaleY(.84)} 39%,57%{transform:translateY(2px) scaleY(.9)} 59%,78%{transform:translateY(3px) rotate(4deg) scaleY(.84)} 79%,99%{transform:translateY(1px) scaleY(.94)} }
-@keyframes battery-left { 0%,18%,100%{transform:translate(2px,2px)} 19%,57%{transform:translate(4px,4px)} 58%,78%{transform:translate(3px,3px)} 79%,99%{transform:translate(2px,2px)} }
-@keyframes battery-right { 0%,18%,100%{transform:translate(-2px,2px)} 19%,57%{transform:translate(-4px,4px)} 58%,78%{transform:translate(-3px,3px)} 79%,99%{transform:translate(-2px,2px)} }
-@keyframes battery-eyes { 0%,58%,100%{transform:translateY(1px) scaleY(.5)} 59%,72%{transform:translateY(1px) scaleY(.15)} 73%,99%{transform:translateY(1px) scaleY(.5)} }
-@keyframes battery-cushion { 0%,18%,58%,100%{transform:scaleY(.94)} 19%,38%{transform:translateY(1px) scaleY(.82)} 39%,57%{transform:scaleY(.9)} 59%,78%{transform:translateY(1px) scaleY(.82)} 79%,99%{transform:scaleY(.94)} }
-
 /* Runtime lifecycle additions ------------------------------------------ */
-.state-launching { --duration: 2.8s; }
-.state-launching .actor { animation-name: launch-body; }
-.state-launching .left-claw { animation-name: launch-left; }
-.state-launching .right-claw { animation-name: launch-right; }
-.state-launching .launch-legs { transform-origin: 7.5px 14px; animation-name: launch-legs; }
-.state-launching .eyes { animation-name: launch-eyes; }
-@keyframes launch-body {
-  0%,12%,100%{transform:translateY(7px) scale(.58,.24)} 13%,30%{transform:translateY(4px) scale(.72,.55)}
-  31%,48%{transform:translateY(-2px) scale(1.04,1.12)} 49%,66%{transform:translateY(1px) scale(.98,.94)}
-  67%,84%{transform:translateY(-1px) scale(1.01,1.04)} 85%,99%{transform:translateY(0) scale(1)}
-}
-@keyframes launch-left { 0%,30%,100%{transform:translate(4px,2px)} 31%,48%{transform:translate(-4px,-2px)} 49%,66%{transform:translate(-2px,0)} 67%,99%{transform:translate(0,0)} }
-@keyframes launch-right { 0%,30%,100%{transform:translate(-4px,2px)} 31%,48%{transform:translate(4px,-2px)} 49%,66%{transform:translate(2px,0)} 67%,99%{transform:translate(0,0)} }
-@keyframes launch-legs { 0%,30%,100%{transform:translateY(-3px) scaleX(.55)} 31%,48%{transform:translateY(1px) scaleX(1.12)} 49%,66%{transform:scaleX(.9)} 67%,99%{transform:translateY(0) scaleX(1)} }
-@keyframes launch-eyes { 0%,30%{transform:scaleY(.15)} 31%,54%{transform:scaleY(1)} 55%,62%{transform:scaleY(.15)} 63%,100%{transform:scaleY(1)} }
-
-.state-quitting { --duration: 2.8s; }
-.state-quitting .actor { animation-name: quit-body; }
-.state-quitting .left-claw { animation-name: quit-left; }
-.state-quitting .right-claw { animation-name: quit-right; }
-.state-quitting .quit-legs { transform-origin: 7.5px 14px; animation-name: quit-legs; }
-.state-quitting .eyes { animation-name: quit-eyes; }
-@keyframes quit-body { 0%,12%,100%{transform:translateY(0) scale(1)} 13%,30%{transform:translateX(1px)} 31%,48%{transform:translateX(-1px)} 49%,66%{transform:translateY(1px) scale(.96,.88)} 67%,84%{transform:translateY(5px) scale(.7,.45)} 85%,99%{transform:translateY(7px) scale(.56,.22)} }
-@keyframes quit-left { 0%,12%,100%{transform:translate(0,0)} 13%,30%{transform:translate(-3px,-4px)} 31%,40%{transform:translate(-4px,-2px)} 41%,48%{transform:translate(-3px,-4px)} 49%,66%{transform:translate(3px,2px)} 67%,99%{transform:translate(4px,2px)} }
-@keyframes quit-right { 0%,48%,100%{transform:translate(0,0)} 49%,66%{transform:translate(-3px,2px)} 67%,99%{transform:translate(-4px,2px)} }
-@keyframes quit-legs { 0%,48%,100%{transform:translateY(0) scaleX(1)} 49%,66%{transform:translateY(-1px) scaleX(.72)} 67%,99%{transform:translateY(-3px) scaleX(.5)} }
-@keyframes quit-eyes { 0%,40%,100%{transform:scaleY(1)} 41%,48%{transform:scaleY(.15)} 49%,99%{transform:scaleY(.12)} }
-
-.state-waiting { --duration: 4.2s; }
-.state-waiting .actor { animation-name: waiting-body; }
-.state-waiting .left-claw { animation-name: waiting-left; }
-.state-waiting .right-claw { animation-name: waiting-right; }
-.state-waiting .eyes { animation-name: waiting-eyes; }
-@keyframes waiting-body { 0%,12%,68%,100%{transform:translateY(0)} 13%,28%{transform:translate(-1px,0)} 29%,44%{transform:translate(0,0)} 45%,60%{transform:translate(-1px,0)} 61%,67%{transform:translate(0,-1px)} }
-@keyframes waiting-left { 0%,12%,68%,100%{transform:translate(2px,1px)} 13%,20%,29%,36%,45%,52%{transform:translate(4px,4px)} 21%,28%,37%,44%,53%,60%{transform:translate(4px,2px)} 61%,67%{transform:translate(2px,1px)} }
-@keyframes waiting-right { 0%,60%,100%{transform:translate(-2px,1px)} 61%,67%{transform:translate(-3px,0)} 68%,99%{transform:translate(-2px,1px)} }
-@keyframes waiting-eyes { 0%,12%,60%,100%{transform:translate(-1px,1px)} 13%,52%{transform:translate(-1px,2px)} 53%,60%{transform:scaleY(.15) translateY(1px)} 61%,99%{transform:translate(0,0)} }
-
-.state-paused { --duration: 6s; }
-.state-paused .actor { animation-name: paused-body; }
-.state-paused .left-claw { animation-name: paused-left; }
-.state-paused .right-claw { animation-name: paused-right; }
-.state-paused .eyes { animation-name: paused-eyes; }
-@keyframes paused-body { 0%,54%,72%,100%{transform:translateY(1px) scaleY(.97)} 55%,71%{transform:translateY(0) scaleY(1)} }
-@keyframes paused-left { 0%,100%{transform:translate(3px,1px)} }
-@keyframes paused-right { 0%,100%{transform:translate(-3px,1px)} }
-@keyframes paused-eyes { 0%,68%,82%,100%{transform:scaleY(.75)} 69%,81%{transform:scaleY(.15)} }
-
-.state-owner-resolved { --duration: 3.2s; }
-.state-owner-resolved .actor { animation-name: resolved-body; }
-.state-owner-resolved .left-claw { animation-name: resolved-left; }
-.state-owner-resolved .right-claw { animation-name: resolved-right; }
-.state-owner-resolved .eyes { animation-name: resolved-eyes; }
-.state-owner-resolved .jar { transform-origin: -2px 17px; animation-name: resolved-jar; }
-.state-owner-resolved .lid { transform-origin: -2px 9px; animation-name: resolved-lid; }
-@keyframes resolved-body { 0%,12%,100%{transform:translate(1px,0)} 13%,34%{transform:translate(0,-1px)} 35%,54%{transform:translate(1px,-2px)} 55%,72%{transform:translate(0,-1px) scaleY(1.04)} 73%,99%{transform:translate(1px,0)} }
-@keyframes resolved-left { 0%,12%,100%{transform:translate(-1px,1px)} 13%,54%{transform:translate(-4px,1px)} 55%,72%{transform:translate(-3px,-2px)} 73%,99%{transform:translate(-1px,1px)} }
-@keyframes resolved-right { 0%,54%,100%{transform:translate(0,0)} 55%,72%{transform:translate(2px,-2px)} 73%,99%{transform:translate(0,0)} }
-@keyframes resolved-eyes { 0%,34%,72%,100%{transform:translateX(-1px)} 35%,54%{transform:translateX(-1px) scaleY(.15)} 55%,71%{transform:translateX(-1px)} }
-@keyframes resolved-jar { 0%,12%,100%{transform:translate(0,0)} 13%,34%{transform:rotate(-4deg)} 35%,54%{transform:translateY(1px) rotate(3deg)} 55%,72%{transform:translate(1px,0)} 73%,99%{transform:translate(0,0)} }
-@keyframes resolved-lid { 0%,12%,100%{transform:translate(0,0) rotate(0)} 13%,34%{transform:translate(1px,-1px) rotate(8deg)} 35%,54%{transform:translate(2px,-2px) rotate(16deg)} 55%,72%{transform:translate(1px,-1px) rotate(8deg)} 73%,99%{transform:translate(0,0) rotate(0)} }
-
-.state-recovering { --duration: 3.4s; }
-.state-recovering .actor { animation-name: recovering-body; }
-.state-recovering .left-claw { animation-name: recovering-left; }
-.state-recovering .right-claw { animation-name: recovering-right; }
-.state-recovering .eyes { animation-name: recovering-eyes; }
-.state-recovering .basket { transform-origin: 8px 16px; animation-name: recovering-basket; }
-@keyframes recovering-body { 0%,12%,100%{transform:translateY(3px) rotate(-5deg) scaleY(.7)} 13%,34%{transform:translate(-1px,1px) rotate(-3deg) scaleY(.84)} 35%,54%{transform:translate(1px,-1px) rotate(2deg)} 55%,68%{transform:translate(-1px,0) rotate(-3deg)} 69%,82%{transform:translate(1px,0) rotate(3deg)} 83%,99%{transform:translate(0,0)} }
-@keyframes recovering-left { 0%,12%,100%{transform:translate(2px,2px)} 13%,34%{transform:translate(-2px,-4px)} 35%,54%{transform:translate(-4px,-3px)} 55%,82%{transform:translate(-1px,-1px)} 83%,99%{transform:translate(0,0)} }
-@keyframes recovering-right { 0%,12%,100%{transform:translate(-2px,2px)} 13%,34%{transform:translate(2px,-4px)} 35%,54%{transform:translate(4px,-3px)} 55%,82%{transform:translate(1px,-1px)} 83%,99%{transform:translate(0,0)} }
-@keyframes recovering-eyes { 0%,34%,100%{transform:scaleY(.15)} 35%,54%{transform:scaleY(1)} 55%,68%{transform:translateX(-1px)} 69%,82%{transform:translateX(1px)} 83%,99%{transform:scaleY(1)} }
-@keyframes recovering-basket { 0%,12%,100%{transform:translate(0,-3px) rotate(-4deg)} 13%,34%{transform:translate(-2px,-5px) rotate(-9deg)} 35%,54%{transform:translate(5px,-5px) rotate(12deg)} 55%,82%{transform:translate(7px,-2px) rotate(14deg)} 83%,99%{transform:translate(8px,-1px) rotate(15deg)} }
-
 /* Idle variants and environmental reactions --------------------------- */
-.state-idle-grooming { --duration: 5.2s; }
-.state-idle-grooming .actor { animation-name: groom-body; }
-.state-idle-grooming .left-claw { animation-name: groom-left; }
-.state-idle-grooming .right-claw { animation-name: groom-right; }
-.state-idle-grooming .eyes { animation-name: groom-eyes; }
-@keyframes groom-body { 0%,14%,100%{transform:translateY(0)} 15%,34%{transform:translate(-1px,-1px)} 35%,70%{transform:translate(0,-1px)} 71%,86%{transform:translate(1px,-1px)} 87%,99%{transform:translateY(0)} }
-@keyframes groom-left { 0%,14%,100%{transform:translate(0,0)} 15%,34%{transform:translate(5px,-1px)} 35%,46%{transform:translate(6px,-3px)} 47%,58%{transform:translate(5px,-1px)} 59%,70%{transform:translate(6px,-3px)} 71%,86%{transform:translate(5px,-1px)} 87%,99%{transform:translate(0,0)} }
-@keyframes groom-right { 0%,14%,100%{transform:translate(0,0)} 15%,86%{transform:translate(-3px,1px)} 87%,99%{transform:translate(0,0)} }
-@keyframes groom-eyes { 0%,14%,86%,100%{transform:translate(0,0)} 15%,70%{transform:translate(1px,1px)} 71%,78%{transform:translate(1px,1px) scaleY(.15)} 79%,86%{transform:translate(1px,1px)} 87%,99%{transform:translate(0,0)} }
-
-.state-idle-leg-shuffle { --duration: 4.8s; }
-.state-idle-leg-shuffle .actor { animation-name: shuffle-body; }
-.state-idle-leg-shuffle .left-claw { animation-name: shuffle-left; }
-.state-idle-leg-shuffle .right-claw { animation-name: shuffle-right; }
-.state-idle-leg-shuffle .shuffle-leg-a { animation-name: shuffle-leg-a; }
-.state-idle-leg-shuffle .shuffle-leg-b { animation-name: shuffle-leg-b; }
-.state-idle-leg-shuffle .eyes { animation-name: shuffle-eyes; }
-@keyframes shuffle-body { 0%,14%,100%{transform:translate(0,0)} 15%,34%{transform:translate(-1px,0)} 35%,54%{transform:translate(1px,-1px)} 55%,74%{transform:translate(-1px,-1px)} 75%,88%{transform:translate(1px,0)} 89%,99%{transform:translate(0,0)} }
-@keyframes shuffle-left { 0%,14%,100%{transform:translate(0,0)} 15%,54%{transform:translate(-2px,-1px)} 55%,88%{transform:translate(1px,0)} 89%,99%{transform:translate(0,0)} }
-@keyframes shuffle-right { 0%,14%,100%{transform:translate(0,0)} 15%,54%{transform:translate(-1px,0)} 55%,88%{transform:translate(2px,-1px)} 89%,99%{transform:translate(0,0)} }
-@keyframes shuffle-leg-a { 0%,14%,54%,100%{transform:translate(0,0)} 15%,34%{transform:translate(-1px,-1px)} 35%,53%{transform:translate(1px,0)} 55%,74%{transform:translate(0,-1px)} 75%,99%{transform:translate(0,0)} }
-@keyframes shuffle-leg-b { 0%,14%,54%,100%{transform:translate(0,0)} 15%,34%{transform:translate(1px,0)} 35%,53%{transform:translate(-1px,-1px)} 55%,74%{transform:translate(1px,0)} 75%,88%{transform:translate(-1px,-1px)} 89%,99%{transform:translate(0,0)} }
-@keyframes shuffle-eyes { 0%,74%,100%{transform:translateY(1px)} 75%,82%{transform:translateY(1px) scaleY(.15)} 83%,99%{transform:translateY(1px)} }
-
-.state-idle-drowsy { --duration: 6s; }
-.state-idle-drowsy .actor { animation-name: drowsy-body; }
-.state-idle-drowsy .left-claw { animation-name: drowsy-left; }
-.state-idle-drowsy .right-claw { animation-name: drowsy-right; }
-.state-idle-drowsy .eyes { animation-name: drowsy-eyes; }
-@keyframes drowsy-body { 0%,16%,100%{transform:translateY(0)} 17%,36%{transform:translateY(1px) scaleY(.94)} 37%,56%{transform:translateY(2px) scaleY(.88)} 57%,70%{transform:translateY(3px) rotate(-3deg) scaleY(.82)} 71%,82%{transform:translateY(-2px) scaleY(1.08)} 83%,99%{transform:translateY(0)} }
-@keyframes drowsy-left { 0%,16%,82%,100%{transform:translate(0,0)} 17%,70%{transform:translate(2px,2px)} 71%,81%{transform:translate(-2px,-1px)} }
-@keyframes drowsy-right { 0%,16%,82%,100%{transform:translate(0,0)} 17%,70%{transform:translate(-2px,2px)} 71%,81%{transform:translate(2px,-1px)} }
-@keyframes drowsy-eyes { 0%,16%,100%{transform:scaleY(1)} 17%,36%{transform:scaleY(.55)} 37%,70%{transform:translateY(1px) scaleY(.15)} 71%,82%{transform:scaleY(1)} 83%,90%{transform:scaleY(.15)} 91%,99%{transform:scaleY(1)} }
-
-.state-hover { --duration: 3s; }
-.state-hover .actor { animation-name: hover-body; }
-.state-hover .left-claw { animation-name: hover-left; }
-.state-hover .right-claw { animation-name: hover-right; }
-.state-hover .eyes { animation-name: hover-eyes; }
-@keyframes hover-body { 0%,14%,100%{transform:translate(0,0)} 15%,34%{transform:translate(-1px,-1px) rotate(-2deg)} 35%,56%{transform:translate(1px,-1px) rotate(2deg)} 57%,76%{transform:translate(0,-2px)} 77%,99%{transform:translate(0,0)} }
-@keyframes hover-left { 0%,14%,100%{transform:translate(0,0)} 15%,34%{transform:translate(-2px,-1px)} 35%,56%{transform:translate(2px,-2px)} 57%,76%{transform:translate(4px,-3px)} 77%,99%{transform:translate(0,0)} }
-@keyframes hover-right { 0%,56%,100%{transform:translate(0,0)} 57%,76%{transform:translate(2px,-1px)} 77%,99%{transform:translate(0,0)} }
-@keyframes hover-eyes { 0%,14%,100%{transform:translate(0,0)} 15%,34%{transform:translate(-1px,0)} 35%,56%{transform:translate(1px,0)} 57%,76%{transform:translate(1px,-1px)} 77%,84%{transform:scaleY(.15)} 85%,99%{transform:translate(0,0)} }
-
-.state-offline { --duration: 5.2s; }
-.state-offline .actor { animation-name: offline-body; }
-.state-offline .left-claw { animation-name: offline-left; }
-.state-offline .right-claw { animation-name: offline-right; }
-.state-offline .eyes { animation-name: offline-eyes; }
-@keyframes offline-body { 0%,14%,100%{transform:translateY(1px)} 15%,34%{transform:translate(-1px,0) rotate(-2deg)} 35%,48%{transform:translate(-1px,0)} 49%,70%{transform:translate(1px,0) rotate(2deg)} 71%,84%{transform:translate(1px,0)} 85%,99%{transform:translateY(1px)} }
-@keyframes offline-left { 0%,14%,100%{transform:translate(2px,1px)} 15%,48%{transform:translate(1px,-2px)} 49%,84%{transform:translate(3px,0)} 85%,99%{transform:translate(2px,1px)} }
-@keyframes offline-right { 0%,14%,100%{transform:translate(-2px,1px)} 15%,48%{transform:translate(-3px,0)} 49%,84%{transform:translate(-1px,-2px)} 85%,99%{transform:translate(-2px,1px)} }
-@keyframes offline-eyes { 0%,14%,100%{transform:translate(0,0)} 15%,48%{transform:translate(-1px,0)} 49%,70%{transform:translate(1px,0)} 71%,78%{transform:translate(1px,0) scaleY(.15)} 79%,84%{transform:translate(1px,0)} 85%,99%{transform:translate(0,0)} }
-
 @media (prefers-reduced-motion: reduce) {
   .motion { animation: none !important; }
   .blink { animation: reduced-blink 8s 1 step-end !important; }
@@ -424,7 +28,6 @@
    而是在同一个构图里增减助手——委派这件事在视觉上保持完整。
    由渲染层在祖先元素上加 data-variant 驱动。 */
 [data-variant="one-subagent"] .state-delegating .helper-b,
-.state-delegating[data-variant="one-subagent"] .helper-b {
   display: none;
 }
 
@@ -518,3 +121,420 @@
 @keyframes mini-exit-body { 0%,18%{transform:translate(0,0)} 19%,40%{transform:translate(1px,-1px)} 41%,64%{transform:translate(-2px,-1px)} 65%,82%{transform:translate(-5px,0)} 83%,100%{transform:translate(-7px,0)} }
 @keyframes mini-exit-eyes { 0%,18%{transform:scaleY(.5)} 19%,32%{transform:scaleY(.15)} 33%,100%{transform:scaleY(1)} }
 @keyframes mini-exit-claw { 0%,18%{transform:translate(0,0)} 19%,40%{transform:translate(0,1px)} 41%,82%{transform:translate(1px,0)} 83%,100%{transform:translate(0,0)} }
+
+/* === 由 scripts/build-motion-css.mjs 生成，请勿手改以下区域 === */
+
+/* idle：安静观察。桌宠绝大部分时间停在这里，所以它值得最多的层次：
+   呼吸、重心、爪、腿、视线、眨眼各走各的周期。 */
+.state-idle { --duration: 5.6s; }
+.state-idle .actor { animation-name: idle-body; }
+.state-idle .left-claw { animation-name: idle-left; animation-duration: 4.2s; }
+.state-idle .right-claw { animation-name: idle-right; animation-duration: 3.4s; }
+.state-idle .eyes { animation-name: idle-eyes; animation-duration: 3.1s; }
+.state-idle .blink { animation-name: idle-blink; animation-duration: 6.7s; }
+@keyframes idle-body { 0%,22%{transform:translateY(0)} 23%,30%{transform:translateY(-1px)} 31%,53%{transform:translateY(-1px)} 54%,61%{transform:translateY(0)} 62%,76%{transform:translateY(0)} 77%,84%{transform:translateY(1px)} 85%,100%{transform:translateY(0)} }
+@keyframes idle-left { 0%,29%{transform:translate(0,0)} 30%,39%{transform:translate(0,-1px)} 40%,59%{transform:translate(1px,-1px)} 60%,69%{transform:translate(1px,0)} 70%,100%{transform:translate(0,0)} }
+@keyframes idle-right { 0%,49%{transform:translate(0,0)} 50%,62%{transform:translate(0,-1px)} 63%,87%{transform:translate(-1px,0)} 88%,100%{transform:translate(0,0)} }
+@keyframes idle-eyes { 0%,24%{transform:translate(0,0)} 25%,37%{transform:translate(1px,0)} 38%,43%{transform:translate(1px,0)} 44%,62%{transform:translate(0,0)} 63%,74%{transform:translate(-1px,0)} 75%,100%{transform:translate(0,0)} }
+@keyframes idle-blink { 0%,51%{transform:scaleY(1)} 52%,56%{transform:scaleY(.15)} 57%,82%{transform:scaleY(1)} 83%,86%{transform:scaleY(.15)} 87%,100%{transform:scaleY(1)} }
+/* idle-grooming：低头擦爪。动作核心是「擦」这个往复，所以擦的那几拍要密。 */
+.state-idle-grooming { --duration: 5.2s; }
+.state-idle-grooming .actor { animation-name: groom-body; }
+.state-idle-grooming .left-claw { animation-name: groom-left; }
+.state-idle-grooming .right-claw { animation-name: groom-right; }
+.state-idle-grooming .eyes { animation-name: groom-eyes; }
+.state-idle-grooming .blink { animation-name: groom-blink; animation-duration: 5.9s; }
+@keyframes groom-body { 0%,19%{transform:translate(0,0)} 20%,26%{transform:translate(0,1px)} 27%,52%{transform:translate(0,2px)} 53%,72%{transform:translate(0,2px)} 73%,79%{transform:translate(0,1px)} 80%,100%{transform:translate(0,0)} }
+@keyframes groom-left { 0%,18%{transform:translate(0,0)} 19%,24%{transform:translate(2px,1px)} 25%,37%{transform:translate(3px,2px)} 38%,43%{transform:translate(2px,2px)} 44%,49%{transform:translate(3px,2px)} 50%,55%{transform:translate(2px,2px)} 56%,62%{transform:translate(3px,2px)} 63%,68%{transform:translate(2px,2px)} 69%,74%{transform:translate(3px,2px)} 75%,80%{transform:translate(2px,1px)} 81%,100%{transform:translate(0,0)} }
+@keyframes groom-right { 0%,26%{transform:translate(0,0)} 27%,32%{transform:translate(-1px,1px)} 33%,72%{transform:translate(-1px,2px)} 73%,79%{transform:translate(-1px,1px)} 80%,100%{transform:translate(0,0)} }
+@keyframes groom-eyes { 0%,19%{transform:translate(0,0)} 20%,26%{transform:translate(0,1px)} 27%,72%{transform:translate(1px,1px)} 73%,79%{transform:translate(0,1px)} 80%,100%{transform:translate(0,0)} }
+@keyframes groom-blink { 0%,59%{transform:scaleY(1)} 60%,66%{transform:scaleY(.15)} 67%,100%{transform:scaleY(1)} }
+/* idle-leg-shuffle：四条腿依次挪动重新找站姿。四条腿必须错开，同时抬会读成跳。 */
+.state-idle-leg-shuffle { --duration: 4.8s; }
+.state-idle-leg-shuffle .actor { animation-name: shuffle-body; }
+.state-idle-leg-shuffle .leg-a { animation-name: shuffle-leg-a; }
+.state-idle-leg-shuffle .leg-b { animation-name: shuffle-leg-b; }
+.state-idle-leg-shuffle .leg-c { animation-name: shuffle-leg-c; }
+.state-idle-leg-shuffle .leg-d { animation-name: shuffle-leg-d; }
+.state-idle-leg-shuffle .eyes { animation-name: shuffle-eyes; animation-duration: 3.3s; }
+.state-idle-leg-shuffle .blink { animation-name: shuffle-blink; animation-duration: 6.1s; }
+@keyframes shuffle-body { 0%,17%{transform:translate(0,0)} 18%,28%{transform:translate(-1px,0)} 29%,34%{transform:translate(-1px,-1px)} 35%,46%{transform:translate(-1px,0)} 47%,52%{transform:translate(0,0)} 53%,64%{transform:translate(1px,0)} 65%,70%{transform:translate(1px,-1px)} 71%,81%{transform:translate(1px,0)} 82%,100%{transform:translate(0,0)} }
+@keyframes shuffle-leg-a { 0%,30%{transform:translateY(0)} 31%,37%{transform:translateY(-1px)} 38%,100%{transform:translateY(0)} }
+@keyframes shuffle-leg-b { 0%,49%{transform:translateY(0)} 50%,55%{transform:translateY(-1px)} 56%,100%{transform:translateY(0)} }
+@keyframes shuffle-leg-c { 0%,68%{transform:translateY(0)} 69%,74%{transform:translateY(-1px)} 75%,100%{transform:translateY(0)} }
+@keyframes shuffle-leg-d { 0%,12%{transform:translateY(0)} 13%,18%{transform:translateY(-1px)} 19%,100%{transform:translateY(0)} }
+@keyframes shuffle-eyes { 0%,24%{transform:translate(0,0)} 25%,41%{transform:translate(-1px,0)} 42%,57%{transform:translate(0,0)} 58%,74%{transform:translate(1px,0)} 75%,100%{transform:translate(0,0)} }
+@keyframes shuffle-blink { 0%,66%{transform:scaleY(1)} 67%,72%{transform:scaleY(.15)} 73%,100%{transform:scaleY(1)} }
+/* idle-drowsy：打瞌睡再惊醒。关键是「点头下沉」要慢、「惊醒」要在一拍内完成——
+   这个对比就是缓动本身，等分排百分比会把它彻底毁掉。 */
+.state-idle-drowsy { --duration: 6s; }
+.state-idle-drowsy .actor { animation-name: drowsy-body; }
+.state-idle-drowsy .left-claw { animation-name: drowsy-left; }
+.state-idle-drowsy .right-claw { animation-name: drowsy-right; }
+.state-idle-drowsy .eyes { animation-name: drowsy-eyes; }
+.state-idle-drowsy .blink { animation-name: drowsy-blink; }
+@keyframes drowsy-body { 0%,13%{transform:translate(0,0)} 14%,23%{transform:translate(0,1px)} 24%,28%{transform:translate(0,1px)} 29%,37%{transform:translate(0,2px)} 38%,42%{transform:translate(0,2px)} 43%,51%{transform:translate(0,3px)} 52%,70%{transform:translate(0,3px)} 71%,75%{transform:translate(0,-2px)} 76%,80%{transform:translate(0,1px)} 81%,85%{transform:translate(0,-1px)} 86%,89%{transform:translate(0,0)} 90%,100%{transform:translate(0,0)} }
+@keyframes drowsy-left { 0%,16%{transform:translate(0,0)} 17%,27%{transform:translate(0,1px)} 28%,71%{transform:translate(0,3px)} 72%,77%{transform:translate(0,-1px)} 78%,100%{transform:translate(0,0)} }
+@keyframes drowsy-right { 0%,16%{transform:translate(0,0)} 17%,27%{transform:translate(0,1px)} 28%,71%{transform:translate(0,3px)} 72%,77%{transform:translate(0,-1px)} 78%,100%{transform:translate(0,0)} }
+@keyframes drowsy-eyes { 0%,16%{transform:translate(0,0)} 17%,27%{transform:translate(0,1px)} 28%,71%{transform:translate(0,3px)} 72%,77%{transform:translate(0,-1px)} 78%,100%{transform:translate(0,0)} }
+@keyframes drowsy-blink { 0%,14%{transform:scaleY(1)} 15%,24%{transform:scaleY(.5)} 25%,29%{transform:scaleY(1)} 30%,44%{transform:scaleY(.35)} 45%,74%{transform:scaleY(.15)} 75%,100%{transform:scaleY(1)} }
+/* working：整理两块工作牌。这是「在干活」的主视觉，节奏要稳、要密，
+   但不能急躁——急躁读作焦虑，不是专注。 */
+.state-working { --duration: 3.4s; }
+.state-working .actor { animation-name: work-body; }
+.state-working .left-claw { animation-name: work-left; }
+.state-working .right-claw { animation-name: work-right; }
+.state-working .work-tile-a { animation-name: work-tile-a; }
+.state-working .work-tile-b { animation-name: work-tile-b; }
+.state-working .eyes { animation-name: work-eyes; animation-duration: 2.9s; }
+.state-working .blink { animation-name: work-blink; animation-duration: 4.7s; }
+@keyframes work-body { 0%,16%{transform:translate(0,0)} 17%,24%{transform:translate(-1px,-1px)} 25%,41%{transform:translate(-1px,-1px)} 42%,49%{transform:translate(0,-1px)} 50%,66%{transform:translate(1px,-1px)} 67%,74%{transform:translate(1px,-2px)} 75%,82%{transform:translate(0,-1px)} 83%,100%{transform:translate(0,0)} }
+@keyframes work-left { 0%,7%{transform:translate(0,0)} 8%,16%{transform:translate(3px,-2px)} 17%,32%{transform:translate(5px,-3px)} 33%,41%{transform:translate(4px,-1px)} 42%,57%{transform:translate(2px,1px)} 58%,66%{transform:translate(3px,-1px)} 67%,82%{transform:translate(5px,-2px)} 83%,91%{transform:translate(2px,0)} 92%,100%{transform:translate(0,0)} }
+@keyframes work-right { 0%,7%{transform:translate(0,0)} 8%,24%{transform:translate(-2px,1px)} 25%,32%{transform:translate(-4px,-1px)} 33%,49%{transform:translate(-5px,-3px)} 50%,57%{transform:translate(-3px,-1px)} 58%,74%{transform:translate(-2px,1px)} 75%,82%{transform:translate(-4px,-2px)} 83%,100%{transform:translate(0,0)} }
+@keyframes work-tile-a { 0%,24%{transform:translateY(0)} 25%,37%{transform:translateY(1px)} 38%,49%{transform:translateY(0)} 50%,74%{transform:translateY(1px)} 75%,100%{transform:translateY(0)} }
+@keyframes work-tile-b { 0%,24%{transform:translateY(1px)} 25%,49%{transform:translateY(0)} 50%,62%{transform:translateY(1px)} 63%,74%{transform:translateY(0)} 75%,100%{transform:translateY(1px)} }
+@keyframes work-eyes { 0%,39%{transform:translate(0,1px)} 40%,59%{transform:translate(0,0)} 60%,69%{transform:translate(1px,0)} 70%,100%{transform:translate(0,1px)} }
+@keyframes work-blink { 0%,68%{transform:scaleY(1)} 69%,74%{transform:scaleY(.15)} 75%,100%{transform:scaleY(1)} }
+/* thinking：双爪间转动拼图、比对两面、停顿。「停顿」那一拍要最长——
+   思考的读感来自停顿，不来自转动。 */
+.state-thinking { --duration: 4.6s; }
+.state-thinking .actor { animation-name: think-body; }
+.state-thinking .left-claw { animation-name: think-left; }
+.state-thinking .right-claw { animation-name: think-right; }
+.state-thinking .puzzle-piece { transform-origin: 8px 16px; animation-name: think-piece; }
+.state-thinking .eyes { animation-name: think-eyes; animation-duration: 3.7s; }
+.state-thinking .blink { animation-name: think-blink; animation-duration: 5.3s; }
+@keyframes think-body { 0%,12%{transform:translate(0,0)} 13%,19%{transform:translate(-1px,-1px)} 20%,32%{transform:translate(-1px,-1px)} 33%,39%{transform:translate(0,-1px)} 40%,52%{transform:translate(1px,-1px)} 53%,59%{transform:translate(1px,-1px)} 60%,86%{transform:translate(0,-2px)} 87%,100%{transform:translate(0,0)} }
+@keyframes think-left { 0%,12%{transform:translate(0,0)} 13%,19%{transform:translate(2px,-1px)} 20%,32%{transform:translate(3px,-1px)} 33%,39%{transform:translate(4px,-2px)} 40%,52%{transform:translate(5px,-2px)} 53%,59%{transform:translate(4px,-3px)} 60%,86%{transform:translate(4px,-4px)} 87%,100%{transform:translate(0,0)} }
+@keyframes think-right { 0%,12%{transform:translate(0,0)} 13%,19%{transform:translate(-3px,-1px)} 20%,32%{transform:translate(-5px,-2px)} 33%,39%{transform:translate(-4px,-1px)} 40%,52%{transform:translate(-3px,-1px)} 53%,59%{transform:translate(-4px,-3px)} 60%,86%{transform:translate(-4px,-4px)} 87%,100%{transform:translate(0,0)} }
+@keyframes think-piece { 0%,12%{transform:translate(0,0) rotate(0)} 13%,19%{transform:translate(-1px,-1px) rotate(-4deg)} 20%,32%{transform:translate(-2px,-1px) rotate(-7deg)} 33%,39%{transform:translate(0,-1px) rotate(0)} 40%,52%{transform:translate(2px,-1px) rotate(7deg)} 53%,59%{transform:translate(1px,-2px) rotate(4deg)} 60%,86%{transform:translate(0,-2px) rotate(0)} 87%,100%{transform:translate(0,0) rotate(0)} }
+@keyframes think-eyes { 0%,24%{transform:translate(-1px,0)} 25%,32%{transform:translate(0,0)} 33%,57%{transform:translate(1px,0)} 58%,74%{transform:translate(0,-1px)} 75%,100%{transform:translate(0,0)} }
+@keyframes think-blink { 0%,62%{transform:scaleY(1)} 63%,68%{transform:scaleY(.15)} 69%,100%{transform:scaleY(1)} }
+/* delegating：把包裹递给身侧接力的助手。递出去那一下要快，等待接手要慢。 */
+.state-delegating { --duration: 5s; }
+.state-delegating .actor { animation-name: delegate-body; }
+.state-delegating .left-claw { animation-name: delegate-left; }
+.state-delegating .right-claw { animation-name: delegate-right; }
+.state-delegating .parcel { transform-origin: 7px 14px; animation-name: delegate-parcel; }
+.state-delegating .helper-a { transform-origin: -4px 15px; animation-name: helper-a; }
+.state-delegating .helper-b { transform-origin: 18px 15px; animation-name: helper-b; }
+.state-delegating .eyes { animation-name: delegate-eyes; animation-duration: 3.9s; }
+.state-delegating .blink { animation-name: delegate-blink; animation-duration: 6.3s; }
+@keyframes delegate-body { 0%,19%{transform:translate(0,-1px)} 20%,26%{transform:translate(-1px,-2px)} 27%,46%{transform:translate(-1px,-2px)} 47%,52%{transform:translate(0,-2px)} 53%,72%{transform:translate(1px,-2px)} 73%,79%{transform:translate(0,-1px)} 80%,100%{transform:translate(0,-1px)} }
+@keyframes delegate-left { 0%,19%{transform:translate(0,0)} 20%,26%{transform:translate(-2px,0)} 27%,46%{transform:translate(-4px,1px)} 47%,52%{transform:translate(0,-1px)} 53%,72%{transform:translate(3px,-2px)} 73%,79%{transform:translate(2px,-1px)} 80%,100%{transform:translate(0,0)} }
+@keyframes delegate-right { 0%,19%{transform:translate(0,0)} 20%,26%{transform:translate(-2px,-1px)} 27%,46%{transform:translate(-3px,-2px)} 47%,52%{transform:translate(1px,-1px)} 53%,72%{transform:translate(4px,1px)} 73%,79%{transform:translate(3px,-1px)} 80%,100%{transform:translate(0,0)} }
+@keyframes delegate-parcel { 0%,19%{transform:translate(0,0)} 20%,26%{transform:translate(-2px,-1px)} 27%,46%{transform:translate(-4px,0)} 47%,52%{transform:translate(0,-2px)} 53%,72%{transform:translate(4px,0)} 73%,79%{transform:translate(2px,-1px)} 80%,100%{transform:translate(0,0)} }
+@keyframes helper-a { 0%,18%{opacity:0;transform:translate(-1px,1px)} 19%,24%{transform:translate(-1px,0)} 25%,43%{transform:translate(0,0)} 44%,62%{transform:translate(1px,1px)} 63%,80%{transform:translate(2px,0)} 81%,100%{transform:translate(3px,1px)} }
+@keyframes helper-b { 0%,30%{transform:translate(-3px,1px)} 31%,49%{transform:translate(-2px,0)} 50%,68%{transform:translate(-1px,1px)} 69%,87%{transform:translate(0,0)} 88%,100%{transform:translate(1px,1px)} }
+@keyframes delegate-eyes { 0%,26%{transform:translate(-1px,1px)} 27%,44%{transform:translate(-2px,1px)} 45%,54%{transform:translate(0,1px)} 55%,81%{transform:translate(1px,1px)} 82%,100%{transform:translate(0,1px)} }
+@keyframes delegate-blink { 0%,68%{transform:scaleY(1)} 69%,74%{transform:scaleY(.15)} 75%,100%{transform:scaleY(1)} }
+/* compacting：把条纹布逐折塞进行李箱。每一折是一次「压」——压下去要快、
+   松手回弹要有一拍，这样才有材料的手感。 */
+.state-compacting { --duration: 4.8s; }
+.state-compacting .actor { animation-name: fold-body; }
+.state-compacting .left-claw { animation-name: fold-left; }
+.state-compacting .right-claw { animation-name: fold-right; }
+.state-compacting .accordion { transform-origin: 7.5px 14px; animation-name: fold-accordion; }
+.state-compacting .eyes { animation-name: fold-eyes; animation-duration: 3.5s; }
+.state-compacting .blink { animation-name: fold-blink; animation-duration: 5.7s; }
+@keyframes fold-body { 0%,10%{transform:translate(0,0)} 11%,16%{transform:translate(0,1px)} 17%,27%{transform:translate(0,2px)} 28%,32%{transform:translate(0,1px)} 33%,38%{transform:translate(0,0)} 39%,43%{transform:translate(0,1px)} 44%,55%{transform:translate(0,2px)} 56%,60%{transform:translate(0,1px)} 61%,66%{transform:translate(0,0)} 67%,71%{transform:translate(0,1px)} 72%,82%{transform:translate(0,2px)} 83%,88%{transform:translate(0,1px)} 89%,100%{transform:translate(0,0)} }
+@keyframes fold-left { 0%,10%{transform:translate(0,0)} 11%,16%{transform:translate(2px,1px)} 17%,27%{transform:translate(3px,3px)} 28%,32%{transform:translate(2px,1px)} 33%,38%{transform:translate(1px,0)} 39%,43%{transform:translate(2px,1px)} 44%,55%{transform:translate(3px,3px)} 56%,60%{transform:translate(2px,1px)} 61%,66%{transform:translate(1px,0)} 67%,71%{transform:translate(2px,1px)} 72%,82%{transform:translate(3px,3px)} 83%,88%{transform:translate(2px,1px)} 89%,100%{transform:translate(0,0)} }
+@keyframes fold-right { 0%,10%{transform:translate(0,0)} 11%,16%{transform:translate(-2px,1px)} 17%,27%{transform:translate(-3px,3px)} 28%,32%{transform:translate(-2px,1px)} 33%,38%{transform:translate(-1px,0)} 39%,43%{transform:translate(-2px,1px)} 44%,55%{transform:translate(-3px,3px)} 56%,60%{transform:translate(-2px,1px)} 61%,66%{transform:translate(-1px,0)} 67%,71%{transform:translate(-2px,1px)} 72%,82%{transform:translate(-3px,3px)} 83%,88%{transform:translate(-2px,1px)} 89%,100%{transform:translate(0,0)} }
+@keyframes fold-accordion { 0%,10%{transform:scaleY(1)} 11%,16%{transform:scaleY(.9)} 17%,27%{transform:scaleY(.8)} 28%,32%{transform:scaleY(.84)} 33%,38%{transform:scaleY(.8)} 39%,43%{transform:scaleY(.7)} 44%,55%{transform:scaleY(.6)} 56%,60%{transform:scaleY(.64)} 61%,66%{transform:scaleY(.6)} 67%,71%{transform:scaleY(.5)} 72%,82%{transform:scaleY(.4)} 83%,88%{transform:scaleY(.44)} 89%,100%{transform:scaleY(1)} }
+@keyframes fold-eyes { 0%,43%{transform:translate(0,1px)} 44%,66%{transform:translate(0,2px)} 67%,100%{transform:translate(0,1px)} }
+@keyframes fold-blink { 0%,59%{transform:scaleY(1)} 60%,66%{transform:scaleY(.15)} 67%,100%{transform:scaleY(1)} }
+/* needs-owner：拧两次拧不开，使劲，然后把罐子推给主人。「使劲」那一拍要最长，
+   推出去要在一拍内完成——这个对比就是「放弃」的读法。 */
+.state-needs-owner { --duration: 4.8s; }
+.state-needs-owner .actor { animation-name: jar-body; }
+.state-needs-owner .left-claw { animation-name: jar-left; }
+.state-needs-owner .right-claw { animation-name: jar-right; }
+.state-needs-owner .jar { transform-origin: -4px 16px; animation-name: jar-prop; }
+.state-needs-owner .lid { transform-origin: -4px 8px; animation-name: jar-lid; }
+.state-needs-owner .eyes { animation-name: jar-eyes; animation-duration: 3.3s; }
+.state-needs-owner .blink { animation-name: jar-blink; animation-duration: 5.5s; }
+@keyframes jar-body { 0%,13%{transform:translate(0,0)} 14%,20%{transform:translate(-1px,0)} 21%,28%{transform:translate(1px,0)} 29%,35%{transform:translate(-1px,0)} 36%,42%{transform:translate(1px,0)} 43%,70%{transform:translate(0,-1px)} 71%,78%{transform:translate(2px,0)} 79%,100%{transform:translate(1px,0)} }
+@keyframes jar-left { 0%,13%{transform:translate(0,0)} 14%,20%{transform:translate(-2px,-1px)} 21%,28%{transform:translate(-1px,-2px)} 29%,35%{transform:translate(-2px,-1px)} 36%,42%{transform:translate(-1px,-2px)} 43%,70%{transform:translate(-2px,-2px)} 71%,78%{transform:translate(1px,0)} 79%,100%{transform:translate(0,0)} }
+@keyframes jar-right { 0%,13%{transform:translate(0,0)} 14%,20%{transform:translate(-1px,-1px)} 21%,28%{transform:translate(-2px,-2px)} 29%,35%{transform:translate(-1px,-1px)} 36%,42%{transform:translate(-2px,-2px)} 43%,70%{transform:translate(-2px,-3px)} 71%,78%{transform:translate(2px,0)} 79%,100%{transform:translate(1px,0)} }
+@keyframes jar-prop { 0%,13%{transform:translate(0,0) rotate(0)} 14%,20%{transform:rotate(-3deg)} 21%,28%{transform:rotate(3deg)} 29%,35%{transform:rotate(-3deg)} 36%,42%{transform:rotate(3deg)} 43%,70%{transform:rotate(0)} 71%,78%{transform:translate(3px,0) rotate(6deg)} 79%,100%{transform:translate(4px,0) rotate(4deg)} }
+@keyframes jar-lid { 0%,13%{transform:rotate(0)} 14%,20%{transform:rotate(-5deg)} 21%,28%{transform:rotate(5deg)} 29%,35%{transform:rotate(-5deg)} 36%,42%{transform:rotate(5deg)} 43%,70%{transform:rotate(0)} 71%,78%{transform:translate(3px,0)} 79%,100%{transform:translate(4px,0)} }
+@keyframes jar-eyes { 0%,26%{transform:translate(-1px,0)} 27%,54%{transform:translate(-1px,1px)} 55%,72%{transform:translate(0,0)} 73%,100%{transform:translate(1px,0)} }
+@keyframes jar-blink { 0%,61%{transform:scaleY(1)} 62%,68%{transform:scaleY(.15)} 69%,100%{transform:scaleY(1)} }
+/* success：起跳，双爪在头顶碰到，落回。跳的顶点要停住一拍——
+   没有滞空的跳跃读不出兴奋。 */
+.state-success { --duration: 2.9s; }
+.state-success .actor { animation-name: highfive-body; }
+.state-success .left-claw { animation-name: highfive-left; }
+.state-success .right-claw { animation-name: highfive-right; }
+.state-success .eyes { animation-name: highfive-eyes; }
+.state-success .blink { animation-name: highfive-blink; }
+@keyframes highfive-body { 0%,14%{transform:translate(0,0)} 15%,22%{transform:translate(0,-2px)} 23%,45%{transform:translate(0,-5px)} 46%,53%{transform:translate(0,-4px)} 54%,61%{transform:translate(0,-1px)} 62%,76%{transform:translate(0,1px)} 77%,84%{transform:translate(0,0)} 85%,100%{transform:translate(0,0)} }
+@keyframes highfive-left { 0%,14%{transform:translate(0,0)} 15%,22%{transform:translate(3px,-3px)} 23%,45%{transform:translate(5px,-6px)} 46%,53%{transform:translate(4px,-5px)} 54%,61%{transform:translate(2px,-2px)} 62%,76%{transform:translate(0,1px)} 77%,100%{transform:translate(0,0)} }
+@keyframes highfive-right { 0%,14%{transform:translate(0,0)} 15%,22%{transform:translate(-3px,-3px)} 23%,45%{transform:translate(-5px,-6px)} 46%,53%{transform:translate(-4px,-5px)} 54%,61%{transform:translate(-2px,-2px)} 62%,76%{transform:translate(0,1px)} 77%,100%{transform:translate(0,0)} }
+@keyframes highfive-eyes { 0%,16%{transform:translate(0,0)} 17%,24%{transform:translate(0,-1px)} 25%,57%{transform:translate(0,-1px)} 58%,74%{transform:translate(0,1px)} 75%,100%{transform:translate(0,0)} }
+@keyframes highfive-blink { 0%,57%{transform:scaleY(1)} 58%,66%{transform:scaleY(.15)} 67%,100%{transform:scaleY(1)} }
+/* error：被篮子扣住、挣脱、站稳、又被碰倒。挣扎要密集，被碰倒要突然。 */
+.state-error { --duration: 4.8s; }
+.state-error .actor { animation-name: fail-body; }
+.state-error .left-claw { animation-name: fail-left; }
+.state-error .right-claw { animation-name: fail-right; }
+.state-error .basket { transform-origin: 8px 18px; animation-name: fail-basket; }
+.state-error .eyes { animation-name: fail-eyes; animation-duration: 3.1s; }
+.state-error .blink { animation-name: fail-blink; animation-duration: 4.3s; }
+@keyframes fail-body { 0%,20%{transform:translate(0,2px)} 21%,28%{transform:translate(-1px,2px)} 29%,35%{transform:translate(1px,1px)} 36%,42%{transform:translate(-1px,1px)} 43%,49%{transform:translate(1px,0)} 50%,70%{transform:translate(0,0)} 71%,78%{transform:translate(0,-1px)} 79%,85%{transform:translate(1px,1px)} 86%,100%{transform:translate(0,2px)} }
+@keyframes fail-left { 0%,20%{transform:translate(1px,1px)} 21%,28%{transform:translate(-1px,0)} 29%,35%{transform:translate(1px,-1px)} 36%,42%{transform:translate(-1px,0)} 43%,49%{transform:translate(0,-1px)} 50%,70%{transform:translate(0,0)} 71%,78%{transform:translate(1px,0)} 79%,100%{transform:translate(1px,1px)} }
+@keyframes fail-right { 0%,20%{transform:translate(-1px,1px)} 21%,28%{transform:translate(1px,0)} 29%,35%{transform:translate(-1px,-1px)} 36%,42%{transform:translate(1px,0)} 43%,49%{transform:translate(0,-1px)} 50%,70%{transform:translate(0,0)} 71%,78%{transform:translate(-1px,0)} 79%,100%{transform:translate(-1px,1px)} }
+@keyframes fail-basket { 0%,20%{transform:translate(0,0) rotate(0)} 21%,28%{transform:rotate(-4deg)} 29%,35%{transform:rotate(4deg)} 36%,42%{transform:rotate(-4deg)} 43%,49%{transform:translate(0,-3px) rotate(8deg)} 50%,70%{transform:translate(1px,-6px) rotate(14deg)} 71%,78%{transform:translate(1px,-4px) rotate(10deg)} 79%,85%{transform:translate(0,-1px) rotate(4deg)} 86%,100%{transform:translate(0,0) rotate(0)} }
+@keyframes fail-eyes { 0%,29%{transform:translate(0,1px)} 30%,49%{transform:translate(-1px,1px)} 50%,69%{transform:translate(1px,1px)} 70%,100%{transform:translate(0,0)} }
+@keyframes fail-blink { 0%,59%{transform:scaleY(1)} 60%,69%{transform:scaleY(.15)} 70%,100%{transform:scaleY(1)} }
+/* away：犯困，把小毛毯拉到身边。拉的动作要有阻力感：起拉快、拖行慢。 */
+.state-away { --duration: 3.8s; }
+.state-away .actor { animation-name: away-body; }
+.state-away .left-claw { animation-name: away-left; }
+.state-away .right-claw { animation-name: away-right; }
+.state-away .blanket { transform-origin: -5px 16px; animation-name: away-blanket; }
+.state-away .eyes { animation-name: away-eyes; animation-duration: 2.9s; }
+.state-away .blink { animation-name: away-blink; animation-duration: 4.7s; }
+@keyframes away-body { 0%,12%{transform:translate(0,0)} 13%,19%{transform:translate(-1px,0)} 20%,32%{transform:translate(-2px,-1px)} 33%,39%{transform:translate(-1px,-1px)} 40%,46%{transform:translate(0,-1px)} 47%,59%{transform:translate(1px,-1px)} 60%,66%{transform:translate(0,0)} 67%,86%{transform:translate(0,1px)} 87%,100%{transform:translate(0,0)} }
+@keyframes away-left { 0%,12%{transform:translate(0,0)} 13%,19%{transform:translate(-3px,0)} 20%,32%{transform:translate(-5px,1px)} 33%,39%{transform:translate(-4px,1px)} 40%,46%{transform:translate(-2px,1px)} 47%,59%{transform:translate(-1px,0)} 60%,66%{transform:translate(0,1px)} 67%,86%{transform:translate(0,2px)} 87%,100%{transform:translate(0,0)} }
+@keyframes away-right { 0%,12%{transform:translate(0,0)} 13%,19%{transform:translate(1px,0)} 20%,32%{transform:translate(2px,1px)} 33%,39%{transform:translate(1px,1px)} 40%,46%{transform:translate(0,1px)} 47%,59%{transform:translate(-1px,1px)} 60%,66%{transform:translate(0,2px)} 67%,86%{transform:translate(0,2px)} 87%,100%{transform:translate(0,0)} }
+@keyframes away-blanket { 0%,12%{transform:translate(0,0) rotate(0)} 13%,19%{transform:translate(1px,0) rotate(-3deg)} 20%,32%{transform:translate(3px,0) rotate(-8deg)} 33%,39%{transform:translate(4px,0) rotate(-6deg)} 40%,46%{transform:translate(5px,0) rotate(-4deg)} 47%,59%{transform:translate(6px,1px) rotate(-2deg)} 60%,86%{transform:translate(6px,1px) rotate(0)} 87%,100%{transform:translate(6px,1px) rotate(0)} }
+@keyframes away-eyes { 0%,35%{transform:scaleY(1)} 36%,54%{transform:translateY(1px) scaleY(.5)} 55%,72%{transform:scaleY(1)} 73%,100%{transform:translateY(1px) scaleY(.35)} }
+@keyframes away-blink { 0%,63%{transform:scaleY(1)} 64%,72%{transform:scaleY(.15)} 73%,100%{transform:scaleY(1)} }
+/* sleeping：俯视平躺盖被呼吸，三个 Zzz 依次升起。呼吸是全动作唯一的节拍，
+   所以它必须是**慢的深呼吸**——吸 2 拍、屏 1 拍、呼 3 拍。
+   三个 Z 各走自己的周期，否则会读成一个整体在闪。 */
+.state-sleeping { --duration: 6.4s; }
+.state-sleeping .actor { transform-origin: 7.5px 10px; animation-name: sleep-body; }
+.state-sleeping .sleep-claws { transform-origin: 7.5px 12px; animation-name: sleep-claws; }
+.state-sleeping .pillow { transform-origin: 7.5px 7px; animation-name: sleep-pillow; }
+.state-sleeping .blanket { transform-origin: 7.5px 19px; animation-name: sleep-blanket; }
+.state-sleeping .z-one { animation-name: sleep-z-one; }
+.state-sleeping .z-two { animation-name: sleep-z-two; }
+.state-sleeping .z-three { animation-name: sleep-z-three; }
+@keyframes sleep-body { 0%,24%{transform:scaleY(1)} 25%,32%{transform:scaleY(1.03)} 33%,49%{transform:scaleY(1.06)} 50%,57%{transform:scaleY(1.06)} 58%,66%{transform:scaleY(1.04)} 67%,74%{transform:scaleY(1.02)} 75%,100%{transform:scaleY(1)} }
+@keyframes sleep-claws { 0%,24%{transform:translate(0,0)} 25%,41%{transform:translate(0,-1px)} 42%,57%{transform:translate(0,-1px)} 58%,66%{transform:translate(0,0)} 67%,100%{transform:translate(0,0)} }
+@keyframes sleep-pillow { 0%,32%{transform:scaleY(1)} 33%,57%{transform:scaleY(.98)} 58%,100%{transform:scaleY(1)} }
+@keyframes sleep-blanket { 0%,24%{transform:scaleY(1)} 25%,32%{transform:scaleY(1.02)} 33%,49%{transform:scaleY(1.05)} 50%,57%{transform:scaleY(1.05)} 58%,66%{transform:scaleY(1.03)} 67%,74%{transform:scaleY(1.01)} 75%,100%{transform:scaleY(1)} }
+@keyframes sleep-z-one { 0%,24%{opacity:0;transform:translate(0,0)} 25%,32%{opacity:1;transform:translate(0,-1px)} 33%,49%{opacity:1;transform:translate(1px,-3px)} 50%,66%{opacity:1;transform:translate(1px,-5px)} 67%,100%{opacity:0;transform:translate(2px,-7px)} }
+@keyframes sleep-z-two { 0%,42%{opacity:0;transform:translate(0,0)} 43%,49%{opacity:1;transform:translate(0,-1px)} 50%,63%{opacity:1;transform:translate(1px,-3px)} 64%,78%{opacity:1;transform:translate(1px,-5px)} 79%,100%{opacity:0;transform:translate(2px,-7px)} }
+@keyframes sleep-z-three { 0%,55%{opacity:0;transform:translate(0,0)} 56%,62%{opacity:1;transform:translate(0,-1px)} 63%,74%{opacity:1;transform:translate(1px,-3px)} 75%,87%{opacity:1;transform:translate(1px,-5px)} 88%,100%{opacity:0;transform:translate(2px,-7px)} }
+/* waking：起身伸展，毛毯滑落。伸展的顶点要停住——没有顶点的伸展读不出「舒服」。 */
+.state-waking { --duration: 2.6s; }
+.state-waking .actor { animation-name: wake-body; }
+.state-waking .left-claw { animation-name: wake-left; }
+.state-waking .right-claw { animation-name: wake-right; }
+.state-waking .blanket { transform-origin: 2px 16px; animation-name: wake-blanket; }
+.state-waking .eyes { animation-name: wake-eyes; }
+.state-waking .blink { animation-name: wake-blink; }
+@keyframes wake-body { 0%,14%{transform:translateY(2px) scaleY(.84)} 15%,22%{transform:translateY(0) scaleY(.96)} 23%,45%{transform:translateY(-3px) scaleY(1.1)} 46%,53%{transform:translateY(-2px) scaleY(1.06)} 54%,61%{transform:translateY(-1px)} 62%,76%{transform:translateY(1px) scaleY(.95)} 77%,100%{transform:translateY(0)} }
+@keyframes wake-left { 0%,14%{transform:translate(2px,1px)} 15%,22%{transform:translate(-1px,-1px)} 23%,45%{transform:translate(-4px,-3px)} 46%,53%{transform:translate(-3px,-2px)} 54%,61%{transform:translate(-3px,-1px)} 62%,76%{transform:translate(-1px,0)} 77%,100%{transform:translate(0,0)} }
+@keyframes wake-right { 0%,14%{transform:translate(-2px,1px)} 15%,22%{transform:translate(1px,-1px)} 23%,45%{transform:translate(4px,-3px)} 46%,53%{transform:translate(3px,-2px)} 54%,61%{transform:translate(3px,-1px)} 62%,76%{transform:translate(1px,0)} 77%,100%{transform:translate(0,0)} }
+@keyframes wake-blanket { 0%,14%{transform:translate(2px,-3px) rotate(0)} 15%,22%{transform:translate(1px,-4px) rotate(-3deg)} 23%,45%{transform:translate(0,-4px) rotate(-6deg)} 46%,53%{transform:translate(-1px,-3px) rotate(-8deg)} 54%,61%{transform:translate(-2px,-1px) rotate(-10deg)} 62%,76%{transform:translate(-3px,0) rotate(-12deg)} 77%,100%{transform:translate(-3px,1px) rotate(-12deg)} }
+@keyframes wake-eyes { 0%,14%{transform:translateY(1px)} 15%,22%{transform:translateY(0)} 23%,53%{transform:translateY(-1px)} 54%,68%{transform:translateY(0)} 69%,100%{transform:translateY(0)} }
+@keyframes wake-blink { 0%,14%{transform:scaleY(.15)} 15%,53%{transform:scaleY(1)} 54%,61%{transform:scaleY(.15)} 62%,100%{transform:scaleY(1)} }
+/* building：在身侧纵向叠积木。放下去那一刻要「顿」一拍，才有重量。 */
+.state-building { --duration: 5s; }
+.state-building .actor { animation-name: build-body; }
+.state-building .left-claw { animation-name: build-left; }
+.state-building .right-claw { animation-name: build-right; }
+.state-building .block-top { transform-origin: -3px 15px; animation-name: build-block; }
+.state-building .eyes { animation-name: build-eyes; animation-duration: 3.7s; }
+.state-building .blink { animation-name: build-blink; animation-duration: 5.9s; }
+@keyframes build-body { 0%,16%{transform:translate(0,0)} 17%,21%{transform:translate(-1px,0)} 22%,38%{transform:translate(-1px,-1px)} 39%,43%{transform:translate(0,-1px)} 44%,66%{transform:translate(0,0)} 67%,71%{transform:translate(0,1px)} 72%,77%{transform:translate(0,0)} 78%,82%{transform:translate(-1px,0)} 83%,100%{transform:translate(0,0)} }
+@keyframes build-left { 0%,13%{transform:translate(0,0)} 14%,20%{transform:translate(-2px,-2px)} 21%,35%{transform:translate(-4px,-4px)} 36%,42%{transform:translate(-4px,-2px)} 43%,56%{transform:translate(-4px,0)} 57%,63%{transform:translate(-2px,1px)} 64%,78%{transform:translate(0,0)} 79%,85%{transform:translate(-1px,-1px)} 86%,100%{transform:translate(0,0)} }
+@keyframes build-right { 0%,20%{transform:translate(0,0)} 21%,28%{transform:translate(-1px,1px)} 29%,49%{transform:translate(-2px,1px)} 50%,56%{transform:translate(-1px,0)} 57%,78%{transform:translate(0,0)} 79%,85%{transform:translate(0,1px)} 86%,100%{transform:translate(0,0)} }
+@keyframes build-block { 0%,13%{transform:translate(0,0)} 14%,20%{transform:translate(0,-2px)} 21%,35%{transform:translate(0,-4px)} 36%,42%{transform:translate(0,-2px)} 43%,70%{transform:translate(0,0)} 71%,78%{transform:translate(0,0)} 79%,85%{transform:translate(0,-1px)} 86%,100%{transform:translate(0,0)} }
+@keyframes build-eyes { 0%,43%{transform:translate(-1px,0)} 44%,66%{transform:translate(-1px,-1px)} 67%,100%{transform:translate(0,0)} }
+@keyframes build-blink { 0%,59%{transform:scaleY(1)} 60%,66%{transform:scaleY(.15)} 67%,100%{transform:scaleY(1)} }
+/* testing：轻推不倒翁并观察回正。回正的摆幅要逐次变小——等幅摆动读作机械。 */
+.state-testing { --duration: 4.8s; }
+.state-testing .actor { animation-name: test-body; }
+.state-testing .left-claw { animation-name: test-left; }
+.state-testing .right-claw { animation-name: test-right; }
+.state-testing .toy { transform-origin: -4px 17px; animation-name: test-toy; }
+.state-testing .eyes { animation-name: test-eyes; animation-duration: 3.3s; }
+.state-testing .blink { animation-name: test-blink; animation-duration: 5.1s; }
+@keyframes test-body { 0%,18%{transform:translate(0,0)} 19%,24%{transform:translate(-1px,0)} 25%,37%{transform:translate(-2px,0)} 38%,43%{transform:translate(-1px,0)} 44%,74%{transform:translate(0,0)} 75%,80%{transform:translate(0,-1px)} 81%,100%{transform:translate(0,0)} }
+@keyframes test-left { 0%,18%{transform:translate(0,0)} 19%,24%{transform:translate(-3px,0)} 25%,37%{transform:translate(-5px,1px)} 38%,43%{transform:translate(-3px,0)} 44%,74%{transform:translate(-1px,0)} 75%,80%{transform:translate(0,-1px)} 81%,100%{transform:translate(0,0)} }
+@keyframes test-right { 0%,24%{transform:translate(0,0)} 25%,37%{transform:translate(-1px,0)} 38%,74%{transform:translate(0,0)} 75%,80%{transform:translate(0,-1px)} 81%,100%{transform:translate(0,0)} }
+@keyframes test-toy { 0%,18%{transform:rotate(0)} 19%,24%{transform:rotate(-6deg)} 25%,37%{transform:rotate(-14deg)} 38%,43%{transform:rotate(-6deg)} 44%,49%{transform:rotate(6deg)} 50%,55%{transform:rotate(10deg)} 56%,62%{transform:rotate(2deg)} 63%,68%{transform:rotate(-6deg)} 69%,74%{transform:rotate(-2deg)} 75%,80%{transform:rotate(3deg)} 81%,100%{transform:rotate(0)} }
+@keyframes test-eyes { 0%,43%{transform:translate(-1px,0)} 44%,66%{transform:translate(-1px,1px)} 67%,100%{transform:translate(0,0)} }
+@keyframes test-blink { 0%,61%{transform:scaleY(1)} 62%,68%{transform:scaleY(.15)} 69%,100%{transform:scaleY(1)} }
+/* click：被轻点后侧向压扁再回望。压扁必须在一拍内到位，回弹分三段。 */
+.state-click { --duration: 2.2s; }
+.state-click .actor { animation-name: click-body; }
+.state-click .left-claw { animation-name: click-left; }
+.state-click .eyes { animation-name: click-eyes; }
+.state-click .blink { animation-name: click-blink; }
+@keyframes click-body { 0%,7%{transform:translate(0,0)} 8%,16%{transform:translate(1px,1px) scaleY(.8)} 17%,32%{transform:translate(2px,1px) scaleY(.72)} 33%,41%{transform:translate(1px,0) scaleY(.9)} 42%,49%{transform:translate(0,-1px) scaleY(1.04)} 50%,66%{transform:translate(0,0) scaleY(1)} 67%,100%{transform:translate(0,0)} }
+@keyframes click-left { 0%,7%{transform:translate(0,0)} 8%,16%{transform:translate(2px,1px)} 17%,32%{transform:translate(3px,2px)} 33%,41%{transform:translate(2px,1px)} 42%,49%{transform:translate(0,-1px)} 50%,100%{transform:translate(0,0)} }
+@keyframes click-eyes { 0%,7%{transform:translate(0,0)} 8%,16%{transform:translate(1px,1px)} 17%,32%{transform:translate(2px,1px)} 33%,41%{transform:translate(1px,0)} 42%,66%{transform:translate(-1px,0)} 67%,100%{transform:translate(0,0)} }
+@keyframes click-blink { 0%,7%{transform:scaleY(1)} 8%,16%{transform:scaleY(.15)} 17%,100%{transform:scaleY(1)} }
+/* double-click：连点后惊跳。惊跳没有预备动作——直接起，落地才有缓冲。 */
+.state-double-click { --duration: 2.4s; }
+.state-double-click .actor { animation-name: double-body; }
+.state-double-click .left-claw { animation-name: double-left; }
+.state-double-click .right-claw { animation-name: double-right; }
+@keyframes double-body { 0%,7%{transform:translate(0,0)} 8%,22%{transform:translate(0,-5px)} 23%,37%{transform:translate(0,-6px)} 38%,45%{transform:translate(0,-3px)} 46%,53%{transform:translate(0,1px) scaleY(.82)} 54%,61%{transform:translate(0,0) scaleY(1.04)} 62%,76%{transform:translate(0,0)} 77%,100%{transform:translate(0,0)} }
+@keyframes double-left { 0%,7%{transform:translate(0,0)} 8%,22%{transform:translate(-2px,-3px)} 23%,37%{transform:translate(-3px,-4px)} 38%,45%{transform:translate(-2px,-1px)} 46%,53%{transform:translate(0,2px)} 54%,100%{transform:translate(0,0)} }
+@keyframes double-right { 0%,7%{transform:translate(0,0)} 8%,22%{transform:translate(2px,-3px)} 23%,37%{transform:translate(3px,-4px)} 38%,45%{transform:translate(2px,-1px)} 46%,53%{transform:translate(0,2px)} 54%,100%{transform:translate(0,0)} }
+/* drag：被拖动时抓住吊环。这是 held 循环，所以是持续的摆荡而不是一次反应。 */
+.state-drag { --duration: 3.2s; }
+.state-drag .actor { animation-name: drag-body; }
+.state-drag .left-claw { animation-name: drag-left; }
+.state-drag .right-claw { animation-name: drag-right; }
+.state-drag .eyes { animation-name: drag-eyes; animation-duration: 2.3s; }
+.state-drag .blink { animation-name: drag-blink; animation-duration: 3.7s; }
+@keyframes drag-body { 0%,16%{transform:translate(0,1px)} 17%,24%{transform:translate(-1px,1px)} 25%,41%{transform:translate(-2px,2px)} 42%,49%{transform:translate(-1px,1px)} 50%,57%{transform:translate(0,1px)} 58%,66%{transform:translate(1px,1px)} 67%,82%{transform:translate(2px,2px)} 83%,91%{transform:translate(1px,1px)} 92%,100%{transform:translate(0,1px)} }
+@keyframes drag-left { 0%,24%{transform:translate(2px,-3px)} 25%,41%{transform:translate(2px,-4px)} 42%,66%{transform:translate(2px,-3px)} 67%,82%{transform:translate(2px,-4px)} 83%,100%{transform:translate(2px,-3px)} }
+@keyframes drag-right { 0%,24%{transform:translate(-2px,-3px)} 25%,41%{transform:translate(-2px,-4px)} 42%,66%{transform:translate(-2px,-3px)} 67%,82%{transform:translate(-2px,-4px)} 83%,100%{transform:translate(-2px,-3px)} }
+@keyframes drag-eyes { 0%,32%{transform:translate(0,1px)} 33%,55%{transform:translate(-1px,1px)} 56%,77%{transform:translate(1px,1px)} 78%,100%{transform:translate(0,1px)} }
+@keyframes drag-blink { 0%,59%{transform:scaleY(1)} 60%,69%{transform:scaleY(.15)} 70%,100%{transform:scaleY(1)} }
+/* drop：落地压扁、回弹、站稳。三次回弹要一次比一次小。 */
+.state-drop { --duration: 2.6s; }
+.state-drop .actor { animation-name: drop-body; }
+.state-drop .left-claw { animation-name: drop-left; }
+.state-drop .right-claw { animation-name: drop-right; }
+.state-drop .eyes { animation-name: drop-eyes; }
+.state-drop .blink { animation-name: drop-blink; }
+@keyframes drop-body { 0%,7%{transform:translate(0,-4px)} 8%,16%{transform:translate(0,1px) scaleY(.7)} 17%,24%{transform:translate(0,0) scaleY(1.12)} 25%,32%{transform:translate(0,-2px) scaleY(1.04)} 33%,41%{transform:translate(0,1px) scaleY(.88)} 42%,49%{transform:translate(0,0) scaleY(1.04)} 50%,57%{transform:translate(0,0) scaleY(.96)} 58%,100%{transform:translate(0,0)} }
+@keyframes drop-left { 0%,8%{transform:translate(0,-3px)} 9%,17%{transform:translate(-2px,2px)} 18%,26%{transform:translate(-3px,0)} 27%,35%{transform:translate(-2px,-1px)} 36%,44%{transform:translate(-1px,1px)} 45%,100%{transform:translate(0,0)} }
+@keyframes drop-right { 0%,8%{transform:translate(0,-3px)} 9%,17%{transform:translate(2px,2px)} 18%,26%{transform:translate(3px,0)} 27%,35%{transform:translate(2px,-1px)} 36%,44%{transform:translate(1px,1px)} 45%,100%{transform:translate(0,0)} }
+@keyframes drop-eyes { 0%,8%{transform:translate(0,-1px)} 9%,17%{transform:translate(0,2px)} 18%,26%{transform:translate(0,0)} 27%,35%{transform:translate(0,1px)} 36%,100%{transform:translate(0,0)} }
+@keyframes drop-blink { 0%,8%{transform:scaleY(1)} 9%,26%{transform:scaleY(.15)} 27%,100%{transform:scaleY(1)} }
+/* hover：不画光标，只用眼神与重心跟随。这是 held：必须能无限循环而不腻。 */
+.state-hover { --duration: 3s; }
+.state-hover .actor { animation-name: hover-body; }
+.state-hover .left-claw { animation-name: hover-left; animation-duration: 2.3s; }
+.state-hover .right-claw { animation-name: hover-right; animation-duration: 2.7s; }
+.state-hover .eyes { animation-name: hover-eyes; animation-duration: 1.9s; }
+.state-hover .blink { animation-name: hover-blink; animation-duration: 4.3s; }
+@keyframes hover-body { 0%,24%{transform:translate(0,0)} 25%,32%{transform:translate(0,-1px)} 33%,49%{transform:translate(1px,-1px)} 50%,57%{transform:translate(1px,0)} 58%,74%{transform:translate(0,0)} 75%,82%{transform:translate(-1px,0)} 83%,100%{transform:translate(0,0)} }
+@keyframes hover-left { 0%,29%{transform:translate(0,0)} 30%,49%{transform:translate(1px,-2px)} 50%,69%{transform:translate(1px,-1px)} 70%,100%{transform:translate(0,0)} }
+@keyframes hover-right { 0%,43%{transform:translate(0,0)} 44%,66%{transform:translate(-1px,-1px)} 67%,100%{transform:translate(0,0)} }
+@keyframes hover-eyes { 0%,29%{transform:translate(1px,-1px)} 30%,49%{transform:translate(1px,0)} 50%,69%{transform:translate(0,-1px)} 70%,100%{transform:translate(1px,-1px)} }
+@keyframes hover-blink { 0%,61%{transform:scaleY(1)} 62%,68%{transform:scaleY(.15)} 69%,100%{transform:scaleY(1)} }
+/* edge：从帘幕后偷看再躲回去。探头要慢（试探），缩回要快（被发现了）。 */
+.state-edge { --duration: 4.6s; }
+.state-edge .actor { animation-name: edge-body; }
+.state-edge .left-claw { animation-name: edge-left; }
+.state-edge .eyes { animation-name: edge-eyes; animation-duration: 3.1s; }
+.state-edge .blink { animation-name: edge-blink; animation-duration: 5.3s; }
+@keyframes edge-body { 0%,20%{transform:translate(6px,0)} 21%,28%{transform:translate(4px,0)} 29%,42%{transform:translate(2px,0)} 43%,49%{transform:translate(1px,0)} 50%,78%{transform:translate(0,0)} 79%,85%{transform:translate(2px,0)} 86%,100%{transform:translate(6px,0)} }
+@keyframes edge-left { 0%,20%{transform:translate(1px,0)} 21%,28%{transform:translate(1px,-1px)} 29%,42%{transform:translate(0,-1px)} 43%,49%{transform:translate(0,0)} 50%,78%{transform:translate(-1px,0)} 79%,85%{transform:translate(0,0)} 86%,100%{transform:translate(1px,0)} }
+@keyframes edge-eyes { 0%,29%{transform:translate(-1px,0)} 30%,49%{transform:translate(0,0)} 50%,79%{transform:translate(1px,0)} 80%,100%{transform:translate(0,0)} }
+@keyframes edge-blink { 0%,63%{transform:scaleY(1)} 64%,70%{transform:scaleY(.15)} 71%,100%{transform:scaleY(1)} }
+/* low-battery：身体下沉、双爪内卷、半闭眼。间或有一次「撑一下又垮下去」——
+   纯粹的单调下沉读作静止图，那次徒劳的挣扎才让它是活的。 */
+.state-low-battery { --duration: 6.2s; }
+.state-low-battery .actor { animation-name: battery-body; }
+.state-low-battery .left-claw { animation-name: battery-left; }
+.state-low-battery .right-claw { animation-name: battery-right; }
+.state-low-battery .eyes { animation-name: battery-eyes; }
+.state-low-battery .blink { animation-name: battery-blink; animation-duration: 4.1s; }
+@keyframes battery-body { 0%,17%{transform:translate(0,1px) scaleY(.94)} 18%,28%{transform:translate(0,2px) scaleY(.9)} 29%,46%{transform:translate(0,2px) scaleY(.88)} 47%,52%{transform:translate(0,0) scaleY(1)} 53%,58%{transform:translate(0,1px) scaleY(.94)} 59%,75%{transform:translate(0,2px) scaleY(.88)} 76%,100%{transform:translate(0,3px) scaleY(.84)} }
+@keyframes battery-left { 0%,17%{transform:translate(1px,1px)} 18%,28%{transform:translate(2px,2px)} 29%,46%{transform:translate(2px,3px)} 47%,52%{transform:translate(0,0)} 53%,58%{transform:translate(1px,1px)} 59%,75%{transform:translate(2px,3px)} 76%,100%{transform:translate(2px,4px)} }
+@keyframes battery-right { 0%,17%{transform:translate(-1px,1px)} 18%,28%{transform:translate(-2px,2px)} 29%,46%{transform:translate(-2px,3px)} 47%,52%{transform:translate(0,0)} 53%,58%{transform:translate(-1px,1px)} 59%,75%{transform:translate(-2px,3px)} 76%,100%{transform:translate(-2px,4px)} }
+@keyframes battery-eyes { 0%,17%{transform:translate(0,1px)} 18%,46%{transform:translate(0,2px)} 47%,52%{transform:translate(0,0)} 53%,75%{transform:translate(0,2px)} 76%,100%{transform:translate(0,3px)} }
+@keyframes battery-blink { 0%,35%{transform:scaleY(.5)} 36%,56%{transform:scaleY(.15)} 57%,70%{transform:scaleY(.5)} 71%,100%{transform:scaleY(.35)} }
+/* offline：停下来向左右仔细听。「听」的读感来自**静止的长停顿**加上突然转向，
+   所以这个动作刻意保留大段不动，只在转向那几拍密集。 */
+.state-offline { --duration: 5.2s; }
+.state-offline .actor { animation-name: offline-body; }
+.state-offline .left-claw { animation-name: offline-left; }
+.state-offline .right-claw { animation-name: offline-right; }
+.state-offline .eyes { animation-name: offline-eyes; }
+.state-offline .blink { animation-name: offline-blink; animation-duration: 3.7s; }
+@keyframes offline-body { 0%,19%{transform:translate(0,0)} 20%,24%{transform:translate(-1px,0)} 25%,44%{transform:translate(-2px,0)} 45%,49%{transform:translate(-1px,0)} 50%,54%{transform:translate(0,0)} 55%,59%{transform:translate(1px,0)} 60%,79%{transform:translate(2px,0)} 80%,84%{transform:translate(1px,0)} 85%,100%{transform:translate(0,0)} }
+@keyframes offline-left { 0%,19%{transform:translate(0,0)} 20%,24%{transform:translate(-1px,-1px)} 25%,44%{transform:translate(-1px,-2px)} 45%,49%{transform:translate(-1px,-1px)} 50%,54%{transform:translate(0,0)} 55%,59%{transform:translate(1px,0)} 60%,79%{transform:translate(1px,-1px)} 80%,100%{transform:translate(0,0)} }
+@keyframes offline-right { 0%,19%{transform:translate(0,0)} 20%,24%{transform:translate(-1px,0)} 25%,44%{transform:translate(-1px,-1px)} 45%,59%{transform:translate(0,0)} 60%,79%{transform:translate(1px,-2px)} 80%,100%{transform:translate(0,0)} }
+@keyframes offline-eyes { 0%,20%{transform:translate(0,0)} 21%,46%{transform:translate(-1px,0)} 47%,57%{transform:translate(0,0)} 58%,83%{transform:translate(1px,0)} 84%,100%{transform:translate(0,0)} }
+@keyframes offline-blink { 0%,63%{transform:scaleY(1)} 64%,72%{transform:scaleY(.15)} 73%,100%{transform:scaleY(1)} }
+/* launching：从压扁小团展开、双爪打开、站稳。展开要有过冲，否则像充气。 */
+.state-launching { --duration: 2.8s; }
+.state-launching .actor { animation-name: launch-body; }
+.state-launching .launch-legs { transform-origin: 7.5px 14px; animation-name: launch-legs; }
+.state-launching .left-claw { animation-name: launch-left; }
+.state-launching .right-claw { animation-name: launch-right; }
+.state-launching .eyes { animation-name: launch-eyes; }
+.state-launching .blink { animation-name: launch-blink; }
+@keyframes launch-body { 0%,7%{transform:translateY(4px) scaleY(.3)} 8%,16%{transform:translateY(2px) scaleY(.66)} 17%,32%{transform:translateY(-1px) scaleY(1.14)} 33%,41%{transform:translateY(0) scaleY(1.06)} 42%,49%{transform:translateY(1px) scaleY(.94)} 50%,57%{transform:translateY(0) scaleY(1.02)} 58%,74%{transform:translateY(0) scaleY(1)} 75%,100%{transform:translateY(0)} }
+@keyframes launch-legs { 0%,7%{transform:scaleY(0)} 8%,16%{transform:scaleY(.4)} 17%,32%{transform:scaleY(1.2)} 33%,41%{transform:scaleY(1)} 42%,49%{transform:scaleY(1.06)} 50%,100%{transform:scaleY(1)} }
+@keyframes launch-left { 0%,7%{transform:translate(3px,3px)} 8%,16%{transform:translate(1px,1px)} 17%,32%{transform:translate(-2px,-2px)} 33%,41%{transform:translate(-1px,-1px)} 42%,49%{transform:translate(0,1px)} 50%,100%{transform:translate(0,0)} }
+@keyframes launch-right { 0%,7%{transform:translate(-3px,3px)} 8%,16%{transform:translate(-1px,1px)} 17%,32%{transform:translate(2px,-2px)} 33%,41%{transform:translate(1px,-1px)} 42%,49%{transform:translate(0,1px)} 50%,100%{transform:translate(0,0)} }
+@keyframes launch-eyes { 0%,7%{transform:translateY(2px)} 8%,16%{transform:translateY(1px)} 17%,41%{transform:translateY(-1px)} 42%,100%{transform:translateY(0)} }
+@keyframes launch-blink { 0%,14%{transform:scaleY(.15)} 15%,61%{transform:scaleY(1)} 62%,68%{transform:scaleY(.15)} 69%,100%{transform:scaleY(1)} }
+/* quitting：挥一次小爪、闭眼、收回小团。挥手要有两下，一下读作抬手不是告别。 */
+.state-quitting { --duration: 2.8s; }
+.state-quitting .actor { animation-name: quit-body; }
+.state-quitting .quit-legs { transform-origin: 7.5px 14px; animation-name: quit-legs; }
+.state-quitting .left-claw { animation-name: quit-left; }
+.state-quitting .right-claw { animation-name: quit-right; }
+.state-quitting .eyes { animation-name: quit-eyes; }
+.state-quitting .blink { animation-name: quit-blink; }
+@keyframes quit-body { 0%,17%{transform:translateY(0)} 18%,26%{transform:translateY(-1px)} 27%,35%{transform:translateY(0)} 36%,44%{transform:translateY(-1px)} 45%,54%{transform:translateY(0)} 55%,63%{transform:translateY(1px) scaleY(.9)} 64%,72%{transform:translateY(3px) scaleY(.6)} 73%,100%{transform:translateY(4px) scaleY(.3)} }
+@keyframes quit-legs { 0%,54%{transform:scaleY(1)} 55%,63%{transform:scaleY(.8)} 64%,72%{transform:scaleY(.4)} 73%,100%{transform:scaleY(0)} }
+@keyframes quit-left { 0%,17%{transform:translate(0,0)} 18%,26%{transform:translate(-2px,-3px)} 27%,35%{transform:translate(-1px,-4px)} 36%,44%{transform:translate(-3px,-3px)} 45%,54%{transform:translate(-1px,-4px)} 55%,63%{transform:translate(0,-1px)} 64%,72%{transform:translate(1px,2px)} 73%,100%{transform:translate(2px,3px)} }
+@keyframes quit-right { 0%,54%{transform:translate(0,0)} 55%,63%{transform:translate(0,1px)} 64%,72%{transform:translate(-1px,2px)} 73%,100%{transform:translate(-2px,3px)} }
+@keyframes quit-eyes { 0%,44%{transform:translate(0,0)} 45%,63%{transform:translate(0,1px)} 64%,100%{transform:translate(0,2px)} }
+@keyframes quit-blink { 0%,32%{transform:scaleY(1)} 33%,41%{transform:scaleY(.15)} 42%,57%{transform:scaleY(1)} 58%,100%{transform:scaleY(.15)} }
+/* waiting：身体不动，一只爪连续轻点三次。点击要密、间隔要长——
+   「等」的焦躁感全在那个长间隔里。 */
+.state-waiting { --duration: 4.2s; }
+.state-waiting .actor { animation-name: waiting-body; }
+.state-waiting .left-claw { animation-name: waiting-left; }
+.state-waiting .right-claw { animation-name: waiting-right; animation-duration: 3.3s; }
+.state-waiting .eyes { animation-name: waiting-eyes; animation-duration: 2.7s; }
+.state-waiting .blink { animation-name: waiting-blink; animation-duration: 4.7s; }
+@keyframes waiting-body { 0%,18%{transform:translate(0,0)} 19%,24%{transform:translate(0,-1px)} 25%,30%{transform:translate(0,0)} 31%,37%{transform:translate(0,-1px)} 38%,43%{transform:translate(0,0)} 44%,49%{transform:translate(0,-1px)} 50%,100%{transform:translate(0,0)} }
+@keyframes waiting-left { 0%,18%{transform:translate(0,0)} 19%,24%{transform:translate(0,2px)} 25%,30%{transform:translate(0,0)} 31%,37%{transform:translate(0,2px)} 38%,43%{transform:translate(0,0)} 44%,49%{transform:translate(0,2px)} 50%,100%{transform:translate(0,0)} }
+@keyframes waiting-right { 0%,49%{transform:translate(0,0)} 50%,57%{transform:translate(0,-1px)} 58%,100%{transform:translate(0,0)} }
+@keyframes waiting-eyes { 0%,39%{transform:translate(0,0)} 40%,59%{transform:translate(-1px,0)} 60%,79%{transform:translate(0,0)} 80%,100%{transform:translate(1px,0)} }
+@keyframes waiting-blink { 0%,61%{transform:scaleY(1)} 62%,68%{transform:scaleY(.15)} 69%,100%{transform:scaleY(1)} }
+/* paused：几乎静止，只留慢呼吸和眨眼。这是全套最安静的动作——
+   但「几乎静止」不等于「静止图」，旧版 6 秒只有 2 个姿态，
+   那是真的一动不动。眼睛与呼吸各走各的周期就够了。 */
+.state-paused { --duration: 6s; }
+.state-paused .actor { animation-name: paused-body; }
+.state-paused .left-claw { animation-name: paused-left; animation-duration: 4.3s; }
+.state-paused .right-claw { animation-name: paused-right; animation-duration: 5.1s; }
+.state-paused .eyes { animation-name: paused-eyes; animation-duration: 3.7s; }
+.state-paused .blink { animation-name: paused-blink; animation-duration: 5.3s; }
+@keyframes paused-body { 0%,36%{transform:translateY(0) scaleY(1)} 37%,41%{transform:translateY(0) scaleY(1.02)} 42%,62%{transform:translateY(0) scaleY(1.03)} 63%,67%{transform:translateY(0) scaleY(1.01)} 68%,100%{transform:translateY(0) scaleY(1)} }
+@keyframes paused-left { 0%,44%{transform:translate(1px,0)} 45%,63%{transform:translate(1px,-1px)} 64%,100%{transform:translate(1px,0)} }
+@keyframes paused-right { 0%,44%{transform:translate(-1px,0)} 45%,63%{transform:translate(-1px,-1px)} 64%,100%{transform:translate(-1px,0)} }
+@keyframes paused-eyes { 0%,45%{transform:translate(0,0)} 46%,61%{transform:translate(1px,0)} 62%,100%{transform:translate(0,0)} }
+@keyframes paused-blink { 0%,62%{transform:scaleY(1)} 63%,68%{transform:scaleY(.15)} 69%,100%{transform:scaleY(1)} }
+/* owner-resolved：罐盖咔哒松开、扶稳罐子、放心眨眼。「咔哒」必须是单独一拍的突变。 */
+.state-owner-resolved { --duration: 3.2s; }
+.state-owner-resolved .actor { animation-name: resolved-body; }
+.state-owner-resolved .left-claw { animation-name: resolved-left; }
+.state-owner-resolved .right-claw { animation-name: resolved-right; }
+.state-owner-resolved .jar { transform-origin: -2px 17px; animation-name: resolved-jar; }
+.state-owner-resolved .lid { transform-origin: -2px 9px; animation-name: resolved-lid; }
+.state-owner-resolved .eyes { animation-name: resolved-eyes; }
+.state-owner-resolved .blink { animation-name: resolved-blink; }
+@keyframes resolved-body { 0%,24%{transform:translate(0,0)} 25%,32%{transform:translate(0,-1px)} 33%,41%{transform:translate(0,-2px)} 42%,49%{transform:translate(0,0)} 50%,57%{transform:translate(0,1px)} 58%,74%{transform:translate(0,0)} 75%,100%{transform:translate(0,0)} }
+@keyframes resolved-left { 0%,24%{transform:translate(-2px,-1px)} 25%,32%{transform:translate(-2px,-2px)} 33%,41%{transform:translate(-1px,-3px)} 42%,49%{transform:translate(-1px,-1px)} 50%,57%{transform:translate(-1px,0)} 58%,100%{transform:translate(0,0)} }
+@keyframes resolved-right { 0%,24%{transform:translate(-1px,-1px)} 25%,32%{transform:translate(-1px,-2px)} 33%,41%{transform:translate(0,-3px)} 42%,49%{transform:translate(0,-1px)} 50%,100%{transform:translate(0,0)} }
+@keyframes resolved-jar { 0%,24%{transform:rotate(-4deg)} 25%,32%{transform:rotate(-2deg)} 33%,41%{transform:rotate(0)} 42%,49%{transform:rotate(1deg)} 50%,100%{transform:rotate(0)} }
+@keyframes resolved-lid { 0%,24%{transform:translate(0,0) rotate(0)} 25%,32%{transform:translate(0,-1px) rotate(-8deg)} 33%,41%{transform:translate(-1px,-3px) rotate(-18deg)} 42%,49%{transform:translate(-1px,-2px) rotate(-14deg)} 50%,100%{transform:translate(-1px,-2px) rotate(-16deg)} }
+@keyframes resolved-eyes { 0%,24%{transform:translate(-1px,0)} 25%,41%{transform:translate(-1px,-1px)} 42%,100%{transform:translate(0,0)} }
+@keyframes resolved-blink { 0%,45%{transform:scaleY(1)} 46%,53%{transform:scaleY(.15)} 54%,68%{transform:scaleY(1)} 69%,76%{transform:scaleY(.15)} 77%,100%{transform:scaleY(1)} }
+/* recovering：把篮子推开、抖一抖、重新站稳。抖动要逐次衰减。 */
+.state-recovering { --duration: 3.4s; }
+.state-recovering .actor { animation-name: recovering-body; }
+.state-recovering .left-claw { animation-name: recovering-left; }
+.state-recovering .right-claw { animation-name: recovering-right; }
+.state-recovering .basket { transform-origin: 8px 16px; animation-name: recovering-basket; }
+.state-recovering .eyes { animation-name: recovering-eyes; }
+.state-recovering .blink { animation-name: recovering-blink; }
+@keyframes recovering-body { 0%,16%{transform:translateY(3px) scaleY(.7)} 17%,24%{transform:translate(-1px,1px) scaleY(.84)} 25%,41%{transform:translate(1px,-1px) scaleY(1.04)} 42%,49%{transform:translate(-1px,0)} 50%,57%{transform:translate(1px,0)} 58%,66%{transform:translate(-1px,0)} 67%,74%{transform:translate(0,0)} 75%,100%{transform:translate(0,0)} }
+@keyframes recovering-left { 0%,16%{transform:translate(2px,2px)} 17%,24%{transform:translate(-1px,-2px)} 25%,41%{transform:translate(-4px,-3px)} 42%,49%{transform:translate(-2px,-1px)} 50%,57%{transform:translate(-1px,-1px)} 58%,66%{transform:translate(0,0)} 67%,100%{transform:translate(0,0)} }
+@keyframes recovering-right { 0%,16%{transform:translate(-2px,2px)} 17%,24%{transform:translate(1px,-2px)} 25%,41%{transform:translate(4px,-3px)} 42%,49%{transform:translate(2px,-1px)} 50%,57%{transform:translate(1px,-1px)} 58%,66%{transform:translate(0,0)} 67%,100%{transform:translate(0,0)} }
+@keyframes recovering-basket { 0%,16%{transform:translate(0,0) rotate(0)} 17%,24%{transform:translate(1px,-2px) rotate(10deg)} 25%,41%{transform:translate(4px,-4px) rotate(26deg)} 42%,49%{transform:translate(6px,-2px) rotate(38deg)} 50%,57%{transform:translate(7px,0) rotate(44deg)} 58%,100%{transform:translate(7px,1px) rotate(46deg)} }
+@keyframes recovering-eyes { 0%,16%{transform:translate(0,2px)} 17%,24%{transform:translate(0,0)} 25%,41%{transform:translate(0,-1px)} 42%,100%{transform:translate(0,0)} }
+@keyframes recovering-blink { 0%,16%{transform:scaleY(.35)} 17%,66%{transform:scaleY(1)} 67%,74%{transform:scaleY(.15)} 75%,100%{transform:scaleY(1)} }
+
+/* === 生成区结束 === */
