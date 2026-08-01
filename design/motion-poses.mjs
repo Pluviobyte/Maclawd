@@ -1411,3 +1411,203 @@ ANIMATIONS.push(
     ],
   },
 );
+
+// ============================================================================
+// working 候选第三批
+//
+// 前两批都没碰过的轴：
+//   I 朝向    — 背对着你（前八个全是正面）
+//   J 位置    — 道具在**身后**且角色在位移（前八个道具都在身前/头顶，角色原地）
+//   L 结构    — 一个循环内有起承转合（前八个都是均匀节拍的重复）
+//   N 对称性  — 左右爪各干各的、周期还不同（前八个双爪都是同一件事的两半）
+// ============================================================================
+
+ANIMATIONS.push(
+  {
+    state: 'work-i',
+    svg: {
+      file: 'work-i-hunch.svg',
+      title: 'Desk Hunch',
+      desc: 'Turned away from you, hunched over the work; only the back and a bit of claw show.',
+      // 背对：眼睛藏起来，壳纹替代面部特征，否则就是一个纯色方块。
+      // 台面被身体挡住大半，只露上缘——那条边就是「有张桌子」的全部证据。
+      props: '<g class="desk"><rect x="0" y="10" width="15" height="1" fill="#8C7A5E"/>'
+        + '<rect x="1" y="11" width="13" height="1" fill="#6E5F49"/></g>',
+      propsAfter: '<g class="shell"><rect x="3" y="8" width="9" height="1" fill="#C4715A"/>'
+        + '<rect x="4" y="10" width="7" height="1" fill="#C4715A"/></g>',
+    },
+    duration: 3400,
+    comment: '背身伏案。转过去不理你，只看得到背在起伏、一点爪尖在动。\n'
+      + '   八个候选全是正面站着，这个换的是**朝向**——背对本身就是「别打扰我」。',
+    layers: [
+      { sel: '.actor', name: 'hunch-body', poses: [
+        p('translate(0,2px) scaleY(.88)', 4), p('translate(0,1px) scaleY(.92)', 1),
+        p('translate(0,1px) scaleY(.96)', 2), p('translate(0,2px) scaleY(.9)', 1),
+        p('translate(0,3px) scaleY(.84)', 3), p('translate(0,2px) scaleY(.9)', 1),
+        p('translate(0,2px) scaleY(.86)', 2) ] },
+      { sel: '.left-claw', name: 'hunch-left', period: 1130, poses: [
+        p('translate(2px,2px)', 3), p('translate(3px,3px)', 1), p('translate(3px,2px)', 2),
+        p('translate(2px,1px)', 1) ] },
+      { sel: '.right-claw', name: 'hunch-right', period: 1700, poses: [
+        p('translate(-2px,1px)', 3), p('translate(-3px,3px)', 1), p('translate(-3px,2px)', 2),
+        p('translate(-2px,2px)', 1) ] },
+      // 背对时眼睛不可见。给一条恒定 opacity:0 的动画，比在素材里删掉更好——
+      // 角色几何仍然与契约一致，只是这个动作看不到脸。
+      { sel: '.eyes', name: 'hunch-eyes', poses: [p('opacity:0', 1)] },
+      { sel: '.blink', name: 'hunch-blink', poses: [p('opacity:0', 1)] },
+    ],
+  },
+
+  {
+    state: 'work-j',
+    svg: {
+      file: 'work-j-tow.svg',
+      title: 'Tow Line',
+      desc: 'Hauls a train of crates behind it, stepping forward one small pace at a time.',
+      splitLegs: true,
+      // 道具在**身后**——前八个全在身前或头顶。串的每一节延迟跟随，
+      // 那个延迟就是「拖」的全部读感；同步跟随会读成粘在身上。
+      props: '<g class="tow-c"><rect x="-14" y="12" width="4" height="4" fill="#B9A1D9"/>'
+        + '<rect x="-13" y="13" width="2" height="1" fill="#E7DCF2"/></g>'
+        + '<g class="tow-b"><rect x="-9" y="12" width="4" height="4" fill="#7BC8C4"/>'
+        + '<rect x="-8" y="13" width="2" height="1" fill="#BDE7E4"/></g>'
+        + '<g class="tow-a"><rect x="-4" y="12" width="4" height="4" fill="#F6C85F"/>'
+        + '<rect x="-3" y="13" width="2" height="1" fill="#FFE3A3"/></g>',
+    },
+    duration: 3400,
+    comment: '拖运。身后拖着一串箱子，一小步一小步往前挪。\n'
+      + '   串的每一节都比前一节晚一拍跟上——那个**延迟**就是「拖得动」的读感。',
+    layers: [
+      { sel: '.actor', name: 'tow-body', poses: [
+        p('translate(0,0) scaleX(.96)', 4), p('translate(1px,-1px)', 1), p('translate(2px,0)', 2),
+        p('translate(2px,0) scaleX(1.02)', 1), p('translate(1px,1px)', 3), p('translate(0,0)', 1),
+        p('translate(0,1px) scaleX(.98)', 2) ] },
+      { sel: '.left-claw', name: 'tow-left', poses: [
+        p('translate(1px,1px)', 4), p('translate(2px,0)', 1), p('translate(2px,-1px)', 2),
+        p('translate(1px,0)', 1), p('translate(1px,1px)', 3), p('translate(0,1px)', 3) ] },
+      { sel: '.right-claw', name: 'tow-right', poses: [
+        p('translate(-2px,2px)', 4), p('translate(-2px,1px)', 1), p('translate(-1px,1px)', 2),
+        p('translate(-2px,2px)', 4), p('translate(-2px,1px)', 3) ] },
+      // 三节各晚一拍：a 跟得最紧，c 拖在最后
+      { sel: '.tow-a', name: 'tow-crate-a', poses: [
+        p('translate(0,0)', 5), p('translate(1px,0)', 1), p('translate(2px,0)', 2),
+        p('translate(2px,0)', 1), p('translate(1px,1px)', 3), p('translate(0,0)', 2) ] },
+      { sel: '.tow-b', name: 'tow-crate-b', poses: [
+        p('translate(0,0)', 7), p('translate(1px,0)', 1), p('translate(2px,0)', 2),
+        p('translate(1px,1px)', 2), p('translate(0,0)', 2) ] },
+      { sel: '.tow-c', name: 'tow-crate-c', poses: [
+        p('translate(0,0)', 9), p('translate(1px,0)', 1), p('translate(2px,0)', 2),
+        p('translate(1px,0)', 1), p('translate(0,1px)', 1) ] },
+      { sel: '.leg-a', name: 'tow-leg-a', period: 1700, poses: [
+        p('translate(0,0)', 4), p('translate(1px,-1px)', 1), p('translate(0,0)', 3) ] },
+      { sel: '.leg-b', name: 'tow-leg-b', period: 1700, poses: [
+        p('translate(0,0)', 6), p('translate(1px,-1px)', 1), p('translate(0,0)', 1) ] },
+      { sel: '.leg-c', name: 'tow-leg-c', period: 1700, poses: [
+        p('translate(1px,-1px)', 1), p('translate(0,0)', 5), p('translate(0,0)', 2) ] },
+      { sel: '.leg-d', name: 'tow-leg-d', period: 1700, poses: [
+        p('translate(0,0)', 2), p('translate(1px,-1px)', 1), p('translate(0,0)', 5) ] },
+      { sel: '.eyes', name: 'tow-eyes', period: 2900, poses: [
+        p('translate(1px,1px)', 4), p('translate(1px,0)', 2), p('translate(0,1px)', 3) ] },
+      { sel: '.blink', name: 'tow-blink', period: 4700, poses: [
+        p('scaleY(1)', 11), p('scaleY(.15)', 1), p('scaleY(1)', 4) ] },
+    ],
+  },
+
+  {
+    state: 'work-l',
+    svg: {
+      file: 'work-l-cycle.svg',
+      title: 'Full Cycle',
+      desc: 'One complete beat of work per loop: fetch, process, inspect, file away.',
+      propsAfter: '<g class="item motion"><rect x="5" y="11" width="5" height="4" fill="#7BC8C4"/>'
+        + '<rect x="6" y="12" width="3" height="1" fill="#BDE7E4"/></g>'
+        + '<g class="done motion"><rect x="16" y="13" width="4" height="3" fill="#B9A1D9"/>'
+        + '<rect x="17" y="14" width="2" height="1" fill="#E7DCF2"/></g>',
+    },
+    duration: 3400,
+    comment: '起承转合。一个循环里是一件**完整的活**：伸手取料 → 快速加工 →\n'
+      + '   举起来检查（停一拍）→ 归到右边。\n'
+      + '   前八个候选都是均匀节拍的重复，这个换的是**循环结构**——\n'
+      + '   有段落感，看久了不会腻，但也因此每一遍都一样、可预测。',
+    layers: [
+      { sel: '.actor', name: 'cycle-body', poses: [
+        // ① 取
+        p('translate(-2px,1px)', 3), p('translate(-1px,0)', 1),
+        // ② 加工：高频小抖
+        p('translate(0,-1px)', 1), p('translate(1px,0)', 1), p('translate(0,-1px)', 1),
+        p('translate(1px,0)', 1), p('translate(0,-1px)', 1),
+        // ③ 检查：举起来停住
+        p('translate(0,-2px)', 4),
+        // ④ 归位
+        p('translate(1px,-1px)', 1), p('translate(2px,0)', 2), p('translate(1px,1px)', 1) ] },
+      { sel: '.left-claw', name: 'cycle-left', poses: [
+        p('translate(1px,3px)', 3), p('translate(2px,1px)', 1),
+        p('translate(3px,-1px)', 1), p('translate(2px,0)', 1), p('translate(3px,-1px)', 1),
+        p('translate(2px,0)', 1), p('translate(3px,-1px)', 1),
+        p('translate(3px,-3px)', 4),
+        p('translate(4px,-2px)', 1), p('translate(5px,0)', 2), p('translate(2px,2px)', 1) ] },
+      { sel: '.right-claw', name: 'cycle-right', poses: [
+        p('translate(-1px,2px)', 3), p('translate(-2px,1px)', 1),
+        p('translate(-3px,-1px)', 1), p('translate(-2px,0)', 1), p('translate(-3px,-1px)', 1),
+        p('translate(-2px,0)', 1), p('translate(-3px,-1px)', 1),
+        p('translate(-3px,-3px)', 4),
+        p('translate(-2px,-2px)', 1), p('translate(0,0)', 2), p('translate(-1px,1px)', 1) ] },
+      { sel: '.item', name: 'cycle-item', poses: [
+        p('opacity:0;transform:translate(-4px,3px)', 2), p('opacity:1;transform:translate(-3px,2px)', 1),
+        p('opacity:1;transform:translate(-1px,0)', 1),
+        p('opacity:1;transform:translate(0,-1px)', 1), p('opacity:1;transform:translate(0,0)', 1),
+        p('opacity:1;transform:translate(0,-1px)', 1), p('opacity:1;transform:translate(0,0)', 1),
+        p('opacity:1;transform:translate(0,-3px)', 4),
+        p('opacity:1;transform:translate(4px,-2px)', 1), p('opacity:0;transform:translate(9px,0)', 2) ] },
+      // 右边的成品堆一件件长高，一个循环加一件
+      { sel: '.done', name: 'cycle-done', origin: '18px 16px', poses: [
+        p('scaleY(.6)', 12), p('scaleY(1)', 3), p('scaleY(.9)', 2) ] },
+      { sel: '.eyes', name: 'cycle-eyes', poses: [
+        p('translate(-1px,1px)', 3), p('translate(0,0)', 4),
+        p('translate(0,-1px)', 4), p('translate(1px,0)', 3) ] },
+      { sel: '.blink', name: 'cycle-blink', period: 4700, poses: [
+        p('scaleY(1)', 11), p('scaleY(.15)', 1), p('scaleY(1)', 4) ] },
+    ],
+  },
+
+  {
+    state: 'work-n',
+    svg: {
+      file: 'work-n-split.svg',
+      title: 'Split Duty',
+      desc: 'Each claw runs a different job at a different tempo — two things at once.',
+      // 左右**不是同一件事的两半**：左边压、右边拉，周期还不同（1130 vs 1700）。
+      // 前八个候选的双爪都是对称的。
+      propsAfter: '<g class="job-l motion"><rect x="-2" y="12" width="5" height="3" fill="#F6C85F"/>'
+        + '<rect x="-1" y="13" width="3" height="1" fill="#FFE3A3"/></g>'
+        + '<g class="job-r motion"><rect x="12" y="10" width="4" height="6" fill="#7BC8C4"/>'
+        + '<rect x="13" y="11" width="2" height="1" fill="#BDE7E4"/></g>',
+    },
+    duration: 3400,
+    comment: '左右开工。左爪在压、右爪在拉，两边**周期不同**——\n'
+      + '   1130ms 对 1700ms，永远错开，合起来的图案要 3.4 秒才重复一次。\n'
+      + '   前八个的双爪都是同一件事的两半，这个是两件事同时在干。',
+    layers: [
+      { sel: '.actor', name: 'split-body', poses: [
+        p('translate(-1px,0)', 4), p('translate(-1px,1px)', 1), p('translate(0,-1px)', 2),
+        p('translate(1px,0)', 4), p('translate(1px,1px)', 1), p('translate(0,-1px)', 2) ] },
+      // 左：压。快节奏
+      { sel: '.left-claw', name: 'split-left', period: 1130, poses: [
+        p('translate(-1px,0)', 3), p('translate(-2px,2px)', 2), p('translate(-2px,3px)', 1),
+        p('translate(-1px,1px)', 1) ] },
+      { sel: '.job-l', name: 'split-job-l', period: 1130, origin: '0.5px 15px', poses: [
+        p('scaleY(1)', 3), p('scaleY(.6)', 2), p('scaleY(1.15)', 1), p('scaleY(1)', 1) ] },
+      // 右：拉。慢节奏
+      { sel: '.right-claw', name: 'split-right', period: 1700, poses: [
+        p('translate(-1px,-2px)', 3), p('translate(-1px,0)', 1), p('translate(0,2px)', 3),
+        p('translate(0,0)', 1) ] },
+      { sel: '.job-r', name: 'split-job-r', period: 1700, origin: '14px 16px', poses: [
+        p('scaleY(1)', 3), p('scaleY(.72)', 1), p('scaleY(.55)', 3), p('scaleY(.85)', 1) ] },
+      { sel: '.eyes', name: 'split-eyes', period: 2300, poses: [
+        p('translate(-1px,1px)', 3), p('translate(0,0)', 1), p('translate(1px,1px)', 3),
+        p('translate(0,0)', 1) ] },
+      { sel: '.blink', name: 'split-blink', period: 4300, poses: [
+        p('scaleY(1)', 9), p('scaleY(.15)', 1), p('scaleY(1)', 4) ] },
+    ],
+  },
+);

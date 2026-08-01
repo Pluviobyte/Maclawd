@@ -675,5 +675,82 @@
 @keyframes rain-drop-c { 0%,16%{opacity:0;transform:translateY(-4px)} 17%,49%{opacity:1;transform:translateY(3px)} 50%,82%{opacity:1;transform:translateY(8px)} 83%,100%{opacity:0;transform:translate(3px,12px)} }
 @keyframes rain-eyes { 0%,28%{transform:translate(-1px,-1px)} 29%,42%{transform:translate(0,-1px)} 43%,70%{transform:translate(1px,-1px)} 71%,100%{transform:translate(0,0)} }
 @keyframes rain-blink { 0%,66%{transform:scaleY(1)} 67%,74%{transform:scaleY(.15)} 75%,100%{transform:scaleY(1)} }
+/* work-i：背身伏案。转过去不理你，只看得到背在起伏、一点爪尖在动。
+   八个候选全是正面站着，这个换的是**朝向**——背对本身就是「别打扰我」。 */
+.state-work-i { --duration: 3.4s; }
+.state-work-i .actor { animation-name: hunch-body; }
+.state-work-i .left-claw { animation-name: hunch-left; animation-duration: 1.13s; }
+.state-work-i .right-claw { animation-name: hunch-right; animation-duration: 1.7s; }
+.state-work-i .eyes { animation-name: hunch-eyes; }
+.state-work-i .blink { animation-name: hunch-blink; }
+@keyframes hunch-body { 0%,28%{transform:translate(0,2px) scaleY(.88)} 29%,35%{transform:translate(0,1px) scaleY(.92)} 36%,49%{transform:translate(0,1px) scaleY(.96)} 50%,56%{transform:translate(0,2px) scaleY(.9)} 57%,78%{transform:translate(0,3px) scaleY(.84)} 79%,85%{transform:translate(0,2px) scaleY(.9)} 86%,100%{transform:translate(0,2px) scaleY(.86)} }
+@keyframes hunch-left { 0%,42%{transform:translate(2px,2px)} 43%,56%{transform:translate(3px,3px)} 57%,85%{transform:translate(3px,2px)} 86%,100%{transform:translate(2px,1px)} }
+@keyframes hunch-right { 0%,42%{transform:translate(-2px,1px)} 43%,56%{transform:translate(-3px,3px)} 57%,85%{transform:translate(-3px,2px)} 86%,100%{transform:translate(-2px,2px)} }
+@keyframes hunch-eyes { 0%,100%{opacity:0} }
+@keyframes hunch-blink { 0%,100%{opacity:0} }
+/* work-j：拖运。身后拖着一串箱子，一小步一小步往前挪。
+   串的每一节都比前一节晚一拍跟上——那个**延迟**就是「拖得动」的读感。 */
+.state-work-j { --duration: 3.4s; }
+.state-work-j .actor { animation-name: tow-body; }
+.state-work-j .left-claw { animation-name: tow-left; }
+.state-work-j .right-claw { animation-name: tow-right; }
+.state-work-j .tow-a { animation-name: tow-crate-a; }
+.state-work-j .tow-b { animation-name: tow-crate-b; }
+.state-work-j .tow-c { animation-name: tow-crate-c; }
+.state-work-j .leg-a { animation-name: tow-leg-a; animation-duration: 1.7s; }
+.state-work-j .leg-b { animation-name: tow-leg-b; animation-duration: 1.7s; }
+.state-work-j .leg-c { animation-name: tow-leg-c; animation-duration: 1.7s; }
+.state-work-j .leg-d { animation-name: tow-leg-d; animation-duration: 1.7s; }
+.state-work-j .eyes { animation-name: tow-eyes; animation-duration: 2.9s; }
+.state-work-j .blink { animation-name: tow-blink; animation-duration: 4.7s; }
+@keyframes tow-body { 0%,28%{transform:translate(0,0) scaleX(.96)} 29%,35%{transform:translate(1px,-1px)} 36%,49%{transform:translate(2px,0)} 50%,56%{transform:translate(2px,0) scaleX(1.02)} 57%,78%{transform:translate(1px,1px)} 79%,85%{transform:translate(0,0)} 86%,100%{transform:translate(0,1px) scaleX(.98)} }
+@keyframes tow-left { 0%,28%{transform:translate(1px,1px)} 29%,35%{transform:translate(2px,0)} 36%,49%{transform:translate(2px,-1px)} 50%,56%{transform:translate(1px,0)} 57%,78%{transform:translate(1px,1px)} 79%,100%{transform:translate(0,1px)} }
+@keyframes tow-right { 0%,28%{transform:translate(-2px,2px)} 29%,35%{transform:translate(-2px,1px)} 36%,49%{transform:translate(-1px,1px)} 50%,78%{transform:translate(-2px,2px)} 79%,100%{transform:translate(-2px,1px)} }
+@keyframes tow-crate-a { 0%,35%{transform:translate(0,0)} 36%,42%{transform:translate(1px,0)} 43%,56%{transform:translate(2px,0)} 57%,63%{transform:translate(2px,0)} 64%,85%{transform:translate(1px,1px)} 86%,100%{transform:translate(0,0)} }
+@keyframes tow-crate-b { 0%,49%{transform:translate(0,0)} 50%,56%{transform:translate(1px,0)} 57%,70%{transform:translate(2px,0)} 71%,85%{transform:translate(1px,1px)} 86%,100%{transform:translate(0,0)} }
+@keyframes tow-crate-c { 0%,63%{transform:translate(0,0)} 64%,70%{transform:translate(1px,0)} 71%,85%{transform:translate(2px,0)} 86%,92%{transform:translate(1px,0)} 93%,100%{transform:translate(0,1px)} }
+@keyframes tow-leg-a { 0%,49%{transform:translate(0,0)} 50%,62%{transform:translate(1px,-1px)} 63%,100%{transform:translate(0,0)} }
+@keyframes tow-leg-b { 0%,74%{transform:translate(0,0)} 75%,87%{transform:translate(1px,-1px)} 88%,100%{transform:translate(0,0)} }
+@keyframes tow-leg-c { 0%,12%{transform:translate(1px,-1px)} 13%,74%{transform:translate(0,0)} 75%,100%{transform:translate(0,0)} }
+@keyframes tow-leg-d { 0%,24%{transform:translate(0,0)} 25%,37%{transform:translate(1px,-1px)} 38%,100%{transform:translate(0,0)} }
+@keyframes tow-eyes { 0%,43%{transform:translate(1px,1px)} 44%,66%{transform:translate(1px,0)} 67%,100%{transform:translate(0,1px)} }
+@keyframes tow-blink { 0%,68%{transform:scaleY(1)} 69%,74%{transform:scaleY(.15)} 75%,100%{transform:scaleY(1)} }
+/* work-l：起承转合。一个循环里是一件**完整的活**：伸手取料 → 快速加工 →
+   举起来检查（停一拍）→ 归到右边。
+   前八个候选都是均匀节拍的重复，这个换的是**循环结构**——
+   有段落感，看久了不会腻，但也因此每一遍都一样、可预测。 */
+.state-work-l { --duration: 3.4s; }
+.state-work-l .actor { animation-name: cycle-body; }
+.state-work-l .left-claw { animation-name: cycle-left; }
+.state-work-l .right-claw { animation-name: cycle-right; }
+.state-work-l .item { animation-name: cycle-item; }
+.state-work-l .done { transform-origin: 18px 16px; animation-name: cycle-done; }
+.state-work-l .eyes { animation-name: cycle-eyes; }
+.state-work-l .blink { animation-name: cycle-blink; animation-duration: 4.7s; }
+@keyframes cycle-body { 0%,17%{transform:translate(-2px,1px)} 18%,23%{transform:translate(-1px,0)} 24%,28%{transform:translate(0,-1px)} 29%,34%{transform:translate(1px,0)} 35%,40%{transform:translate(0,-1px)} 41%,46%{transform:translate(1px,0)} 47%,52%{transform:translate(0,-1px)} 53%,75%{transform:translate(0,-2px)} 76%,81%{transform:translate(1px,-1px)} 82%,93%{transform:translate(2px,0)} 94%,100%{transform:translate(1px,1px)} }
+@keyframes cycle-left { 0%,17%{transform:translate(1px,3px)} 18%,23%{transform:translate(2px,1px)} 24%,28%{transform:translate(3px,-1px)} 29%,34%{transform:translate(2px,0)} 35%,40%{transform:translate(3px,-1px)} 41%,46%{transform:translate(2px,0)} 47%,52%{transform:translate(3px,-1px)} 53%,75%{transform:translate(3px,-3px)} 76%,81%{transform:translate(4px,-2px)} 82%,93%{transform:translate(5px,0)} 94%,100%{transform:translate(2px,2px)} }
+@keyframes cycle-right { 0%,17%{transform:translate(-1px,2px)} 18%,23%{transform:translate(-2px,1px)} 24%,28%{transform:translate(-3px,-1px)} 29%,34%{transform:translate(-2px,0)} 35%,40%{transform:translate(-3px,-1px)} 41%,46%{transform:translate(-2px,0)} 47%,52%{transform:translate(-3px,-1px)} 53%,75%{transform:translate(-3px,-3px)} 76%,81%{transform:translate(-2px,-2px)} 82%,93%{transform:translate(0,0)} 94%,100%{transform:translate(-1px,1px)} }
+@keyframes cycle-item { 0%,12%{opacity:0;transform:translate(-4px,3px)} 13%,19%{opacity:1;transform:translate(-3px,2px)} 20%,26%{opacity:1;transform:translate(-1px,0)} 27%,32%{opacity:1;transform:translate(0,-1px)} 33%,39%{opacity:1;transform:translate(0,0)} 40%,46%{opacity:1;transform:translate(0,-1px)} 47%,52%{opacity:1;transform:translate(0,0)} 53%,79%{opacity:1;transform:translate(0,-3px)} 80%,86%{opacity:1;transform:translate(4px,-2px)} 87%,100%{opacity:0;transform:translate(9px,0)} }
+@keyframes cycle-done { 0%,70%{transform:scaleY(.6)} 71%,87%{transform:scaleY(1)} 88%,100%{transform:scaleY(.9)} }
+@keyframes cycle-eyes { 0%,20%{transform:translate(-1px,1px)} 21%,49%{transform:translate(0,0)} 50%,78%{transform:translate(0,-1px)} 79%,100%{transform:translate(1px,0)} }
+@keyframes cycle-blink { 0%,68%{transform:scaleY(1)} 69%,74%{transform:scaleY(.15)} 75%,100%{transform:scaleY(1)} }
+/* work-n：左右开工。左爪在压、右爪在拉，两边**周期不同**——
+   1130ms 对 1700ms，永远错开，合起来的图案要 3.4 秒才重复一次。
+   前八个的双爪都是同一件事的两半，这个是两件事同时在干。 */
+.state-work-n { --duration: 3.4s; }
+.state-work-n .actor { animation-name: split-body; }
+.state-work-n .left-claw { animation-name: split-left; animation-duration: 1.13s; }
+.state-work-n .job-l { transform-origin: 0.5px 15px; animation-name: split-job-l; animation-duration: 1.13s; }
+.state-work-n .right-claw { animation-name: split-right; animation-duration: 1.7s; }
+.state-work-n .job-r { transform-origin: 14px 16px; animation-name: split-job-r; animation-duration: 1.7s; }
+.state-work-n .eyes { animation-name: split-eyes; animation-duration: 2.3s; }
+.state-work-n .blink { animation-name: split-blink; animation-duration: 4.3s; }
+@keyframes split-body { 0%,28%{transform:translate(-1px,0)} 29%,35%{transform:translate(-1px,1px)} 36%,49%{transform:translate(0,-1px)} 50%,78%{transform:translate(1px,0)} 79%,85%{transform:translate(1px,1px)} 86%,100%{transform:translate(0,-1px)} }
+@keyframes split-left { 0%,42%{transform:translate(-1px,0)} 43%,70%{transform:translate(-2px,2px)} 71%,85%{transform:translate(-2px,3px)} 86%,100%{transform:translate(-1px,1px)} }
+@keyframes split-job-l { 0%,42%{transform:scaleY(1)} 43%,70%{transform:scaleY(.6)} 71%,85%{transform:scaleY(1.15)} 86%,100%{transform:scaleY(1)} }
+@keyframes split-right { 0%,37%{transform:translate(-1px,-2px)} 38%,49%{transform:translate(-1px,0)} 50%,87%{transform:translate(0,2px)} 88%,100%{transform:translate(0,0)} }
+@keyframes split-job-r { 0%,37%{transform:scaleY(1)} 38%,49%{transform:scaleY(.72)} 50%,87%{transform:scaleY(.55)} 88%,100%{transform:scaleY(.85)} }
+@keyframes split-eyes { 0%,37%{transform:translate(-1px,1px)} 38%,49%{transform:translate(0,0)} 50%,87%{transform:translate(1px,1px)} 88%,100%{transform:translate(0,0)} }
+@keyframes split-blink { 0%,63%{transform:scaleY(1)} 64%,70%{transform:scaleY(.15)} 71%,100%{transform:scaleY(1)} }
 
 /* === 生成区结束 === */
