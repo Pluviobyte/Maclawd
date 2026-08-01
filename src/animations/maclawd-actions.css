@@ -752,5 +752,85 @@
 @keyframes split-job-r { 0%,37%{transform:scaleY(1)} 38%,49%{transform:scaleY(.72)} 50%,87%{transform:scaleY(.55)} 88%,100%{transform:scaleY(.85)} }
 @keyframes split-eyes { 0%,37%{transform:translate(-1px,1px)} 38%,49%{transform:translate(0,0)} 50%,87%{transform:translate(1px,1px)} 88%,100%{transform:translate(0,0)} }
 @keyframes split-blink { 0%,63%{transform:scaleY(1)} 64%,70%{transform:scaleY(.15)} 71%,100%{transform:scaleY(1)} }
+/* work-o：敲键盘。双爪高频交替下击，被敲到的键下沉一格。
+   周期 850ms——四个候选里最快的，每 0.85 秒一轮双击，
+   打字的读感全在**频率**上，慢下来就变成「戳」了。 */
+.state-work-o { --duration: 3.4s; }
+.state-work-o .actor { animation-name: keys-body; }
+.state-work-o .left-claw { animation-name: keys-left; animation-duration: 0.85s; }
+.state-work-o .right-claw { animation-name: keys-right; animation-duration: 0.85s; }
+.state-work-o .key-a { animation-name: keys-key-a; animation-duration: 0.85s; }
+.state-work-o .key-b { animation-name: keys-key-b; animation-duration: 0.85s; }
+.state-work-o .key-c { animation-name: keys-key-c; animation-duration: 0.85s; }
+.state-work-o .eyes { animation-name: keys-eyes; animation-duration: 2.9s; }
+.state-work-o .blink { animation-name: keys-blink; animation-duration: 4.3s; }
+@keyframes keys-body { 0%,28%{transform:translate(0,1px)} 29%,35%{transform:translate(-1px,2px)} 36%,49%{transform:translate(0,1px)} 50%,56%{transform:translate(1px,2px)} 57%,78%{transform:translate(0,1px)} 79%,85%{transform:translate(0,2px)} 86%,100%{transform:translate(-1px,1px)} }
+@keyframes keys-left { 0%,42%{transform:translate(3px,2px)} 43%,56%{transform:translate(3px,4px)} 57%,70%{transform:translate(3px,3px)} 71%,100%{transform:translate(4px,1px)} }
+@keyframes keys-right { 0%,28%{transform:translate(-4px,1px)} 29%,70%{transform:translate(-3px,2px)} 71%,85%{transform:translate(-3px,4px)} 86%,100%{transform:translate(-3px,3px)} }
+@keyframes keys-key-a { 0%,62%{transform:translateY(0)} 63%,74%{transform:translateY(1px)} 75%,100%{transform:translateY(0)} }
+@keyframes keys-key-b { 0%,12%{transform:translateY(1px)} 13%,62%{transform:translateY(0)} 63%,74%{transform:translateY(1px)} 75%,100%{transform:translateY(0)} }
+@keyframes keys-key-c { 0%,24%{transform:translateY(0)} 25%,37%{transform:translateY(1px)} 38%,100%{transform:translateY(0)} }
+@keyframes keys-eyes { 0%,41%{transform:translate(0,-1px)} 42%,57%{transform:translate(1px,-1px)} 58%,82%{transform:translate(0,-1px)} 83%,100%{transform:translate(-1px,-1px)} }
+@keyframes keys-blink { 0%,66%{transform:scaleY(1)} 67%,72%{transform:scaleY(.15)} 73%,100%{transform:scaleY(1)} }
+/* work-q：翻卡。右边一叠翻到左边，一张接一张。
+   翻转用 scaleX 压到 0 再展开——像素画里这就是「翻过去」的标准写法。
+   与 A 的区别：A 是收下并消化，这个是**过一遍就扔到另一边**。 */
+.state-work-q { --duration: 3.4s; }
+.state-work-q .actor { animation-name: cards-body; }
+.state-work-q .left-claw { animation-name: cards-left; animation-duration: 1.13s; }
+.state-work-q .right-claw { animation-name: cards-right; animation-duration: 1.13s; }
+.state-work-q .flip { transform-origin: 11.5px 13.5px; animation-name: cards-flip; animation-duration: 1.13s; }
+.state-work-q .eyes { animation-name: cards-eyes; animation-duration: 1.9s; }
+.state-work-q .blink { animation-name: cards-blink; animation-duration: 4.3s; }
+@keyframes cards-body { 0%,28%{transform:translate(1px,0)} 29%,35%{transform:translate(0,-1px)} 36%,49%{transform:translate(-1px,0)} 50%,56%{transform:translate(-1px,1px)} 57%,78%{transform:translate(1px,0)} 79%,85%{transform:translate(0,-1px)} 86%,100%{transform:translate(1px,1px)} }
+@keyframes cards-left { 0%,42%{transform:translate(2px,1px)} 43%,56%{transform:translate(3px,0)} 57%,85%{transform:translate(3px,1px)} 86%,100%{transform:translate(2px,2px)} }
+@keyframes cards-right { 0%,42%{transform:translate(-2px,0)} 43%,56%{transform:translate(-3px,1px)} 57%,85%{transform:translate(-4px,0)} 86%,100%{transform:translate(-3px,-1px)} }
+@keyframes cards-flip { 0%,37%{opacity:1;transform:scaleX(1)} 38%,49%{opacity:1;transform:scaleX(.4) translateX(-3px)} 50%,62%{opacity:1;transform:scaleX(.05) translateX(-8px)} 63%,74%{opacity:1;transform:scaleX(.5) translateX(-13px)} 75%,100%{opacity:0;transform:scaleX(1) translateX(-16px)} }
+@keyframes cards-eyes { 0%,37%{transform:translate(1px,0)} 38%,49%{transform:translate(0,0)} 50%,87%{transform:translate(-1px,0)} 88%,100%{transform:translate(0,1px)} }
+@keyframes cards-blink { 0%,63%{transform:scaleY(1)} 64%,70%{transform:scaleY(.15)} 71%,100%{transform:scaleY(1)} }
+/* work-r：踩踏板。四条腿轮流蹬，板被踩得一头沉一头翘，整个身体跟着起伏。
+   这是 E（无道具全身发力）的修正版：腿仍然是主角，
+   但给了它一块看得见的板，「在使劲」才有了对象。 */
+.state-work-r { --duration: 3.4s; }
+.state-work-r .actor { animation-name: pedal-body; }
+.state-work-r .board { transform-origin: 7.5px 16px; animation-name: pedal-board; }
+.state-work-r .leg-a { animation-name: pedal-leg-a; animation-duration: 0.85s; }
+.state-work-r .leg-b { animation-name: pedal-leg-b; animation-duration: 0.85s; }
+.state-work-r .leg-c { animation-name: pedal-leg-c; animation-duration: 0.85s; }
+.state-work-r .leg-d { animation-name: pedal-leg-d; animation-duration: 0.85s; }
+.state-work-r .left-claw { animation-name: pedal-left; }
+.state-work-r .right-claw { animation-name: pedal-right; }
+.state-work-r .eyes { animation-name: pedal-eyes; animation-duration: 2.3s; }
+.state-work-r .blink { animation-name: pedal-blink; animation-duration: 5.3s; }
+@keyframes pedal-body { 0%,28%{transform:translate(-1px,1px) scaleY(.94)} 29%,35%{transform:translate(-1px,0)} 36%,49%{transform:translate(0,-1px) scaleY(1.02)} 50%,56%{transform:translate(1px,0)} 57%,78%{transform:translate(1px,1px) scaleY(.94)} 79%,85%{transform:translate(1px,0)} 86%,100%{transform:translate(0,0) scaleY(.98)} }
+@keyframes pedal-board { 0%,28%{transform:rotate(-6deg)} 29%,35%{transform:rotate(-3deg)} 36%,49%{transform:rotate(0)} 50%,56%{transform:rotate(3deg)} 57%,78%{transform:rotate(6deg)} 79%,85%{transform:rotate(3deg)} 86%,100%{transform:rotate(0)} }
+@keyframes pedal-leg-a { 0%,42%{transform:translateY(0)} 43%,56%{transform:translateY(-2px)} 57%,70%{transform:translateY(-1px)} 71%,100%{transform:translateY(0)} }
+@keyframes pedal-leg-b { 0%,13%{transform:translateY(-1px)} 14%,56%{transform:translateY(0)} 57%,70%{transform:translateY(-2px)} 71%,100%{transform:translateY(0)} }
+@keyframes pedal-leg-c { 0%,28%{transform:translateY(0)} 29%,42%{transform:translateY(-2px)} 43%,56%{transform:translateY(-1px)} 57%,100%{transform:translateY(0)} }
+@keyframes pedal-leg-d { 0%,70%{transform:translateY(0)} 71%,85%{transform:translateY(-2px)} 86%,100%{transform:translateY(-1px)} }
+@keyframes pedal-left { 0%,35%{transform:translate(1px,-1px)} 36%,54%{transform:translate(1px,0)} 55%,81%{transform:translate(2px,-1px)} 82%,100%{transform:translate(1px,0)} }
+@keyframes pedal-right { 0%,35%{transform:translate(-2px,-1px)} 36%,54%{transform:translate(-1px,0)} 55%,81%{transform:translate(-1px,-1px)} 82%,100%{transform:translate(-2px,0)} }
+@keyframes pedal-eyes { 0%,43%{transform:translate(0,-1px)} 44%,66%{transform:translate(0,0)} 67%,100%{transform:translate(0,-1px)} }
+@keyframes pedal-blink { 0%,70%{transform:scaleY(1)} 71%,75%{transform:scaleY(.15)} 76%,100%{transform:scaleY(1)} }
+/* work-s：收发。背上一根天线，信号一波波往外发；双爪在底座上调。
+   十二个候选里最抽象的一个——不表演体力活，表演**在和远端通信**。
+   对一个 AI 客户端来说，这可能比搬砖更贴近它真正在做的事。 */
+.state-work-s { --duration: 3.4s; }
+.state-work-s .actor { animation-name: signal-body; }
+.state-work-s .left-claw { animation-name: signal-left; animation-duration: 1.7s; }
+.state-work-s .right-claw { animation-name: signal-right; animation-duration: 1.7s; }
+.state-work-s .pulse-a { animation-name: signal-pulse-a; }
+.state-work-s .pulse-b { animation-name: signal-pulse-b; }
+.state-work-s .pulse-c { animation-name: signal-pulse-c; }
+.state-work-s .eyes { animation-name: signal-eyes; animation-duration: 2.9s; }
+.state-work-s .blink { animation-name: signal-blink; animation-duration: 4.7s; }
+@keyframes signal-body { 0%,28%{transform:translate(0,-1px)} 29%,35%{transform:translate(-1px,-1px)} 36%,49%{transform:translate(-1px,0)} 50%,56%{transform:translate(0,-2px)} 57%,78%{transform:translate(1px,0)} 79%,85%{transform:translate(1px,-1px)} 86%,100%{transform:translate(0,-2px)} }
+@keyframes signal-left { 0%,42%{transform:translate(2px,-2px)} 43%,56%{transform:translate(2px,-3px)} 57%,85%{transform:translate(3px,-2px)} 86%,100%{transform:translate(2px,-1px)} }
+@keyframes signal-right { 0%,13%{transform:translate(-2px,-1px)} 14%,56%{transform:translate(-2px,-2px)} 57%,70%{transform:translate(-3px,-3px)} 71%,100%{transform:translate(-2px,-2px)} }
+@keyframes signal-pulse-a { 0%,10%{opacity:0;transform:translateY(4px) scaleX(.4)} 11%,32%{opacity:1;transform:translateY(1px) scaleX(.7)} 33%,55%{opacity:1;transform:translateY(-2px) scaleX(1)} 56%,77%{opacity:1;transform:translateY(-5px) scaleX(1.3)} 78%,100%{opacity:0;transform:translateY(-8px) scaleX(1.6)} }
+@keyframes signal-pulse-b { 0%,21%{opacity:1;transform:translateY(-2px) scaleX(1)} 22%,43%{opacity:1;transform:translateY(-5px) scaleX(1.3)} 44%,66%{opacity:0;transform:translateY(-8px) scaleX(1.6)} 67%,77%{opacity:0;transform:translateY(4px) scaleX(.4)} 78%,100%{opacity:1;transform:translateY(1px) scaleX(.7)} }
+@keyframes signal-pulse-c { 0%,21%{opacity:0;transform:translateY(-8px) scaleX(1.6)} 22%,32%{opacity:0;transform:translateY(4px) scaleX(.4)} 33%,55%{opacity:1;transform:translateY(1px) scaleX(.7)} 56%,77%{opacity:1;transform:translateY(-2px) scaleX(1)} 78%,100%{opacity:1;transform:translateY(-5px) scaleX(1.3)} }
+@keyframes signal-eyes { 0%,35%{transform:translate(0,-1px)} 36%,54%{transform:translate(0,0)} 55%,81%{transform:translate(0,-1px)} 82%,100%{transform:translate(1px,0)} }
+@keyframes signal-blink { 0%,68%{transform:scaleY(1)} 69%,74%{transform:scaleY(.15)} 75%,100%{transform:scaleY(1)} }
 
 /* === 生成区结束 === */

@@ -1611,3 +1611,213 @@ ANIMATIONS.push(
     ],
   },
 );
+
+// ============================================================================
+// working 候选第四批
+//
+//   O 敲键盘  — 电脑场景里最直白的「在干活」，用户点名要的
+//   Q 翻卡片  — 快速连续过料，与 A 的「流入」区别在于是「翻过去」不是「收下」
+//   R 踩踏板  — 修正 E 的失败：腿仍是主角，但给它配一个**看得见的**道具
+//   S 收发    — 抽象方向：头顶天线一波波收发信号，表达「在和远端通信」
+// ============================================================================
+
+ANIMATIONS.push(
+  {
+    state: 'work-o',
+    svg: {
+      file: 'work-o-keys.svg',
+      title: 'Keyboard',
+      desc: 'Types on a small keyboard with both claws in rapid alternation; keys depress under each strike.',
+      // 键帽必须 2 单位宽才看得见（1 单位 = 3px）。三个键够读出「一排键」，
+      // 再多就糊成一条了。键盘抬到腿的高度，短手才够得着。
+      propsAfter: '<g class="kbd"><rect x="2" y="14" width="12" height="3" fill="#6E5F49"/>'
+        + '<rect x="2" y="17" width="12" height="1" fill="#544732"/></g>'
+        + '<g class="key-a motion"><rect x="3" y="13" width="2" height="1" fill="#E8E0D2"/></g>'
+        + '<g class="key-b motion"><rect x="7" y="13" width="2" height="1" fill="#E8E0D2"/></g>'
+        + '<g class="key-c motion"><rect x="11" y="13" width="2" height="1" fill="#E8E0D2"/></g>',
+    },
+    duration: 3400,
+    comment: '敲键盘。双爪高频交替下击，被敲到的键下沉一格。\n'
+      + '   周期 850ms——四个候选里最快的，每 0.85 秒一轮双击，\n'
+      + '   打字的读感全在**频率**上，慢下来就变成「戳」了。',
+    layers: [
+      { sel: '.actor', name: 'keys-body', poses: [
+        p('translate(0,1px)', 4), p('translate(-1px,2px)', 1), p('translate(0,1px)', 2),
+        p('translate(1px,2px)', 1), p('translate(0,1px)', 3), p('translate(0,2px)', 1),
+        p('translate(-1px,1px)', 2) ] },
+      { sel: '.left-claw', name: 'keys-left', period: 850, poses: [
+        p('translate(3px,2px)', 3), p('translate(3px,4px)', 1), p('translate(3px,3px)', 1),
+        p('translate(4px,1px)', 2) ] },
+      { sel: '.right-claw', name: 'keys-right', period: 850, poses: [
+        p('translate(-4px,1px)', 2), p('translate(-3px,2px)', 3), p('translate(-3px,4px)', 1),
+        p('translate(-3px,3px)', 1) ] },
+      { sel: '.key-a', name: 'keys-key-a', period: 850, poses: [
+        p('translateY(0)', 5), p('translateY(1px)', 1), p('translateY(0)', 2) ] },
+      { sel: '.key-b', name: 'keys-key-b', period: 850, poses: [
+        p('translateY(1px)', 1), p('translateY(0)', 4), p('translateY(1px)', 1),
+        p('translateY(0)', 2) ] },
+      { sel: '.key-c', name: 'keys-key-c', period: 850, poses: [
+        p('translateY(0)', 2), p('translateY(1px)', 1), p('translateY(0)', 5) ] },
+      // 眼睛看前上方——盯着看不见的屏幕，不是盯着键盘。这是打字的人的样子。
+      { sel: '.eyes', name: 'keys-eyes', period: 2900, poses: [
+        p('translate(0,-1px)', 5), p('translate(1px,-1px)', 2), p('translate(0,-1px)', 3),
+        p('translate(-1px,-1px)', 2) ] },
+      { sel: '.blink', name: 'keys-blink', period: 4300, poses: [
+        p('scaleY(1)', 10), p('scaleY(.15)', 1), p('scaleY(1)', 4) ] },
+    ],
+  },
+
+  {
+    state: 'work-q',
+    svg: {
+      file: 'work-q-cards.svg',
+      title: 'Card Flip',
+      desc: 'Flips through a stack card by card; each one snaps over to the far side.',
+      propsAfter: '<g class="stack-r"><rect x="9" y="11" width="5" height="5" fill="#7BC8C4"/>'
+        + '<rect x="10" y="12" width="3" height="1" fill="#BDE7E4"/></g>'
+        + '<g class="stack-l"><rect x="1" y="12" width="5" height="4" fill="#B9A1D9"/>'
+        + '<rect x="2" y="13" width="3" height="1" fill="#E7DCF2"/></g>'
+        + '<g class="flip motion"><rect x="9" y="11" width="5" height="5" fill="#A8DBD8"/>'
+        + '<rect x="10" y="12" width="3" height="1" fill="#DFF3F2"/></g>',
+    },
+    duration: 3400,
+    comment: '翻卡。右边一叠翻到左边，一张接一张。\n'
+      + '   翻转用 scaleX 压到 0 再展开——像素画里这就是「翻过去」的标准写法。\n'
+      + '   与 A 的区别：A 是收下并消化，这个是**过一遍就扔到另一边**。',
+    layers: [
+      { sel: '.actor', name: 'cards-body', poses: [
+        p('translate(1px,0)', 4), p('translate(0,-1px)', 1), p('translate(-1px,0)', 2),
+        p('translate(-1px,1px)', 1), p('translate(1px,0)', 3), p('translate(0,-1px)', 1),
+        p('translate(1px,1px)', 2) ] },
+      { sel: '.left-claw', name: 'cards-left', period: 1130, poses: [
+        p('translate(2px,1px)', 3), p('translate(3px,0)', 1), p('translate(3px,1px)', 2),
+        p('translate(2px,2px)', 1) ] },
+      { sel: '.right-claw', name: 'cards-right', period: 1130, poses: [
+        p('translate(-2px,0)', 3), p('translate(-3px,1px)', 1), p('translate(-4px,0)', 2),
+        p('translate(-3px,-1px)', 1) ] },
+      // 一张卡从右叠翻到左叠：scaleX 压扁到 0 是「转到侧面」，再展开是「落下」
+      { sel: '.flip', name: 'cards-flip', period: 1130, origin: '11.5px 13.5px', poses: [
+        p('opacity:1;transform:scaleX(1)', 3),
+        p('opacity:1;transform:scaleX(.4) translateX(-3px)', 1),
+        p('opacity:1;transform:scaleX(.05) translateX(-8px)', 1),
+        p('opacity:1;transform:scaleX(.5) translateX(-13px)', 1),
+        p('opacity:0;transform:scaleX(1) translateX(-16px)', 2) ] },
+      { sel: '.eyes', name: 'cards-eyes', period: 1900, poses: [
+        p('translate(1px,0)', 3), p('translate(0,0)', 1), p('translate(-1px,0)', 3),
+        p('translate(0,1px)', 1) ] },
+      { sel: '.blink', name: 'cards-blink', period: 4300, poses: [
+        p('scaleY(1)', 9), p('scaleY(.15)', 1), p('scaleY(1)', 4) ] },
+    ],
+  },
+
+  {
+    state: 'work-r',
+    svg: {
+      file: 'work-r-pedal.svg',
+      title: 'Pedal',
+      desc: 'Four legs work a treadle in turn; the board rocks under them and the whole body rides it.',
+      splitLegs: true,
+      // E 的教训：腿当主角没问题，但**必须有看得见的道具**，
+      // 否则角色只是一个方块在变形，读不出在干什么。
+      props: '<g class="board motion"><rect x="0" y="15" width="15" height="2" fill="#8C7A5E"/>'
+        + '<rect x="0" y="17" width="15" height="1" fill="#6E5F49"/>'
+        + '<rect x="2" y="16" width="3" height="1" fill="#A08C6C"/>'
+        + '<rect x="10" y="16" width="3" height="1" fill="#A08C6C"/></g>',
+    },
+    duration: 3400,
+    comment: '踩踏板。四条腿轮流蹬，板被踩得一头沉一头翘，整个身体跟着起伏。\n'
+      + '   这是 E（无道具全身发力）的修正版：腿仍然是主角，\n'
+      + '   但给了它一块看得见的板，「在使劲」才有了对象。',
+    layers: [
+      { sel: '.actor', name: 'pedal-body', poses: [
+        p('translate(-1px,1px) scaleY(.94)', 4), p('translate(-1px,0)', 1),
+        p('translate(0,-1px) scaleY(1.02)', 2), p('translate(1px,0)', 1),
+        p('translate(1px,1px) scaleY(.94)', 3), p('translate(1px,0)', 1),
+        p('translate(0,0) scaleY(.98)', 2) ] },
+      // 板跟着重心一头沉一头翘。角色向左压时板左低右高。
+      { sel: '.board', name: 'pedal-board', origin: '7.5px 16px', poses: [
+        p('rotate(-6deg)', 4), p('rotate(-3deg)', 1), p('rotate(0)', 2),
+        p('rotate(3deg)', 1), p('rotate(6deg)', 3), p('rotate(3deg)', 1),
+        p('rotate(0)', 2) ] },
+      { sel: '.leg-a', name: 'pedal-leg-a', period: 850, poses: [
+        p('translateY(0)', 3), p('translateY(-2px)', 1), p('translateY(-1px)', 1),
+        p('translateY(0)', 2) ] },
+      { sel: '.leg-b', name: 'pedal-leg-b', period: 850, poses: [
+        p('translateY(-1px)', 1), p('translateY(0)', 3), p('translateY(-2px)', 1),
+        p('translateY(0)', 2) ] },
+      { sel: '.leg-c', name: 'pedal-leg-c', period: 850, poses: [
+        p('translateY(0)', 2), p('translateY(-2px)', 1), p('translateY(-1px)', 1),
+        p('translateY(0)', 3) ] },
+      { sel: '.leg-d', name: 'pedal-leg-d', period: 850, poses: [
+        p('translateY(0)', 5), p('translateY(-2px)', 1), p('translateY(-1px)', 1) ] },
+      { sel: '.left-claw', name: 'pedal-left', poses: [
+        p('translate(1px,-1px)', 4), p('translate(1px,0)', 2), p('translate(2px,-1px)', 3),
+        p('translate(1px,0)', 2) ] },
+      { sel: '.right-claw', name: 'pedal-right', poses: [
+        p('translate(-2px,-1px)', 4), p('translate(-1px,0)', 2), p('translate(-1px,-1px)', 3),
+        p('translate(-2px,0)', 2) ] },
+      { sel: '.eyes', name: 'pedal-eyes', period: 2300, poses: [
+        p('translate(0,-1px)', 4), p('translate(0,0)', 2), p('translate(0,-1px)', 3) ] },
+      { sel: '.blink', name: 'pedal-blink', period: 5300, poses: [
+        p('scaleY(1)', 12), p('scaleY(.15)', 1), p('scaleY(1)', 4) ] },
+    ],
+  },
+
+  {
+    state: 'work-s',
+    svg: {
+      file: 'work-s-signal.svg',
+      title: 'Signal Relay',
+      desc: 'An antenna on the back sends pixel pulses upward in waves while both claws tend the base.',
+      // 方块状的离散信号有先例：sleeping 的像素 Zzz 是用户批准过的。
+      // 这不是 glow——契约禁止的是发光与速度线，不是道具化的符号。
+      propsAfter: '<g class="mast"><rect x="7" y="1" width="1" height="6" fill="#8C7A5E"/>'
+        + '<rect x="6" y="0" width="3" height="1" fill="#C4715A"/></g>'
+        + '<g class="pulse-a motion"><rect x="5" y="-2" width="5" height="1" fill="#7BC8C4"/></g>'
+        + '<g class="pulse-b motion"><rect x="5" y="-2" width="5" height="1" fill="#F6C85F"/></g>'
+        + '<g class="pulse-c motion"><rect x="5" y="-2" width="5" height="1" fill="#B9A1D9"/></g>',
+    },
+    duration: 3400,
+    comment: '收发。背上一根天线，信号一波波往外发；双爪在底座上调。\n'
+      + '   十二个候选里最抽象的一个——不表演体力活，表演**在和远端通信**。\n'
+      + '   对一个 AI 客户端来说，这可能比搬砖更贴近它真正在做的事。',
+    layers: [
+      // 「站着发信号」很容易写成站着不动。身体始终保持一点上抬，
+      // 在小范围里持续调整——回到原位就读成信号停了。
+      { sel: '.actor', name: 'signal-body', poses: [
+        p('translate(0,-1px)', 4), p('translate(-1px,-1px)', 1), p('translate(-1px,0)', 2),
+        p('translate(0,-2px)', 1), p('translate(1px,0)', 3), p('translate(1px,-1px)', 1),
+        p('translate(0,-2px)', 2) ] },
+      { sel: '.left-claw', name: 'signal-left', period: 1700, poses: [
+        p('translate(2px,-2px)', 3), p('translate(2px,-3px)', 1), p('translate(3px,-2px)', 2),
+        p('translate(2px,-1px)', 1) ] },
+      { sel: '.right-claw', name: 'signal-right', period: 1700, poses: [
+        p('translate(-2px,-1px)', 1), p('translate(-2px,-2px)', 3), p('translate(-3px,-3px)', 1),
+        p('translate(-2px,-2px)', 2) ] },
+      // 三道信号依次上行、逐渐变宽再淡出。相位各差三分之一。
+      { sel: '.pulse-a', name: 'signal-pulse-a', poses: [
+        p('opacity:0;transform:translateY(4px) scaleX(.4)', 1),
+        p('opacity:1;transform:translateY(1px) scaleX(.7)', 2),
+        p('opacity:1;transform:translateY(-2px) scaleX(1)', 2),
+        p('opacity:1;transform:translateY(-5px) scaleX(1.3)', 2),
+        p('opacity:0;transform:translateY(-8px) scaleX(1.6)', 2) ] },
+      { sel: '.pulse-b', name: 'signal-pulse-b', poses: [
+        p('opacity:1;transform:translateY(-2px) scaleX(1)', 2),
+        p('opacity:1;transform:translateY(-5px) scaleX(1.3)', 2),
+        p('opacity:0;transform:translateY(-8px) scaleX(1.6)', 2),
+        p('opacity:0;transform:translateY(4px) scaleX(.4)', 1),
+        p('opacity:1;transform:translateY(1px) scaleX(.7)', 2) ] },
+      { sel: '.pulse-c', name: 'signal-pulse-c', poses: [
+        p('opacity:0;transform:translateY(-8px) scaleX(1.6)', 2),
+        p('opacity:0;transform:translateY(4px) scaleX(.4)', 1),
+        p('opacity:1;transform:translateY(1px) scaleX(.7)', 2),
+        p('opacity:1;transform:translateY(-2px) scaleX(1)', 2),
+        p('opacity:1;transform:translateY(-5px) scaleX(1.3)', 2) ] },
+      { sel: '.eyes', name: 'signal-eyes', period: 2900, poses: [
+        p('translate(0,-1px)', 4), p('translate(0,0)', 2), p('translate(0,-1px)', 3),
+        p('translate(1px,0)', 2) ] },
+      { sel: '.blink', name: 'signal-blink', period: 4700, poses: [
+        p('scaleY(1)', 11), p('scaleY(.15)', 1), p('scaleY(1)', 4) ] },
+    ],
+  },
+);

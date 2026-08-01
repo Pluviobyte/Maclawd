@@ -207,7 +207,8 @@ test('持续态的循环里不许有静止姿态，接缝不许停顿', () => {
     'building', 'testing', 'drag', 'hover',
     // working 的候选方案也守同一条，否则选进来才发现有停顿就晚了
     'work-b', 'work-c', 'work-d', 'work-e', 'work-f', 'work-g', 'work-h',
-    'work-i', 'work-j', 'work-l', 'work-n'];
+    'work-i', 'work-j', 'work-l', 'work-n',
+    'work-o', 'work-q', 'work-r', 'work-s'];
   const IDENTITY = /^translate\(0,\s*0\)$|^translateY\(0\)$|^translateX\(0\)$/;
 
   for (const state of SUSTAINED) {

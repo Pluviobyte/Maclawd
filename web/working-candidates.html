@@ -18,6 +18,9 @@
       .rule b { color:#1e1e2e; }
       .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px; }
       .card.flawed { opacity:.72; }
+      .card.pick { border-color:#3f8f6a; box-shadow:0 14px 40px rgba(63,143,106,.2); }
+      .card.pick .tag { background:#3f8f6a; }
+      .card.pick .tag::after { content:" · 我推荐"; }
       .card.flawed .tag { background:#b4553f; }
       .card { border:1px solid rgba(30,30,46,.11); border-radius:24px; background:#fbfaf7;
               box-shadow:0 14px 40px rgba(30,30,46,.07); overflow:hidden; }
@@ -48,13 +51,14 @@
   </head>
   <body>
     <main>
-      <h1>工作状态：十二个候选</h1>
+      <h1>工作状态：十六个候选</h1>
       <p class="lede">左边是 4× 放大（看清姿态），右边虚线框是 <code>135px</code> 真实尺寸——桌面上就是那么大，<b>请以右边为准做判断</b>。</p>
       <p class="lede">三批各自换掉一组不同的轴。<b>看的时候可以只比同一批内部</b>，跨批比较意义不大——它们不是同一个维度上的深浅，是不同维度。</p>
       <table style="border-collapse:collapse;margin:16px 0 4px;font-size:13.5px">
         <tr><td style="padding:5px 16px 5px 0;font-weight:800">A–D</td><td style="padding:5px 0;color:#50505e">换<b>道具类型</b>。姿态语汇没变——都是正面站立、双爪在身前对称交替。</td></tr>
         <tr><td style="padding:5px 16px 5px 0;font-weight:800">E–H</td><td style="padding:5px 0;color:#50505e">换<b>构图</b>：道具有/无、比角色大/小、在上/在下、单件/多件、腿参不参与。</td></tr>
         <tr><td style="padding:5px 16px 5px 0;font-weight:800">I–N</td><td style="padding:5px 0;color:#50505e">换<b>更底层的东西</b>：朝向、道具在身后且角色位移、循环内的叙事结构、左右对称性。</td></tr>
+        <tr><td style="padding:5px 16px 5px 0;font-weight:800">O–S</td><td style="padding:5px 0;color:#50505e">换<b>场景本身</b>：不再是抽象劳作，而是具体的电脑场景与更贴合 AI 客户端的隐喻。</td></tr>
       </table>
       <div class="rule">
         八个都守同一组约束，这是上一轮定下来的：<br>
@@ -153,9 +157,38 @@
           cons: ["角色本身动作幅度小，像站在两台机器中间", "两个道具分居两侧，视觉重心散"],
           rate: "9.12 姿态/秒",
         },
+
+        {
+          tag: "O", file: "work-o-keys.svg", name: "Keyboard", idiom: "场景 — 电脑前最直白的「在干活」", pick: true,
+          desc: "双爪在小键盘上高频交替下击，被敲到的键下沉一格；眼睛看前上方那块看不见的屏幕，不是盯着键盘。",
+          pros: ["<b>十六个里语义最准</b>：这是一个 AI 客户端，它真正在做的事就是在电脑上打字", "周期 850ms，节奏最快——打字的读感全在频率上", "眼睛看前上方而非看手，这是「熟练的人」的样子"],
+          cons: ["键盘挡住了腿", "键帽只有 1 单位高，下沉的 3px 变化比较微妙"],
+          rate: "15.29 姿态/秒",
+        },
+        {
+          tag: "Q", file: "work-q-cards.svg", name: "Card Flip", idiom: "过料 — 翻过去，不是收下",
+          desc: "右边一叠翻到左边，一张接一张；翻转用 scaleX 压到 0 再展开，像素画里这就是「转到侧面」。",
+          pros: ["「过一遍就扔到另一边」的语义很清楚", "翻卡的手感在小尺寸下也成立"],
+          cons: ["两叠分居左右把身体夹住，角色显得被挤在中间", "和 A 的「流入」概念上有重叠"],
+          rate: "11.47 姿态/秒",
+        },
+        {
+          tag: "R", file: "work-r-pedal.svg", name: "Pedal", idiom: "腿是主角 — 但这次给了它道具",
+          desc: "四条腿轮流蹬一块踏板，板被踩得一头沉一头翘，整个身体跟着起伏。",
+          pros: ["<b>E 的修正版</b>：腿仍是主角，但有了看得见的对象，「在使劲」才成立", "板的倾斜幅度大，135px 下也一眼看见", "四条腿终于真正参与了"],
+          cons: ["「踩踏板」和「写代码」的语义关联比较间接", "板占满脚下，桌宠像站在跷跷板上"],
+          rate: "10.29 姿态/秒",
+        },
+        {
+          tag: "S", file: "work-s-signal.svg", name: "Signal Relay", idiom: "抽象 — 在和远端通信",
+          desc: "背上一根天线，信号一波波往上发，逐渐变宽再淡出；双爪在底座上调。",
+          pros: ["最贴近它<b>真正</b>在做的事——不是搬砖，是在和远端来回", "信号的疏密天然可以映射 token 速率", "像素方块信号有先例：sleeping 的 Zzz 是批准过的"],
+          cons: ["天线从头顶正中长出来，有点像插了根杆子", "信号条在头顶，可能被读成帽子或装饰", "完全不表演体力，可能显得太静"],
+          rate: "7.06 姿态/秒",
+        },
       ];
       document.getElementById("grid").innerHTML = candidates.map(c => `
-        <article class="card${c.flawed ? " flawed" : ""}">
+        <article class="card${c.flawed ? " flawed" : ""}${c.pick ? " pick" : ""}">
           <div class="stages">
             <div class="zoom"><object data="src/animations/${c.file}" type="image/svg+xml">${c.name}</object></div>
             <div>
