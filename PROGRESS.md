@@ -147,10 +147,35 @@ not started.
   slices, plus both Node runtimes selected per-slice at build time. The DMG path
   forces it, so a single-architecture build can never be handed to anyone.
   Cost: the app goes 117 MB → 235 MB, because it carries two full Node runtimes.
-- **14 of 21 tool parsers are unverified** — they are written against documented
-  log formats but have never been run against real samples from those tools.
+- **14 of 21 tool parsers have never seen real data.** All 21 have synthetic
+  fixtures, so a regression breaks a test — but a fixture only proves the parser
+  matches *our reading* of the format, not the format itself. The seven that have
+  been run against real logs on a live machine (Claude Code, Codex, Kimi Code,
+  Qwen Code, Grok, OpenClaw, WorkBuddy) all pass every invariant. The rest need the
+  corresponding tool installed; there is no way to close this from here.
 - **Never dogfooded for a full working day.** Everything above is verified by tests
-  and by launching the app, not by living with it.
+  and by launching the app, not by living with it. This is the largest remaining
+  unknown: every time this project *was* run for real, it immediately surfaced a
+  defect that no test had caught — `PostToolUse` erasing work modifiers, the drag
+  pose never appearing, the pet grabbable from 93 px of empty space.
+- **The `working` action is unresolved.** Sixteen candidates are built and deployed
+  at `/working-candidates`; none is selected. `working` currently plays Tile Feed.
+
+## Interaction
+
+Drag, click, double-click, hover and edge-dock all route through the state engine.
+Two things worth knowing because they are easy to get wrong and were:
+
+- **A click is only a click if no drag happened.** Reporting it on mouse-down makes
+  every drag start by playing the 2.2 s poke reaction.
+- **The window is 135×135 but the character occupies 6.7 % of it.** Hit testing is
+  clamped to the character's bounding box (derived from `characterContract`, asserted
+  by a test) and the remaining 88 % passes clicks through to whatever is underneath.
+
+Window position survives restart, and is discarded if the screen it was saved on is
+gone — otherwise the pet reappears somewhere invisible and reads as "didn't launch".
+
+---
 
 The public repository is a working application plus a validated motion system —
 but it is not a signed release, and installing it still requires a Gatekeeper bypass.
