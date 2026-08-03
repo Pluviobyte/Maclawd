@@ -362,6 +362,7 @@ export function createUsageServer({ collector = null } = {}) {
   const orchestrator = createOrchestrator({
     actions: loadActions(),
     convergence: loadConvergence(),
+    contract: characterContract(),
   });
   // 贴边收起时切到 mini 尺寸档。这是**尺寸模式**不是状态——
   // 状态引擎照常产出 39 档之一，由编排器投影到 8 档 mini。

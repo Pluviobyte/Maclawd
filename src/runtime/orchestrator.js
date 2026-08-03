@@ -1,4 +1,5 @@
 import { ONESHOT } from './state-engine.js';
+import { geometryFor } from './hit-geometry.js';
 
 /**
  * 动画编排器：状态 id → 可播放的动作。
@@ -27,7 +28,9 @@ export function fallbackChain(actionId) {
 /** mini 收敛不到任何一档时的兜底。宁可演错也不能白屏。 */
 const MINI_DEFAULT = 'mini.idle';
 
-export function createOrchestrator({ actions = [], reducedMotion = false, convergence = {} } = {}) {
+export function createOrchestrator({
+  actions = [], reducedMotion = false, convergence = {}, contract = null,
+} = {}) {
   const byId = new Map();
   // 39 → 8 的收敛表来自 design/mini-actions.json，**穷举声明**。
   // 不靠 id 前缀推断：那在 `idle.drowsy`（该收敛到 idle 档）与
@@ -124,6 +127,9 @@ export function createOrchestrator({ actions = [], reducedMotion = false, conver
       // 收敛与回落也是两回事：收敛是 mini 档的刻意合并，不是缺资产。
       convergedFrom: converged && converged.inexact ? converged.convergedFrom : null,
       unmapped: converged ? converged.unmapped : false,
+      // 命中区与可见画面框，随动作变。外壳直接用，不在 Swift 里再算一遍——
+      // 契约是唯一来源。mini 档整个窗口就是角色，不需要收窄。
+      geometry: miniMode ? null : geometryFor(action.id, contract),
     };
   }
 

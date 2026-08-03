@@ -41,7 +41,9 @@ const write = async (rel, text) => {
  */
 async function bundleEngine() {
   const parts = [];
-  for (const rel of ['src/runtime/state-engine.js', 'src/runtime/orchestrator.js']) {
+  // 顺序即依赖顺序：orchestrator 用 hit-geometry，必须排在它后面。
+  for (const rel of ['src/runtime/state-engine.js', 'src/runtime/hit-geometry.js',
+    'src/runtime/orchestrator.js']) {
     const src = await read(rel);
     for (const line of src.split('\n')) {
       // 只允许相对 import（模块间互相引用），其余一律说明形态变了。

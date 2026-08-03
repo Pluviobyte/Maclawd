@@ -38,7 +38,34 @@
     ],
     "eyesY": 8,
     "eyeWidth": 1,
-    "eyeHeight": 2
+    "eyeHeight": 2,
+    "hitBoxes": {
+      "_comment": "可点击区域，viewBox 单位。default 是站立姿态的角色本体（含双爪）。sleeping 单独一档：俯视平躺的构图比站立扁得多，用同一个框会让「点得到点不到」变得没道理。参照 clawd-on-desk 的 hitBoxes 分档做法。",
+      "default": {
+        "x": 0,
+        "y": 6,
+        "w": 15,
+        "h": 9
+      },
+      "sleeping": {
+        "x": -2,
+        "y": 9,
+        "w": 19,
+        "h": 6
+      }
+    },
+    "hitBoxStates": {
+      "_comment": "哪些动作用非 default 的命中框。没列的一律用 default。",
+      "sleeping": "sleeping",
+      "away": "sleeping"
+    },
+    "marginBox": {
+      "_comment": "可见画面 + 呼吸空间，viewBox 单位。**夹到屏幕内时用这个框，不是窗口框**。窗口 135×135 而角色只占 45×27，按窗口框硬夹的话角色永远贴不到屏幕边——右侧至少空 45px。按可见内容夹，贴的才是画面的边。比 default 命中框各方向宽 2 个单位，留一点不至于贴死的余量。",
+      "x": -2,
+      "y": 4,
+      "w": 19,
+      "h": 13
+    }
   },
   "designRules": {
     "readingOrder": [

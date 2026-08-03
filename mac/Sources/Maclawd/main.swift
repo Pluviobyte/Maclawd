@@ -70,6 +70,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.menuBar.render()
             // 尺寸档要先切：窗口还是 128 却在播 mini 资产，角色会缩在角落里。
             self.pet.setMini(self.client.state.mini)
+            // 几何随动作变（sleeping 的命中框比站立扁），所以每次刷新都要跟上。
+            self.pet.applyGeometry(hit: self.client.state.hitBox,
+                                   margin: self.client.state.marginBox)
             self.pet.show(source: self.client.state.source,
                           motion: self.client.state.motion,
                           variant: self.client.state.variant)

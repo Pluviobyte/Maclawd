@@ -259,42 +259,41 @@ test('动作总表必须覆盖全部契约动作，且每个都有触发源', ()
     '总表上有动作被标为「没有触发源」——要么真是死动作，要么解析器失配了');
 });
 
-test('外壳的角色命中区与角色几何契约一致', () => {
-  // 桌宠窗口 135×135，而角色只占其中 45×27px（6.7% 面积）。
-  // 鼠标命中区必须收到角色身上，否则光标在它上方 93px 的空白处
-  // 就能触发「注视」、甚至把它拎起来——那里看起来什么都没有。
-  //
-  // 外壳里那四个归一化数字是从契约手算的。手算的东西必须有断言盯着，
-  // 否则改了 characterContract 而忘了改外壳，命中区会静默错位，
-  // 表现是「有时候点得到、有时候点不到」——最难查的那种。
+test('外壳不再自己保存几何常量——命中区由运行时下发', () => {
+  // 此前外壳硬编码四个归一化小数，靠断言盯着它和契约一致。那能防漂移，
+  // 但挡不住第二个问题：命中框需要**按动作变化**（俯视平躺的 sleeping
+  // 比站立扁得多），而外壳并不知道当前在演哪个动作的几何。
+  // 现在改成随 plan 下发，所以这条断言反过来了：Swift 里不该再有几何常量。
   const swift = read('mac/Sources/Maclawd/PetWindow.swift');
-  const m = swift.match(
-    /characterBox = \(x0: ([\d.]+), x1: ([\d.]+), y0: ([\d.]+), y1: ([\d.]+)\)/,
-  );
-  assert.ok(m, '读不到外壳里的 characterBox');
-  const [, sx0, sx1, sy0, sy1] = m.map(Number);
-
-  const c = JSON.parse(read('design/main-state-actions.json')).characterContract;
-  const [vx, vy, vw, vh] = c.viewBox.split(' ').map(Number);
-  const left = c.leftArm.x;
-  const right = c.rightArm.x + c.rightArm.width;
-  const top = c.torso.y;
-  const bottom = c.legsY + c.legHeight;
-
-  // AppKit 原点在左下、SVG 的 y 向下，所以纵向要翻转
-  const want = {
-    x0: (left - vx) / vw,
-    x1: (right - vx) / vw,
-    y0: 1 - (bottom - vy) / vh,
-    y1: 1 - (top - vy) / vh,
-  };
-  const close = (a, b) => Math.abs(a - b) < 0.001;
-  assert.ok(close(sx0, want.x0), `x0 应为 ${want.x0.toFixed(4)}，外壳写的是 ${sx0}`);
-  assert.ok(close(sx1, want.x1), `x1 应为 ${want.x1.toFixed(4)}，外壳写的是 ${sx1}`);
-  assert.ok(close(sy0, want.y0), `y0 应为 ${want.y0.toFixed(4)}，外壳写的是 ${sy0}`);
-  assert.ok(close(sy1, want.y1), `y1 应为 ${want.y1.toFixed(4)}，外壳写的是 ${sy1}`);
+  assert.doesNotMatch(swift, /characterBox\s*=\s*\(x0:/,
+    '外壳里又出现了硬编码的角色包围盒——几何应该只有契约一个来源');
+  assert.match(swift, /func applyGeometry\(hit:/, '外壳没有接收运行时下发的几何');
+  assert.match(swift, /marginBox/, '外壳没有用可见画面框做夹取');
 });
 
+test('命中框按动作分档，且 sleeping 确实更扁', () => {
+  // 俯视平躺的构图和站立完全不同。用同一个框会让「点得到点不到」变得没道理。
+  const c = JSON.parse(read('design/main-state-actions.json')).characterContract;
+  const boxes = c.hitBoxes ?? {};
+  assert.ok(boxes.default, '契约缺 default 命中框');
+  assert.ok(boxes.sleeping, '契约缺 sleeping 命中框');
+  assert.ok(boxes.sleeping.h < boxes.default.h, 'sleeping 的框应该比站立扁');
+  assert.ok(boxes.sleeping.w > boxes.default.w, 'sleeping 的框应该比站立宽');
+
+  // 分档表必须显式声明，不许靠 id 前缀猜——`idle.drowsy` 还是站着的
+  const states = c.hitBoxStates ?? {};
+  assert.equal(states.sleeping, 'sleeping');
+  assert.ok(!states['idle.drowsy'], 'idle.drowsy 是站着打瞌睡，不该用平躺的框');
+});
+
+test('可见画面框必须比命中框大——夹取要留出画面而不是贴着身子切', () => {
+  const c = JSON.parse(read('design/main-state-actions.json')).characterContract;
+  const hit = c.hitBoxes.default;
+  const margin = c.marginBox;
+  assert.ok(margin.x <= hit.x && margin.y <= hit.y, '可见画面框比命中框还小');
+  assert.ok(margin.x + margin.w >= hit.x + hit.w, '可见画面框右边界没覆盖命中框');
+  assert.ok(margin.y + margin.h >= hit.y + hit.h, '可见画面框下边界没覆盖命中框');
+});
 test('没有契约动作能绕过运动质量门槛', () => {
   // 上面那几条（密度、缓动、接缝、无静止姿态）都只遍历 ANIMATIONS——
   // 也就是**走姿态谱管线**的动作。如果有人绕开管线、直接手写 CSS 加一个动作，

@@ -125,34 +125,42 @@ final class PetWindow: NSWindow {
     // MARK: - 命中区域
 
     /**
-     角色本体在窗口里的归一化包围盒。
+     命中区与可见画面框，**由运行时按契约算好下发**。
 
-     取景是 45 单位，但**角色只占其中一小块**：横向 x0…15（含双爪）、
-     纵向 y6…15（躯干顶到腿底）。换算下来 135px 的窗口里角色只有
-     45×27px，**占面积 6.7%**——其余 93% 是透明的。
+     此前这里硬编码四个归一化小数，靠一条测试盯着它和 characterContract 一致。
+     那能防漂移，但挡不住第二个问题：命中框需要**按动作变化**——
+     俯视平躺的 sleeping 比站立扁得多，用同一个框会让「点得到点不到」
+     变得没道理，而外壳并不知道当前在演哪个动作的几何。
+     所以改成随 plan 下发，Swift 里一个几何常量都不留。
 
-     这些数由 design/main-state-actions.json 的 characterContract 算出，
-     test/motion-quality.test.js 会断言两边一致，改了契约这里不改就会挂。
-
-     取景 `-15 -25 45 45`，AppKit 原点在左下而 SVG 的 y 向下，所以纵向要翻转：
-       x: (0-(-15))/45 = 0.3333 … (15-(-15))/45 = 0.6667
-       y: 1-(15-(-25))/45 = 0.1111 … 1-(6-(-25))/45 = 0.3111
+     nil 表示还没收到（启动头一两秒）或处于 mini 档（整个窗口就是角色）。
      */
-    private static let characterBox = (x0: 0.3333, x1: 0.6667, y0: 0.1111, y1: 0.3111)
+    private var hitBox: NormalizedRect?
+    private var marginBox: NormalizedRect?
 
     /// 抓取容差。角色只有 45×27px，一个像素不差地要求命中太苛刻——
     /// 但也不能给太多，给多了又回到「在空白处能拎起它」。
     private static let grabMargin: CGFloat = 6
 
+    /// 运行时下发的几何。窗口尺寸变化时命中区跟着变，所以要重建追踪区。
+    func applyGeometry(hit: NormalizedRect?, margin: NormalizedRect?) {
+        let changed = hit?.x0 != hitBox?.x0 || hit?.y0 != hitBox?.y0
+            || hit?.x1 != hitBox?.x1 || hit?.y1 != hitBox?.y1
+        hitBox = hit
+        marginBox = margin
+        if changed { refreshTracking() }
+    }
+
     /// 角色在当前窗口坐标下的可抓取矩形。
     private var characterRect: NSRect {
-        let b = Self.characterBox
-        let side = frame.width
-        let rect = NSRect(
-            x: side * b.x0, y: side * b.y0,
-            width: side * (b.x1 - b.x0), height: side * (b.y1 - b.y0)
-        )
-        return rect.insetBy(dx: -Self.grabMargin, dy: -Self.grabMargin)
+        guard let hitBox else { return NSRect(origin: .zero, size: frame.size) }
+        return hitBox.rect(in: frame.width).insetBy(dx: -Self.grabMargin, dy: -Self.grabMargin)
+    }
+
+    /// 可见画面在当前窗口坐标下的矩形。夹到屏幕内时用它。
+    private var contentRect: NSRect {
+        guard let marginBox else { return NSRect(origin: .zero, size: frame.size) }
+        return marginBox.rect(in: frame.width)
     }
 
     /// 这个点落在角色身上吗？点在窗口坐标系里。
@@ -283,33 +291,96 @@ final class PetWindow: NSWindow {
     /// 桌宠是不接受焦点的浮动窗口，拖到副屏后 main 仍然指主屏，
     /// 于是贴边判定会把它夹回主屏，副屏上根本放不住。
     private var hostScreen: NSScreen? {
+        // NSScreen.screens 在插拔显示器、锁屏解锁、切换用户时会**短暂返回空**。
+        // 那一刻拿 screens[0] 会崩，拿 NSScreen.main 也可能是 nil——
+        // clawd-on-desk 的 work-area.js 就为这个挂过一个 issue。
+        // 这里逐级退：中心命中 → 有交集 → 距离最近 → 主屏。
+        let screens = NSScreen.screens
+        guard !screens.isEmpty else { return NSScreen.main }
         let center = NSPoint(x: frame.midX, y: frame.midY)
-        return NSScreen.screens.first { $0.frame.contains(center) }
-            ?? NSScreen.screens.first { $0.frame.intersects(frame) }
+        if let hit = screens.first(where: { $0.frame.contains(center) }) { return hit }
+        if let overlap = screens.first(where: { $0.frame.intersects(frame) }) { return overlap }
+        // 都不沾边（位置来自已拔掉的屏幕）——挑几何上最近的那块，而不是主屏，
+        // 这样多屏摆位下「最近」比「主」更符合直觉。
+        return screens.min { a, b in squaredDistance(center, a.frame) < squaredDistance(center, b.frame) }
             ?? NSScreen.main
     }
 
+    private func squaredDistance(_ point: NSPoint, _ rect: NSRect) -> CGFloat {
+        let dx = max(rect.minX - point.x, 0, point.x - rect.maxX)
+        let dy = max(rect.minY - point.y, 0, point.y - rect.maxY)
+        return dx * dx + dy * dy
+    }
+
+    /**
+     位置连同**它所在那块显示器的快照**一起存。
+
+     只存坐标是不够的，此前的校验是「这个位置还和某块屏幕相交吗」，
+     两个方向都会判错：
+       - 同一块显示器还在、但窗口略微越界 → 整个丢弃位置，跳回默认角落
+       - 那块显示器被拔了、位置碰巧和另一块屏相交 → 保留一个错误的位置
+
+     正确的问题是「**那块物理显示器还在不在**」。主判据是边界完全相等
+     （同origin同分辨率几乎必然是同一块），次判据是 displayID
+     （macOS 上跨会话稳定，但重排显示器时会变，所以只作次选）。
+     这是 clawd-on-desk 的 buildDisplaySnapshot / findMatchingDisplay 思路。
+     */
     private func savePosition() {
-        UserDefaults.standard.set(NSStringFromPoint(frame.origin), forKey: Self.originKey)
+        var payload: [String: Any] = [
+            "x": Double(frame.origin.x),
+            "y": Double(frame.origin.y),
+        ]
+        if let screen = hostScreen {
+            let b = screen.frame
+            payload["display"] = [
+                "x": Double(b.origin.x), "y": Double(b.origin.y),
+                "w": Double(b.width), "h": Double(b.height),
+                "id": screen.displayID.map(Double.init) ?? -1,
+            ]
+        }
+        UserDefaults.standard.set(payload, forKey: Self.originKey)
+    }
+
+    /// 快照对应的显示器还在不在。边界完全相等优先，其次 displayID。
+    private func matchingScreen(_ snapshot: [String: Any]) -> NSScreen? {
+        guard let d = snapshot["display"] as? [String: Any] else { return nil }
+        let want = NSRect(
+            x: d["x"] as? Double ?? .nan, y: d["y"] as? Double ?? .nan,
+            width: d["w"] as? Double ?? .nan, height: d["h"] as? Double ?? .nan
+        )
+        guard !want.origin.x.isNaN, want.width > 0 else { return nil }
+        if let exact = NSScreen.screens.first(where: { $0.frame == want }) { return exact }
+        if let id = d["id"] as? Double, id >= 0 {
+            return NSScreen.screens.first { $0.displayID.map(Double.init) == id }
+        }
+        return nil
     }
 
     /**
      恢复上次的位置。
 
-     必须校验它**仍然落在某块可见屏幕里**：存下来的位置可能来自已经拔掉的
-     外接屏，直接用会让桌宠出现在看不见的地方——用户会以为应用没启动。
-     校验不过就回默认角落。
+     那块显示器还在 → **信任存下来的坐标，即使朴素的夹取会推动它**
+     （用户可能就是故意把它靠在边上的）。
+     不在了 → 返回 false，交给默认角落。
      */
     @discardableResult
     private func restorePosition() -> Bool {
-        guard let raw = UserDefaults.standard.string(forKey: Self.originKey) else { return false }
-        let origin = NSPointFromString(raw)
-        guard origin != .zero else { return false }
-        let probe = NSRect(origin: origin, size: frame.size)
-        guard NSScreen.screens.contains(where: { $0.visibleFrame.intersects(probe) }) else {
-            return false
+        guard let saved = UserDefaults.standard.dictionary(forKey: Self.originKey),
+              let x = saved["x"] as? Double, let y = saved["y"] as? Double
+        else { return false }
+
+        // 没有显示器快照（旧版本存的）→ 退回到「还看得见吗」这个弱校验
+        guard saved["display"] != nil else {
+            let probe = NSRect(origin: NSPoint(x: x, y: y), size: frame.size)
+            guard NSScreen.screens.contains(where: { $0.visibleFrame.intersects(probe) }) else {
+                return false
+            }
+            setFrameOrigin(probe.origin)
+            return true
         }
-        setFrameOrigin(origin)
+
+        guard matchingScreen(saved) != nil else { return false }
+        setFrameOrigin(NSPoint(x: x, y: y))
         return true
     }
 
@@ -346,10 +417,6 @@ final class PetWindow: NSWindow {
         trackingArea = area
     }
 
-    /// 要推出屏幕多远才算「想收起来」。太小会误触（用户只是想放到角落），
-    /// 太大又推不动。宠物宽度的三分之一左右是个能做到、又做不错的量。
-    private let pushThreshold: CGFloat = 40
-
     /**
      切换尺寸档。
 
@@ -377,37 +444,71 @@ final class PetWindow: NSWindow {
         refreshTracking()
     }
 
+    /// 允许挂在工作区外的比例。按**可见画面**的尺寸算，不是窗口。
+    /// 完全不许出界的话，桌宠没法真正靠到屏幕边上「待着」；
+    /// 允许太多又会让它半个身子失踪。四分之一是 clawd-on-desk 用的量，试下来合适。
+    private static let looseFraction: CGFloat = 0.25
+
     /**
      松手后把身子收回屏幕内，并判断要不要收起成 mini。
 
-     **收起需要明确意图**：只有把宠物**推出屏幕边缘**才收起，
-     靠近边缘放下不算。此前是「落点距边缘 8pt 以内就收起」——
-     那太容易误触，用户只是想把它挪到角落，它却缩成一半。
-     推出屏幕外是一个不会误做的手势，语义上也正好是「把它塞到旁边去」。
+     **按可见画面夹，不是按窗口框。** 窗口 135×135 而角色只占 45×27，
+     按窗口硬夹的话角色右侧永远离屏幕边至少 45px——桌宠根本贴不到边。
+     这是抄 clawd-on-desk 的 marginBox 思路：夹的是画面的边界，
+     窗口那一大圈透明区域该出界就出界。
+
+     **收起需要明确意图**：只有把**画面**推出屏幕边缘才收起，靠近不算。
+     此前是「窗口落点距边缘 8pt 以内就收起」，太容易误触——
+     用户只是想把它挪到角落，它却缩成一半。
      */
     private func snapToEdgeIfNeeded() {
         guard let screen = hostScreen else { return }
         let visible = screen.visibleFrame
+        let content = contentRect
         let origin = frame.origin
-        let clampedX = min(max(origin.x, visible.minX), visible.maxX - frame.width)
-        let clampedY = min(max(origin.y, visible.minY), visible.maxY - frame.height)
 
-        // 被夹回来了多少 —— 这就是「推出去了多远」
-        let pushedLeft = visible.minX - origin.x
-        let pushedRight = origin.x - (visible.maxX - frame.width)
-        let hitEdge = clampedX != origin.x || clampedY != origin.y
-        setFrameOrigin(NSPoint(x: clampedX, y: clampedY))
+        // 画面在屏幕坐标下的边界
+        let contentMinX = origin.x + content.minX
+        let contentMaxX = origin.x + content.maxX
+        let contentMinY = origin.y + content.minY
+        let contentMaxY = origin.y + content.maxY
 
-        let edge: DockEdge = pushedLeft > pushThreshold ? .left
-            : (pushedRight > pushThreshold ? .right : .none)
+        let looseX = content.width * Self.looseFraction
+        let looseY = content.height * Self.looseFraction
+
+        // 夹的是画面，换算回窗口原点
+        var nextX = origin.x
+        var nextY = origin.y
+        if contentMinX < visible.minX - looseX { nextX = visible.minX - looseX - content.minX }
+        if contentMaxX > visible.maxX + looseX { nextX = visible.maxX + looseX - content.maxX }
+        if contentMinY < visible.minY - looseY { nextY = visible.minY - looseY - content.minY }
+        if contentMaxY > visible.maxY + looseY { nextY = visible.maxY + looseY - content.maxY }
+
+        let clamped = nextX != origin.x || nextY != origin.y
+        setFrameOrigin(NSPoint(x: nextX, y: nextY))
+
+        // 推出去了多远——按**画面**算，而不是窗口
+        let pushedLeft = visible.minX - contentMinX
+        let pushedRight = contentMaxX - visible.maxX
+        let threshold = content.width * Self.looseFraction
+        let edge: DockEdge = pushedLeft > threshold ? .left
+            : (pushedRight > threshold ? .right : .none)
         if edge != .none, edge != dockEdge {
             dockEdge = edge
             currentKey = nil // 换边镜像变了，必须重绘
         }
-        if hitEdge { onShellEvent?("shell.screenEdge") }
+        if clamped { onShellEvent?("shell.screenEdge") }
         onShellEvent?(edge == .none ? "shell.miniExit" : "shell.miniEnter")
     }
 
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
+}
+
+extension NSScreen {
+    /// CGDirectDisplayID。macOS 上跨会话稳定，但重排显示器时会变——
+    /// 所以它只作为边界匹配失败后的次判据，不能当主键。
+    var displayID: CGDirectDisplayID? {
+        deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID
+    }
 }

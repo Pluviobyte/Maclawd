@@ -1,6 +1,28 @@
 import Foundation
 
 /// 运行时状态快照，对应 Node 端 `/api/state` 的返回。
+/// 窗口内的归一化矩形，0…1，AppKit 左下原点。
+struct NormalizedRect {
+    var x0: CGFloat
+    var x1: CGFloat
+    var y0: CGFloat
+    var y1: CGFloat
+
+    /// 换算到给定边长的正方形窗口里。
+    func rect(in side: CGFloat) -> NSRect {
+        NSRect(x: side * x0, y: side * y0, width: side * (x1 - x0), height: side * (y1 - y0))
+    }
+
+    init?(_ raw: Any?) {
+        guard let d = raw as? [String: Any],
+              let x0 = d["x0"] as? Double, let x1 = d["x1"] as? Double,
+              let y0 = d["y0"] as? Double, let y1 = d["y1"] as? Double,
+              x1 > x0, y1 > y0
+        else { return nil }
+        self.x0 = x0; self.x1 = x1; self.y0 = y0; self.y1 = y1
+    }
+}
+
 struct RuntimeState {
     var actionId: String = "idle"
     var variant: String?
@@ -12,6 +34,13 @@ struct RuntimeState {
     var motion: Bool = true
     /// 是否处于 mini（贴边）尺寸档。由运行时决定，外壳只跟随。
     var mini: Bool = false
+    /// 可点击区域，窗口内的归一化矩形（AppKit 左下原点）。**按动作变**——
+    /// 俯视平躺的 sleeping 比站立扁得多。由运行时按契约算好下发，
+    /// 外壳不再自己保存一份几何常量。
+    var hitBox: NormalizedRect?
+    /// 可见画面框。夹到屏幕内时用它，**不是窗口框**——
+    /// 窗口 135×135 而角色只占 45×27，按窗口夹的话角色永远贴不到屏幕边。
+    var marginBox: NormalizedRect?
     var reason: String = ""
     var tokensPerMin: Int = 0
     var disabled: Bool = false
@@ -195,6 +224,10 @@ final class RuntimeClient {
                 next.mode = p["mode"] as? String ?? "loop"
                 next.next = p["next"] as? String
                 next.motion = p["motion"] as? Bool ?? true
+                if let g = p["geometry"] as? [String: Any] {
+                    next.hitBox = NormalizedRect(g["hit"])
+                    next.marginBox = NormalizedRect(g["margin"])
+                }
             }
             next.mini = json["mini"] as? Bool ?? false
             if let d = json["debug"] as? [String: Any] {
