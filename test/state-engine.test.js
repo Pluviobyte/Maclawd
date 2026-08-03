@@ -465,3 +465,22 @@ test('hover 是 held：必须成对，否则注视态永远挂着', () => {
   e.observeEvent({ type: 'shell.hoverEnd' }, 3 * SEC);
   assert.equal(e.current().actionId, 'working.testing', '移开后应回到底下真实的状态');
 });
+
+test('落地必须清掉拖拽的持有态，否则桌宠卡在吊环上出不来', () => {
+  // interaction.drag 是 held（拖拽期间一直挂着），interaction.drop 是 oneshot。
+  // 两者走引擎里不同的分支，所以 drop 很容易忘记去清 drag——
+  // 一旦忘了，Drop Wobble 播完会掉回 drag，而 shell 优先级 4.3
+  // 压过 working(6) 和 thinking(7)，表现是「拖完之后桌宠就不动了」。
+  const e = engine();
+  e.observeEvent({ type: 'PreToolUse', sessionId: 's', toolName: 'Bash', command: 'npm test' }, SEC);
+  assert.equal(e.current().actionId, 'working.testing');
+
+  e.observeEvent({ type: 'shell.dragStart' }, 2 * SEC);
+  assert.equal(e.current().actionId, 'interaction.drag', '拖拽期间应显示 Hanging Loop');
+
+  e.observeEvent({ type: 'shell.drop' }, 3 * SEC);
+  assert.equal(e.current().actionId, 'interaction.drop', '落地先播一次性的 Drop Wobble');
+
+  // 一次性动作播完（引擎里插播时长 3 秒）后必须回到底下真实的状态
+  assert.equal(e.tick(7 * SEC).actionId, 'working.testing', '落地后应回到工作态，而不是卡在拖拽姿势');
+});

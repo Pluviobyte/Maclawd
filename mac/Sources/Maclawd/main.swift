@@ -59,6 +59,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menuBar = MenuBarController(client: client)
         menuBar.onTogglePet = { [weak self] in self?.togglePet() }
+        menuBar.onRecenterPet = { [weak self] in
+            self?.pet.recenter()
+            self?.pet.orderFront(nil)
+        }
         menuBar.onQuit = { NSApp.terminate(nil) }
 
         client.onUpdate = { [weak self] in

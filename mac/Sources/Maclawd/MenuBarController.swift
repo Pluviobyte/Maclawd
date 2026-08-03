@@ -14,6 +14,9 @@ final class MenuBarController {
     private let client: RuntimeClient
     private var density: Density
     var onTogglePet: (() -> Void)?
+    /// 把桌宠移回默认角落。拖丢了、或者拖到已经拔掉的外接屏上时的救命入口——
+    /// 没有它，用户只能去删 UserDefaults 或者重装。
+    var onRecenterPet: (() -> Void)?
     var onQuit: (() -> Void)?
 
     enum Density: String, CaseIterable {
@@ -146,6 +149,8 @@ final class MenuBarController {
         menu.addItem(.separator())
         menu.addItem(withTitle: "显示 / 隐藏桌宠", action: #selector(togglePet), keyEquivalent: "p")
             .target = self
+        menu.addItem(withTitle: "把桌宠移回角落", action: #selector(recenterPet), keyEquivalent: "r")
+            .target = self
         menu.addItem(withTitle: "打开用量统计…", action: #selector(openUsage), keyEquivalent: "u")
             .target = self
         menu.addItem(withTitle: "打开宠物管理…", action: #selector(openPanel), keyEquivalent: ",")
@@ -176,6 +181,7 @@ final class MenuBarController {
     }
 
     @objc private func togglePet() { onTogglePet?() }
+    @objc private func recenterPet() { onRecenterPet?() }
     @objc private func openUsage() { NSWorkspace.shared.open(client.usageURL) }
     @objc private func openPanel() { NSWorkspace.shared.open(client.panelURL) }
     @objc private func quit() { onQuit?() }

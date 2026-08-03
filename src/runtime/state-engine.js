@@ -248,6 +248,11 @@ export function createStateEngine(options = {}) {
       lastActivityAt = now;
       if (ONESHOT.has(shellAction)) {
         pushOneshot(shellAction, now);
+        // 落地是拖拽的**终止**事件，必须顺手清掉还持有着的 interaction.drag。
+        // 不清的话：Drop Wobble 播完会掉回「还挂在吊环上」，而 shell 会话的
+        // 优先级 4.3 压过 working(6) 与 thinking(7)，桌宠就卡在拖拽姿势里出不来，
+        // 直到鼠标移开触发 hoverEnd 才自愈——用户只会看到「拖完就不动了」。
+        if (type === 'shell.drop') sessions.delete('shell');
       } else {
         const s = session('shell');
         s.state = shellAction;

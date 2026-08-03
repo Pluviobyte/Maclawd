@@ -12,14 +12,25 @@ import WebKit
 final class PetWindow: NSWindow {
     private let webView: WKWebView
     private var currentKey: String?
-    private var dragOrigin: NSPoint?
     private let repoRoot: URL
     var onDoubleClick: (() -> Void)?
     var onClick: (() -> Void)?
     /// 外壳事件回灌入口，由 AppDelegate 接到 RuntimeClient 上。
     var onShellEvent: ((String) -> Void)?
-    private var isDragging = false
     private var trackingArea: NSTrackingArea?
+
+    // MARK: - 拖动状态
+
+    /// 按下时的**屏幕**坐标，用来判断有没有超过拖动阈值。
+    private var pressedAt: NSPoint?
+    /// 光标落在窗口内的偏移，拖动时保持它不变，宠物才不会跳到光标下。
+    private var grabOffset: NSPoint?
+    /// 按下时的点击次数。真的发生拖动后清零——拖过就不再算点击。
+    private var pendingClicks = 0
+    private var isDragging = false
+    /// 低于这个位移不算拖动。手抖几个点不该把「戳一下」变成「拎起来」。
+    private let dragThreshold: CGFloat = 4
+    private static let originKey = "petWindowOrigin"
 
     /// 贴住哪一边。mini 的动作是按**右边缘**画的，左边缘靠整体镜像复用，
     /// 不为左边缘另画一套资产。
@@ -67,14 +78,15 @@ final class PetWindow: NSWindow {
         ignoresMouseEvents = false
         contentView = webView
 
-        positionAtDefaultCorner()
+        // 先试着回到上次拖到的地方；没有记录或那块屏幕已经不在了才回默认角落。
+        if !restorePosition() { positionAtDefaultCorner() }
     }
 
     private func positionAtDefaultCorner() {
-        guard let screen = NSScreen.main else { return }
+        guard let screen = hostScreen ?? NSScreen.main else { return }
         let inset: CGFloat = 32
-        let frame = screen.visibleFrame
-        setFrameOrigin(NSPoint(x: frame.maxX - self.frame.width - inset, y: frame.minY + inset))
+        let area = screen.visibleFrame
+        setFrameOrigin(NSPoint(x: area.maxX - frame.width - inset, y: area.minY + inset))
     }
 
     /// 让桌宠只接受落在角色身上的点击，空白处点击穿透到下面的窗口。
@@ -123,35 +135,102 @@ final class PetWindow: NSWindow {
 
     // MARK: - 交互
 
+    /**
+     按下只记录，**不**立刻当成点击。
+
+     此前 mouseDown 里无条件发 shell.click，于是每次拖动都会先播一遍
+     Poke Squish（2.2 秒 oneshot），用户刚按下要拎起来，宠物先「被戳了一下」，
+     点击动作和拖动动作打架。点击必须等到抬手、且确认没有发生拖动才算数——
+     这是拖放的标准做法。
+     */
     override func mouseDown(with event: NSEvent) {
-        dragOrigin = event.locationInWindow
-        // 单击保持纯玩耍，不开面板——桌宠首先是宠物，不是按钮。
-        if event.clickCount == 2 {
+        pressedAt = NSEvent.mouseLocation
+        grabOffset = event.locationInWindow
+        pendingClicks = event.clickCount
+        isDragging = false
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let start = pressedAt, let offset = grabOffset else { return }
+        let now = NSEvent.mouseLocation
+        if !isDragging {
+            let moved = max(abs(now.x - start.x), abs(now.y - start.y))
+            guard moved >= dragThreshold else { return }
+            isDragging = true
+            // 已经是拖动了，抬手时不该再补一次点击
+            pendingClicks = 0
+            onShellEvent?("shell.dragStart")
+        }
+        // 保持光标与窗口的相对位置，宠物才是「被拎着」而不是「吸附到光标」
+        setFrameOrigin(NSPoint(x: now.x - offset.x, y: now.y - offset.y))
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        defer {
+            pressedAt = nil
+            grabOffset = nil
+            pendingClicks = 0
+        }
+
+        if isDragging {
+            isDragging = false
+            onShellEvent?("shell.drop")
+            snapToEdgeIfNeeded()
+            savePosition()
+            return
+        }
+
+        // 没拖动才算点击。单击保持纯玩耍，不开面板——桌宠首先是宠物，不是按钮。
+        if pendingClicks >= 2 {
             onShellEvent?("shell.doubleClick")
             onDoubleClick?()
-        } else if event.clickCount == 1 {
+        } else if pendingClicks == 1 {
             onShellEvent?("shell.click")
             onClick?()
         }
     }
 
-    override func mouseDragged(with event: NSEvent) {
-        guard let origin = dragOrigin else { return }
-        if !isDragging {
-            isDragging = true
-            onShellEvent?("shell.dragStart")
-        }
-        let location = NSEvent.mouseLocation
-        setFrameOrigin(NSPoint(x: location.x - origin.x, y: location.y - origin.y))
+    // MARK: - 位置记忆
+
+    /// 窗口**中心所在**的屏幕。不能用 NSScreen.main——那是「有键盘焦点的屏幕」，
+    /// 桌宠是不接受焦点的浮动窗口，拖到副屏后 main 仍然指主屏，
+    /// 于是贴边判定会把它夹回主屏，副屏上根本放不住。
+    private var hostScreen: NSScreen? {
+        let center = NSPoint(x: frame.midX, y: frame.midY)
+        return NSScreen.screens.first { $0.frame.contains(center) }
+            ?? NSScreen.screens.first { $0.frame.intersects(frame) }
+            ?? NSScreen.main
     }
 
-    override func mouseUp(with event: NSEvent) {
-        dragOrigin = nil
-        if isDragging {
-            isDragging = false
-            onShellEvent?("shell.drop")
+    private func savePosition() {
+        UserDefaults.standard.set(NSStringFromPoint(frame.origin), forKey: Self.originKey)
+    }
+
+    /**
+     恢复上次的位置。
+
+     必须校验它**仍然落在某块可见屏幕里**：存下来的位置可能来自已经拔掉的
+     外接屏，直接用会让桌宠出现在看不见的地方——用户会以为应用没启动。
+     校验不过就回默认角落。
+     */
+    @discardableResult
+    private func restorePosition() -> Bool {
+        guard let raw = UserDefaults.standard.string(forKey: Self.originKey) else { return false }
+        let origin = NSPointFromString(raw)
+        guard origin != .zero else { return false }
+        let probe = NSRect(origin: origin, size: frame.size)
+        guard NSScreen.screens.contains(where: { $0.visibleFrame.intersects(probe) }) else {
+            return false
         }
-        snapToEdgeIfNeeded()
+        setFrameOrigin(origin)
+        return true
+    }
+
+    /// 把桌宠移回默认角落。拖丢了、或者拖到已拔掉的屏幕上时的救命入口。
+    func recenter() {
+        positionAtDefaultCorner()
+        savePosition()
+        refreshTracking()
     }
 
     override func mouseEntered(with event: NSEvent) {
@@ -177,9 +256,9 @@ final class PetWindow: NSWindow {
         trackingArea = area
     }
 
-    /// 判定「贴住了」的容差。比原来的 4pt 略宽——拖到边缘时手很难精确到 4pt，
-    /// 太严会让收起功能看起来时灵时不灵。
-    private let snapThreshold: CGFloat = 8
+    /// 要推出屏幕多远才算「想收起来」。太小会误触（用户只是想放到角落），
+    /// 太大又推不动。宠物宽度的三分之一左右是个能做到、又做不错的量。
+    private let pushThreshold: CGFloat = 40
 
     /**
      切换尺寸档。
@@ -193,7 +272,7 @@ final class PetWindow: NSWindow {
         isMini = on
         let side = on ? miniSize : mainSize
         var origin = frame.origin
-        if let screen = NSScreen.main {
+        if let screen = hostScreen {
             let visible = screen.visibleFrame
             // 收起时紧贴屏幕边（贴边位的裁切才成立），展开时把身子让回屏幕内。
             switch dockEdge {
@@ -208,23 +287,30 @@ final class PetWindow: NSWindow {
         refreshTracking()
     }
 
-    /// 贴边时轻微内收，避免半个身子跑到屏幕外；真正贴到边就报 screenEdge，
-    /// 并按落点在左还是在右提议收起 / 展开。
+    /**
+     松手后把身子收回屏幕内，并判断要不要收起成 mini。
+
+     **收起需要明确意图**：只有把宠物**推出屏幕边缘**才收起，
+     靠近边缘放下不算。此前是「落点距边缘 8pt 以内就收起」——
+     那太容易误触，用户只是想把它挪到角落，它却缩成一半。
+     推出屏幕外是一个不会误做的手势，语义上也正好是「把它塞到旁边去」。
+     */
     private func snapToEdgeIfNeeded() {
-        guard let screen = NSScreen.main else { return }
+        guard let screen = hostScreen else { return }
         let visible = screen.visibleFrame
-        var origin = frame.origin
+        let origin = frame.origin
         let clampedX = min(max(origin.x, visible.minX), visible.maxX - frame.width)
         let clampedY = min(max(origin.y, visible.minY), visible.maxY - frame.height)
-        let atLeft = abs(clampedX - visible.minX) < snapThreshold
-        let atRight = abs(clampedX - (visible.maxX - frame.width)) < snapThreshold
-        let hitEdge = clampedX != origin.x || clampedY != origin.y || atLeft || atRight
-        origin.x = clampedX
-        origin.y = clampedY
-        setFrameOrigin(origin)
 
-        let edge: DockEdge = atLeft ? .left : (atRight ? .right : .none)
-        if edge != dockEdge {
+        // 被夹回来了多少 —— 这就是「推出去了多远」
+        let pushedLeft = visible.minX - origin.x
+        let pushedRight = origin.x - (visible.maxX - frame.width)
+        let hitEdge = clampedX != origin.x || clampedY != origin.y
+        setFrameOrigin(NSPoint(x: clampedX, y: clampedY))
+
+        let edge: DockEdge = pushedLeft > pushThreshold ? .left
+            : (pushedRight > pushThreshold ? .right : .none)
+        if edge != .none, edge != dockEdge {
             dockEdge = edge
             currentKey = nil // 换边镜像变了，必须重绘
         }
