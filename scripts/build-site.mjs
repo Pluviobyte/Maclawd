@@ -142,6 +142,15 @@ async function main() {
   await import('./build-action-catalog.mjs');
   await write('actions.html', await read('web/actions.html'));
 
+  // 候选变体浏览页。变体 CSS 已经在共享样式表里（build-variants.mjs 写的），
+  // 这里只需要把页面和数据搬过去。
+  try {
+    await write('variants.html', await read('web/variants.html'));
+    await write('variant-data.js', await read('web/variant-data.js'));
+  } catch {
+    // 变体页还没生成时不阻断整个站点构建
+  }
+
   await write('demo-engine.js', await bundleEngine());
   await write('demo-data.js', await read('web/demo-data.js'));
   await write('demo-mode.js', await read('web/demo-mode.js'));
