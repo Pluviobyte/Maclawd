@@ -1,0 +1,741 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Maclawd — 动作状态总表</title>
+    <style>
+      :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+              background:#f4f1ea; color:#1e1e2e; }
+      * { box-sizing:border-box; }
+      body { margin:0; padding:44px 24px 80px; }
+      main { width:min(1320px,100%); margin:0 auto; }
+      h1 { margin:0 0 12px; font-size:clamp(30px,4vw,46px); letter-spacing:-.03em; }
+      .lede { max-width:780px; margin:0 0 6px; color:#50505e; line-height:1.65; }
+      .stats { display:flex; flex-wrap:wrap; gap:10px; margin:22px 0 10px; }
+      .stat { padding:10px 14px; border-radius:14px; background:#fbfaf7;
+              border:1px solid rgba(30,30,46,.1); font-size:13px; }
+      .stat b { font-size:20px; display:block; letter-spacing:-.02em; }
+      .note { max-width:780px; margin:18px 0 40px; padding:14px 16px; border-radius:14px;
+              background:rgba(255,255,255,.55); border:1px solid rgba(30,30,46,.1);
+              color:#626271; font-size:13.5px; line-height:1.65; }
+      section { margin-bottom:46px; }
+      .head { margin-bottom:16px; }
+      .head h2 { margin:0 0 4px; font-size:26px; }
+      .count { display:inline-block; margin-left:6px; padding:2px 9px; border-radius:999px;
+               background:#1e1e2e; color:#fbfaf7; font-size:13px; vertical-align:middle; }
+      .head p { margin:0; max-width:720px; color:#50505e; font-size:14px; line-height:1.6; }
+      .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
+      .act { border:1px solid rgba(30,30,46,.11); border-radius:20px; background:#fbfaf7;
+             overflow:hidden; box-shadow:0 10px 30px rgba(30,30,46,.06); }
+      .act.alias { opacity:.66; }
+      .stage { aspect-ratio:1; background:
+        linear-gradient(rgba(30,30,46,.035) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(30,30,46,.035) 1px,transparent 1px),#fff;
+        background-size:22px 22px; display:grid; place-items:center; }
+      object { width:100%; height:100%; image-rendering:pixelated; }
+      .no-asset { font-size:12px; color:#9a9aa8; }
+      .body { padding:14px 16px 18px; }
+      .id { font:11px ui-monospace,SFMono-Regular,Menlo,monospace; color:#c67a62; }
+      h3 { margin:3px 0 6px; font-size:18px; }
+      .body p { margin:0 0 10px; font-size:13px; line-height:1.55; color:#50505e; }
+      dl { margin:0 0 10px; font-size:12px; }
+      dl div { display:flex; gap:8px; padding:2px 0; }
+      dt { flex:none; width:82px; color:#8a8a99; }
+      dd { margin:0; color:#3a3a48; }
+      .dim { color:#a8a8b4; }
+      .trig { display:flex; flex-wrap:wrap; gap:5px; }
+      .chip { padding:3px 8px; border-radius:999px; background:#fff; font-size:10.5px;
+              border:1px solid rgba(30,30,46,.12); color:#50505e;
+              font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+      .chip.warn { background:#fdecea; border-color:#e6b0a6; color:#a8432c; }
+      a { color:#a55f4c; }
+      @media(max-width:560px){ body{padding:28px 14px 60px} .grid{grid-template-columns:1fr} }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>动作状态总表</h1>
+      <p class="lede">这一页由契约生成，不是手写的——手写的表和契约必然漂移，
+        而漂移之后它会变成一份看起来权威、实际在骗人的文档。</p>
+      <div class="stats">
+        <div class="stat"><b>39</b>个动作</div>
+        <div class="stat"><b>8</b>个 mini 档</div>
+        <div class="stat"><b>39</b>个有触发源</div>
+        <div class="stat"><b>31</b>条收敛映射</div>
+      </div>
+      <div class="note">
+        <b>怎么读这张表。</b><br>
+        <b>优先级</b>数字越小越先显示。一台机器可能同时跑多个会话，但桌宠只有一只——
+        谁上屏由这个数决定。「不参与仲裁」的是一次性插播或外壳反应，走另一条路。<br>
+        <b>姿态密度</b>是屏幕上每秒变几次姿态，只有重做过运动的动作有这个数。
+        重做前全套中位是 1.56，像素画待机循环的通常下限是 4。<br>
+        <b>mini 收敛</b>是贴边收起后投影到哪一档。收敛表必须穷举声明，
+        不允许靠 id 前缀推断——前缀推断在 <code>idle.drowsy</code> 与
+        <code>interaction.drag</code> 这种地方一定会猜错。<br>
+        另见：<a href="working-candidates">工作状态的 16 个候选</a> ·
+        <a href="./">动作实验室</a>
+      </div>
+      
+      <section>
+        <div class="head">
+          <h2>主状态 <span class="count">11</span></h2>
+          <p>Agent 与 owner 的稳定状态。休眠链、任务链、结果链都有明确转场。</p>
+        </div>
+        <div class="grid">
+        <article class="act">
+          <div class="stage"><object data="src/animations/calm-calibration.svg" type="image/svg+xml">Quiet Watch</object></div>
+          <div class="body">
+            <code class="id">idle</code>
+            <h3>Quiet Watch</h3>
+            <p>Breathe, observe, and blink once.</p>
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>5.6s · loop</dd></div>
+              <div><dt>道具</dt><dd>无道具</dd></div>
+              <div><dt>优先级</dt><dd>8</dd></div>
+              <div><dt>姿态密度</dt><dd>5.9 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.idle</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">hook · Stop</span><span class="chip">hook · ErrorResolved</span><span class="chip">hook · SessionEnd</span><span class="chip">外壳 · shell.hoverEnd</span><span class="chip">外壳 · shell.reconnected</span><span class="chip">外壳 · shell.resumed</span><span class="chip">idle 加权轮换</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/blanket-drag.svg" type="image/svg+xml">Blanket Tug</object></div>
+          <div class="body">
+            <code class="id">away</code>
+            <h3>Blanket Tug</h3>
+            <p>Grow drowsy and pull the blanket against the body.</p>
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>3.8s · loop</dd></div>
+              <div><dt>道具</dt><dd>one small attached blanket</dd></div>
+              <div><dt>优先级</dt><dd>9</dd></div>
+              <div><dt>姿态密度</dt><dd>3.9 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.idle</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">hook · 静默转场</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/blanket-burrito.svg" type="image/svg+xml">Top-down Sleep</object></div>
+          <div class="body">
+            <code class="id">sleeping</code>
+            <h3>Top-down Sleep</h3>
+            <p>Lie flat on the pillow under the blanket; keep closed eyes and both claws visible while the blanket breathes and three Z shapes rise.</p>
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>6.4s · loop</dd></div>
+              <div><dt>道具</dt><dd>one pillow, the same large blanket, and user-approved pixel Zzz; no mattress or bottom pad</dd></div>
+              <div><dt>优先级</dt><dd>10</dd></div>
+              <div><dt>姿态密度</dt><dd>2.2 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.idle</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">hook · 静默转场</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/blanket-pop.svg" type="image/svg+xml">Morning Stretch</object></div>
+          <div class="body">
+            <code class="id">waking</code>
+            <h3>Morning Stretch</h3>
+            <p>Spring upright, stretch, and let the blanket slip away.</p>
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>2.6s · oneshot</dd></div>
+              <div><dt>道具</dt><dd>one small attached blanket</dd></div>
+              <div><dt>优先级</dt><dd><span class="dim">不参与仲裁</span></dd></div>
+              <div><dt>姿态密度</dt><dd>3.1 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.peek</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">hook · 从 away / sleeping 被唤醒</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/shell-shuffle.svg" type="image/svg+xml">Puzzle Turn</object></div>
+          <div class="body">
+            <code class="id">thinking</code>
+            <h3>Puzzle Turn</h3>
+            <p>Turn the piece, compare both sides, and pause.</p>
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>4.6s · loop</dd></div>
+              <div><dt>道具</dt><dd>one puzzle piece between both claws</dd></div>
+              <div><dt>优先级</dt><dd>7</dd></div>
+              <div><dt>姿态密度</dt><dd>3.5 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.busy</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">hook · SessionStart</span><span class="chip">hook · UserPromptSubmit</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/token-knitting.svg" type="image/svg+xml">Tile Feed</object></div>
+          <div class="body">
+            <code class="id">working</code>
+            <h3>Tile Feed</h3>
+            <p>Receive each arriving tile with one claw and pass it up with the other; never return to a rest pose.</p>
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>3.4s · loop</dd></div>
+              <div><dt>道具</dt><dd>two work tiles flowing through a single vertical lane</dd></div>
+              <div><dt>优先级</dt><dd>6</dd></div>
+              <div><dt>姿态密度</dt><dd>7.6 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.busy</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">hook · PostToolUseFailure</span><span class="chip">hook · PostToolBatch</span><span class="chip">hook · SubagentStop</span><span class="chip">hook · PostCompact</span><span class="chip">hook · PermissionResolved</span><span class="chip">hook · CwdChanged</span><span class="chip">hook · SessionEnd</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/hatchling-parade.svg" type="image/svg+xml">Parcel Stack</object></div>
+          <div class="body">
+            <code class="id">delegating</code>
+            <h3>Parcel Stack</h3>
+            <p>Pass the parcel through the helper stack.</p>
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>5s · loop</dd></div>
+              <div><dt>道具</dt><dd>one parcel and two vertically stacked helpers</dd></div>
+              <div><dt>优先级</dt><dd>4</dd></div>
+              <div><dt>姿态密度</dt><dd>4.8 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.busy</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">hook · SubagentStart</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/stuck-jar.svg" type="image/svg+xml">Stuck Jar</object></div>
+          <div class="body">
+            <code class="id">needs_owner</code>
+            <h3>Stuck Jar</h3>
+            <p>Twist twice, strain, then push the jar toward the owner.</p>
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>4.8s · loop</dd></div>
+              <div><dt>道具</dt><dd>one jar beside the body</dd></div>
+              <div><dt>优先级</dt><dd>1</dd></div>
+              <div><dt>姿态密度</dt><dd>3.1 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.alert</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">hook · PermissionRequest</span><span class="chip">hook · Notification</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/accordion-fold.svg" type="image/svg+xml">Suitcase Fold</object></div>
+          <div class="body">
+            <code class="id">compacting</code>
+            <h3>Suitcase Fold</h3>
+            <p>Fold the cloth progressively into the suitcase.</p>
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>4.8s · loop</dd></div>
+              <div><dt>道具</dt><dd>one open suitcase and one striped cloth</dd></div>
+              <div><dt>优先级</dt><dd>3</dd></div>
+              <div><dt>姿态密度</dt><dd>3.8 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.busy</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">hook · PreCompact</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/self-high-five.svg" type="image/svg+xml">Self High-five</object></div>
+          <div class="body">
+            <code class="id">success</code>
+            <h3>Self High-five</h3>
+            <p>Hop, make both claws meet overhead, and settle.</p>
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>2.9s · oneshot</dd></div>
+              <div><dt>道具</dt><dd>无道具</dd></div>
+              <div><dt>优先级</dt><dd><span class="dim">不参与仲裁</span></dd></div>
+              <div><dt>姿态密度</dt><dd>4.5 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.happy</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">hook · Stop</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/yarn-tangle.svg" type="image/svg+xml">Basket Rescue</object></div>
+          <div class="body">
+            <code class="id">error</code>
+            <h3>Basket Rescue</h3>
+            <p>Get covered by the basket, wriggle free, stand, and get nudged again.</p>
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>4.8s · loop</dd></div>
+              <div><dt>道具</dt><dd>one broad woven basket</dd></div>
+              <div><dt>优先级</dt><dd>2</dd></div>
+              <div><dt>姿态密度</dt><dd>3.8 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.error</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">hook · StopFailure</span></div>
+          </div>
+        </article></div>
+      </section>
+      <section>
+        <div class="head">
+          <h2>工作修饰 <span class="count">2</span></h2>
+          <p>只保留跑得够久、看得见的两个。Read/Edit 毫秒返回，修饰一闪而过，为它们画动作是白费。</p>
+        </div>
+        <div class="grid">
+        <article class="act">
+          <div class="stage"><object data="src/animations/block-tower.svg" type="image/svg+xml">Block Stack</object></div>
+          <div class="body">
+            <code class="id">working.building</code>
+            <h3>Block Stack</h3>
+            
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>5s · —</dd></div>
+              <div><dt>道具</dt><dd>—</dd></div>
+              <div><dt>优先级</dt><dd>5</dd></div>
+              <div><dt>姿态密度</dt><dd>5 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.busy</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">hook · PreToolUse · Bash 构建命令</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/wobble-test.svg" type="image/svg+xml">Toy Check</object></div>
+          <div class="body">
+            <code class="id">working.testing</code>
+            <h3>Toy Check</h3>
+            
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>4.8s · —</dd></div>
+              <div><dt>道具</dt><dd>—</dd></div>
+              <div><dt>优先级</dt><dd>5</dd></div>
+              <div><dt>姿态密度</dt><dd>5.4 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.busy</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">hook · PreToolUse · Bash 测试命令</span></div>
+          </div>
+        </article></div>
+      </section>
+      <section>
+        <div class="head">
+          <h2>互动与环境 <span class="count">6</span></h2>
+          <p>由桌面交互或系统事件触发，不冒充 Agent 的任务进度。</p>
+        </div>
+        <div class="grid">
+        <article class="act">
+          <div class="stage"><object data="src/animations/click-flinch.svg" type="image/svg+xml">Poke Squish</object></div>
+          <div class="body">
+            <code class="id">interaction.click</code>
+            <h3>Poke Squish</h3>
+            
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>2.2s · reaction</dd></div>
+              <div><dt>道具</dt><dd>—</dd></div>
+              <div><dt>优先级</dt><dd><span class="dim">不参与仲裁</span></dd></div>
+              <div><dt>姿态密度</dt><dd>3.2 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.peek</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">外壳 · shell.click</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/surprised-hop.svg" type="image/svg+xml">Surprised Hop</object></div>
+          <div class="body">
+            <code class="id">interaction.double_click</code>
+            <h3>Surprised Hop</h3>
+            
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>2.4s · reaction</dd></div>
+              <div><dt>道具</dt><dd>—</dd></div>
+              <div><dt>优先级</dt><dd><span class="dim">不参与仲裁</span></dd></div>
+              <div><dt>姿态密度</dt><dd>3.3 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.happy</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">外壳 · shell.doubleClick</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/drag-cling.svg" type="image/svg+xml">Hanging Loop</object></div>
+          <div class="body">
+            <code class="id">interaction.drag</code>
+            <h3>Hanging Loop</h3>
+            
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>3.2s · held</dd></div>
+              <div><dt>道具</dt><dd>—</dd></div>
+              <div><dt>优先级</dt><dd><span class="dim">不参与仲裁</span></dd></div>
+              <div><dt>姿态密度</dt><dd>5 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.peek</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">外壳 · shell.dragStart</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/drop-wobble.svg" type="image/svg+xml">Drop Wobble</object></div>
+          <div class="body">
+            <code class="id">interaction.drop</code>
+            <h3>Drop Wobble</h3>
+            
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>2.6s · reaction</dd></div>
+              <div><dt>道具</dt><dd>—</dd></div>
+              <div><dt>优先级</dt><dd><span class="dim">不参与仲裁</span></dd></div>
+              <div><dt>姿态密度</dt><dd>5 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.peek</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">外壳 · shell.drop</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/edge-peek.svg" type="image/svg+xml">Curtain Peek</object></div>
+          <div class="body">
+            <code class="id">ambient.edge</code>
+            <h3>Curtain Peek</h3>
+            
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>4.6s · loop</dd></div>
+              <div><dt>道具</dt><dd>—</dd></div>
+              <div><dt>优先级</dt><dd><span class="dim">不参与仲裁</span></dd></div>
+              <div><dt>姿态密度</dt><dd>3 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.idle</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">外壳 · shell.screenEdge</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/low-battery-droop.svg" type="image/svg+xml">Low Battery Droop</object></div>
+          <div class="body">
+            <code class="id">ambient.low_battery</code>
+            <h3>Low Battery Droop</h3>
+            
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>6.2s · loop</dd></div>
+              <div><dt>道具</dt><dd>无道具</dd></div>
+              <div><dt>优先级</dt><dd><span class="dim">不参与仲裁</span></dd></div>
+              <div><dt>姿态密度</dt><dd>1.9 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.alert</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">外壳 · shell.lowBattery</span></div>
+          </div>
+        </article></div>
+      </section>
+      <section>
+        <div class="head">
+          <h2>生命周期与生命感 <span class="count">12</span></h2>
+          <p>启动、退出、等待、收尾，以及让桌宠像活物的低频 idle 彩蛋。</p>
+        </div>
+        <div class="grid">
+        <article class="act">
+          <div class="stage"><object data="src/animations/hello-unfold.svg" type="image/svg+xml">Hello Unfold</object></div>
+          <div class="body">
+            <code class="id">launching</code>
+            <h3>Hello Unfold</h3>
+            
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>2.8s · oneshot</dd></div>
+              <div><dt>道具</dt><dd>—</dd></div>
+              <div><dt>优先级</dt><dd><span class="dim">不参与仲裁</span></dd></div>
+              <div><dt>姿态密度</dt><dd>3.9 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.peek</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">hook · SessionStart</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/goodbye-tuck.svg" type="image/svg+xml">Goodbye Tuck</object></div>
+          <div class="body">
+            <code class="id">quitting</code>
+            <h3>Goodbye Tuck</h3>
+            
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>2.8s · oneshot</dd></div>
+              <div><dt>道具</dt><dd>—</dd></div>
+              <div><dt>优先级</dt><dd><span class="dim">不参与仲裁</span></dd></div>
+              <div><dt>姿态密度</dt><dd>3.9 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.enter</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">hook · SessionEnd</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/claw-tap-wait.svg" type="image/svg+xml">Claw Tap Wait</object></div>
+          <div class="body">
+            <code class="id">waiting</code>
+            <h3>Claw Tap Wait</h3>
+            
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>4.2s · loop</dd></div>
+              <div><dt>道具</dt><dd>—</dd></div>
+              <div><dt>优先级</dt><dd>4.6</dd></div>
+              <div><dt>姿态密度</dt><dd>4 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.alert</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">hook · TeammateIdle</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/statue-pause.svg" type="image/svg+xml">Statue Pause</object></div>
+          <div class="body">
+            <code class="id">paused</code>
+            <h3>Statue Pause</h3>
+            
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>6s · loop</dd></div>
+              <div><dt>道具</dt><dd>—</dd></div>
+              <div><dt>优先级</dt><dd><span class="dim">不参与仲裁</span></dd></div>
+              <div><dt>姿态密度</dt><dd>3.2 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.idle</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">外壳 · shell.paused</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/jar-click.svg" type="image/svg+xml">Jar Click</object></div>
+          <div class="body">
+            <code class="id">owner_resolved</code>
+            <h3>Jar Click</h3>
+            
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>3.2s · oneshot</dd></div>
+              <div><dt>道具</dt><dd>—</dd></div>
+              <div><dt>优先级</dt><dd><span class="dim">不参与仲裁</span></dd></div>
+              <div><dt>姿态密度</dt><dd>3.4 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.happy</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">hook · PermissionResolved</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/basket-breakout.svg" type="image/svg+xml">Basket Breakout</object></div>
+          <div class="body">
+            <code class="id">recovering</code>
+            <h3>Basket Breakout</h3>
+            
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>3.4s · oneshot</dd></div>
+              <div><dt>道具</dt><dd>—</dd></div>
+              <div><dt>优先级</dt><dd><span class="dim">不参与仲裁</span></dd></div>
+              <div><dt>姿态密度</dt><dd>2.4 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.busy</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">hook · ErrorResolved</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/idle-claw-groom.svg" type="image/svg+xml">Claw Groom</object></div>
+          <div class="body">
+            <code class="id">idle.grooming</code>
+            <h3>Claw Groom</h3>
+            
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>5.2s · loop</dd></div>
+              <div><dt>道具</dt><dd>—</dd></div>
+              <div><dt>优先级</dt><dd><span class="dim">不参与仲裁</span></dd></div>
+              <div><dt>姿态密度</dt><dd>3.7 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.idle</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">idle 加权轮换</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/idle-leg-shuffle.svg" type="image/svg+xml">Leg Shuffle</object></div>
+          <div class="body">
+            <code class="id">idle.leg_shuffle</code>
+            <h3>Leg Shuffle</h3>
+            
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>4.8s · loop</dd></div>
+              <div><dt>道具</dt><dd>—</dd></div>
+              <div><dt>优先级</dt><dd><span class="dim">不参与仲裁</span></dd></div>
+              <div><dt>姿态密度</dt><dd>5.2 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.idle</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">idle 加权轮换</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/idle-drowsy-nod.svg" type="image/svg+xml">Drowsy Nod</object></div>
+          <div class="body">
+            <code class="id">idle.drowsy</code>
+            <h3>Drowsy Nod</h3>
+            
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>6s · loop</dd></div>
+              <div><dt>道具</dt><dd>—</dd></div>
+              <div><dt>优先级</dt><dd><span class="dim">不参与仲裁</span></dd></div>
+              <div><dt>姿态密度</dt><dd>3.5 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.idle</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">idle 加权轮换</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/hover-gaze.svg" type="image/svg+xml">Cursor Gaze</object></div>
+          <div class="body">
+            <code class="id">interaction.hover</code>
+            <h3>Cursor Gaze</h3>
+            
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>3s · held</dd></div>
+              <div><dt>道具</dt><dd>—</dd></div>
+              <div><dt>优先级</dt><dd><span class="dim">不参与仲裁</span></dd></div>
+              <div><dt>姿态密度</dt><dd>7.7 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.peek</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">外壳 · shell.hover</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/signal-listen.svg" type="image/svg+xml">Signal Listen</object></div>
+          <div class="body">
+            <code class="id">ambient.offline</code>
+            <h3>Signal Listen</h3>
+            
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>5.2s · loop</dd></div>
+              <div><dt>道具</dt><dd>—</dd></div>
+              <div><dt>优先级</dt><dd><span class="dim">不参与仲裁</span></dd></div>
+              <div><dt>姿态密度</dt><dd>3.1 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.error</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">外壳 · shell.offline</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/blanket-pop.svg" type="image/svg+xml">（别名 → waking）</object></div>
+          <div class="body">
+            <code class="id">ambient.power_connected</code>
+            <h3>（别名 → waking）</h3>
+            
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>— · alias</dd></div>
+              <div><dt>道具</dt><dd>—</dd></div>
+              <div><dt>优先级</dt><dd><span class="dim">不参与仲裁</span></dd></div>
+              <div><dt>姿态密度</dt><dd>3.1 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.happy</code></dd></div>
+            </dl>
+            <div class="trig"><span class="chip">外壳 · shell.powerConnected</span></div>
+          </div>
+        </article></div>
+      </section>
+      <section>
+        <div class="head">
+          <h2>mini（贴边） <span class="count">8</span></h2>
+          <p>推出屏幕边缘后收起成 48px。不是把角色缩小，而是把镜头推近、裁掉场景只留演员。</p>
+        </div>
+        <div class="grid">
+        <article class="act">
+          <div class="stage"><object data="src/animations/mini-idle.svg" type="image/svg+xml">Edge Doze</object></div>
+          <div class="body">
+            <code class="id">mini.idle</code>
+            <h3>Edge Doze</h3>
+            <p>Breathe slowly against the edge with one drowsy eye showing.</p>
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>5.2s · loop</dd></div>
+              <div><dt>道具</dt><dd>无道具</dd></div>
+              <div><dt>优先级</dt><dd><span class="dim">不参与仲裁</span></dd></div>
+              
+              
+            </dl>
+            <div class="trig"><span class="chip">mini 档内由收敛表投影</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/mini-busy.svg" type="image/svg+xml">Edge Bob</object></div>
+          <div class="body">
+            <code class="id">mini.busy</code>
+            <h3>Edge Bob</h3>
+            <p>Bob with a working rhythm, claw stirring.</p>
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>3.2s · loop</dd></div>
+              <div><dt>道具</dt><dd>无道具</dd></div>
+              <div><dt>优先级</dt><dd><span class="dim">不参与仲裁</span></dd></div>
+              
+              
+            </dl>
+            <div class="trig"><span class="chip">mini 档内由收敛表投影</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/mini-peek.svg" type="image/svg+xml">Edge Peek</object></div>
+          <div class="body">
+            <code class="id">mini.peek</code>
+            <h3>Edge Peek</h3>
+            <p>Lean out until both eyes clear the frame, then ease back.</p>
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>3.6s · loop</dd></div>
+              <div><dt>道具</dt><dd>无道具</dd></div>
+              <div><dt>优先级</dt><dd><span class="dim">不参与仲裁</span></dd></div>
+              
+              
+            </dl>
+            <div class="trig"><span class="chip">mini 档内由收敛表投影</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/mini-alert.svg" type="image/svg+xml">Edge Tap</object></div>
+          <div class="body">
+            <code class="id">mini.alert</code>
+            <h3>Edge Tap</h3>
+            <p>Lean out and tap the edge twice.</p>
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>2.4s · loop</dd></div>
+              <div><dt>道具</dt><dd>无道具</dd></div>
+              <div><dt>优先级</dt><dd><span class="dim">不参与仲裁</span></dd></div>
+              
+              
+            </dl>
+            <div class="trig"><span class="chip">mini 档内由收敛表投影</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/mini-error.svg" type="image/svg+xml">Edge Slump</object></div>
+          <div class="body">
+            <code class="id">mini.error</code>
+            <h3>Edge Slump</h3>
+            <p>Slump against the edge and rock slowly.</p>
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>4.4s · loop</dd></div>
+              <div><dt>道具</dt><dd>无道具</dd></div>
+              <div><dt>优先级</dt><dd><span class="dim">不参与仲裁</span></dd></div>
+              
+              
+            </dl>
+            <div class="trig"><span class="chip">mini 档内由收敛表投影</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/mini-happy.svg" type="image/svg+xml">Edge Bounce</object></div>
+          <div class="body">
+            <code class="id">mini.happy</code>
+            <h3>Edge Bounce</h3>
+            <p>Spring out once and settle back.</p>
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>2.4s · oneshot</dd></div>
+              <div><dt>道具</dt><dd>无道具</dd></div>
+              <div><dt>优先级</dt><dd><span class="dim">不参与仲裁</span></dd></div>
+              
+              
+            </dl>
+            <div class="trig"><span class="chip">mini 档内由收敛表投影</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/mini-enter.svg" type="image/svg+xml">Tuck In</object></div>
+          <div class="body">
+            <code class="id">mini.enter</code>
+            <h3>Tuck In</h3>
+            <p>Slide from the main-form centre into the tucked edge position.</p>
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>1.6s · oneshot</dd></div>
+              <div><dt>道具</dt><dd>无道具</dd></div>
+              <div><dt>优先级</dt><dd><span class="dim">不参与仲裁</span></dd></div>
+              
+              
+            </dl>
+            <div class="trig"><span class="chip">mini 档内由收敛表投影</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/mini-exit.svg" type="image/svg+xml">Pop Out</object></div>
+          <div class="body">
+            <code class="id">mini.exit</code>
+            <h3>Pop Out</h3>
+            <p>Slide out of the tucked edge position toward the main form.</p>
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>1.6s · oneshot</dd></div>
+              <div><dt>道具</dt><dd>无道具</dd></div>
+              <div><dt>优先级</dt><dd><span class="dim">不参与仲裁</span></dd></div>
+              
+              
+            </dl>
+            <div class="trig"><span class="chip">mini 档内由收敛表投影</span></div>
+          </div>
+        </article></div>
+      </section>
+    </main>
+  </body>
+</html>

@@ -120,7 +120,9 @@ async function main() {
   await write('index.html', lab.replace(
     '<div id="lab"></div>',
     '<p class="note" style="margin:0 0 26px">'
-    + '这 38 个动作由运行时按状态调度。'
+    + `这 ${loadActions().length} 个动作由运行时按状态调度。`
+    + '<a href="/actions">动作状态总表</a> · '
+    + '<a href="/working-candidates">工作状态候选</a> · '
     + '<a href="/pet">宠物管理面板</a> · <a href="/usage">用量统计面板</a>'
     + '（演示数据，桌宠状态跑的是真引擎）</p>\n      <div id="lab"></div>',
   ));
@@ -132,6 +134,11 @@ async function main() {
 
   // 候选对比页：纯静态，不需要演示兜底。
   await write('working-candidates.html', await read('web/working-candidates.html'));
+
+  // 动作总表：**每次构建都重新生成**。只在改动作时手动跑一次的话，
+  // 它迟早会停在某个旧版本上，而一份过期的「总表」比没有更误导。
+  await import('./build-action-catalog.mjs');
+  await write('actions.html', await read('web/actions.html'));
 
   await write('demo-engine.js', await bundleEngine());
   await write('demo-data.js', await read('web/demo-data.js'));

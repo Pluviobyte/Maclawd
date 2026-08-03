@@ -231,3 +231,30 @@ test('持续态的循环里不许有静止姿态，接缝不许停顿', () => {
       `${state} 有 ${(share * 100).toFixed(0)}% 的循环停在原位，读不出持续活动`);
   }
 });
+
+test('动作总表必须覆盖全部契约动作，且每个都有触发源', () => {
+  // 这张表是对外的「现在有哪些动作」的唯一答案。它由契约生成，
+  // 但生成器靠**解析引擎源码**找触发源——引擎一改结构，解析就可能失配，
+  // 而失配的表现是把活着的动作标成「没有触发源」。
+  // 那正是这张表最该避免的错误：看起来权威，实际在骗人。
+  const html = read('web/actions.html');
+  const actions = JSON.parse(read('design/main-state-actions.json'));
+  assert.ok(html.length > 5000, '总表页太小，八成没生成成功');
+
+  // 每个契约动作都要在页面上出现
+  const walk = (node, out = []) => {
+    if (Array.isArray(node)) node.forEach((n) => walk(n, out));
+    else if (node && typeof node === 'object') {
+      if (node.id && node.name) out.push(node.id);
+      Object.values(node).forEach((v) => walk(v, out));
+    }
+    return out;
+  };
+  for (const id of walk(actions)) {
+    assert.ok(html.includes(`>${id}</code>`), `总表缺少动作 ${id}`);
+  }
+
+  // 「没有触发源」是生成器给出的警示标记，不该出现在成品里
+  assert.ok(!html.includes('没有触发源'),
+    '总表上有动作被标为「没有触发源」——要么真是死动作，要么解析器失配了');
+});
