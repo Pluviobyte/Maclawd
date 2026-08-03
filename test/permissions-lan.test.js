@@ -124,7 +124,8 @@ test('局域网连接严格只读', () => {
   assert.equal(authorize({ ...base, pathname: '/api/tools', method: 'GET' }).allow, false);
   assert.equal(authorize({ ...base, pathname: '/usage', method: 'GET' }).allow, false);
   // 白名单内放行
-  for (const path of ['/mobile', '/api/state', '/api/live', '/api/summary', '/src/animations/x.svg']) {
+  for (const path of ['/mobile', '/api/state', '/api/live', '/api/summary', '/api/analytics',
+    '/src/animations/x.svg']) {
     assert.equal(authorize({ ...base, pathname: path, method: 'GET' }).allow, true, path);
   }
 });

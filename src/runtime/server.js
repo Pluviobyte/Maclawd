@@ -12,6 +12,7 @@ import {
 import { costOf, updatePrices, pricingMeta } from './pricing.js';
 import { billable } from './usage-record.js';
 import { summarizeSessions } from './sessions.js';
+import { queryUsageAnalytics } from './analytics.js';
 import { intensityFromRate } from './tail.js';
 import { createCollector } from './daemon.js';
 import { createStateEngine, energyFrom } from './state-engine.js';
@@ -237,6 +238,35 @@ function buildSummary(query) {
     projectPaths: rollup.projectPaths ?? {},
     wrapped: wrapped(rollup, summary),
   };
+}
+
+function buildAnalytics(query) {
+  const rollup = loadRollup();
+  if (!rollup) return { empty: true };
+  if (rollup.stale) return { empty: true, stale: true };
+
+  const multi = (name) => {
+    const values = query.getAll(name).filter(Boolean);
+    if (values.length === 0) return null;
+    return values.length === 1 ? values[0] : values;
+  };
+  try {
+    return queryUsageAnalytics(rollup, {
+      range: query.get('range') || '30d',
+      from: query.get('from'),
+      to: query.get('to'),
+      filters: {
+        source: multi('source'),
+        model: multi('model'),
+        project: multi('project'),
+      },
+      cursor: query.get('cursor'),
+      limit: Number(query.get('limit')) || 50,
+      priceBucket: costOf,
+    });
+  } catch (error) {
+    return { empty: true, error: error.message };
+  }
 }
 
 // ---------- 动作清单 ----------
@@ -580,6 +610,11 @@ export function createUsageServer({ collector = null } = {}) {
       // ---- API ----
       if (pathname === '/api/summary') {
         sendJson(res, 200, buildSummary(url.searchParams));
+        return;
+      }
+
+      if (pathname === '/api/analytics') {
+        sendJson(res, 200, buildAnalytics(url.searchParams));
         return;
       }
 

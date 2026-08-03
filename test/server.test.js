@@ -100,6 +100,20 @@ test('/api/summary 的筛选参数生效且未知区间回落 today', async () =
   assert.equal(fallback.range, 'today');
 });
 
+test('/api/analytics 暴露统一的同比、趋势、热力图、分布和分页明细', async () => {
+  const d = await json('/api/analytics?range=7d&model=claude-opus-5&limit=1');
+  assert.equal(d.range, '7d');
+  assert.equal(d.totals.totalTokens, 1050);
+  assert.equal(d.totals.inputTokens, 100);
+  assert.equal(d.heatmap.length, 168);
+  assert.equal(d.series.length, 7);
+  assert.deepEqual(d.distributions.models.map((x) => x.id), ['claude-opus-5']);
+  assert.equal(d.records.items.length, 1);
+  assert.equal(d.records.nextCursor, null);
+  assert.equal(d.sessions.available, false, '模型筛选下会话指标不能伪造');
+  assert.ok(d.cost.coverage >= 0 && d.cost.coverage <= 1);
+});
+
 test('聚合结构版本不匹配时明确报 stale，而不是静默返回 0', async () => {
   writeJson(ROLLUP_FILE, { v: 0, days: {}, sessions: {} });
   const d = await json('/api/summary?range=all');

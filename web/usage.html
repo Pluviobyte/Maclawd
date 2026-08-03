@@ -35,7 +35,7 @@
   .chip{padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--card);
     font-size:12px;font-weight:650;cursor:pointer;}
   .chip[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink);}
-  select{padding:6px 10px;border-radius:10px;border:1px solid var(--line);background:var(--card);
+  select,input[type="date"]{padding:6px 10px;border-radius:10px;border:1px solid var(--line);background:var(--card);
     font-size:12px;color:var(--ink);max-width:190px;}
   .headline{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-end;}
   .big{font-size:clamp(34px,5vw,52px);line-height:1;letter-spacing:-.03em;font-weight:700;}
@@ -104,6 +104,16 @@
     <select id="fModel"></select>
     <select id="fProject"></select>
     <button class="chip" id="clearFilters">清除筛选</button>
+    <input type="date" id="customFrom" aria-label="开始日期">
+    <input type="date" id="customTo" aria-label="结束日期">
+    <button class="chip" id="customApply">自定义</button>
+    <span style="flex:1"></span>
+    <select id="trendMetric" aria-label="趋势和热力图指标">
+      <option value="tokens">Token</option><option value="cost">估算费用</option><option value="active">时长</option>
+    </select>
+    <select id="distributionMetric" aria-label="分布指标">
+      <option value="tokens">分布：Token</option><option value="cost">分布：估算费用</option>
+    </select>
   </div>
 
   <div class="card">
@@ -123,7 +133,7 @@
 
   <div class="grid2">
     <div class="card">
-      <h2>作息分布 <span>按小时，全部来源</span></h2>
+      <h2>作息分布 <span>按小时，跟随筛选</span></h2>
       <div class="spark" id="hours"></div>
       <div class="axis"><span>0</span><span>6</span><span>12</span><span>18</span><span>23</span></div>
       <p class="note" id="hoursNote" hidden>筛选状态下作息分布不可用——预聚合的小时数据是跨来源汇总的，按筛选条件拆不出来。</p>
@@ -135,26 +145,33 @@
   </div>
 
   <div class="card">
-    <h2>活跃热力 <span>纵轴周一至周日</span></h2>
+    <h2>分时活跃 <span>24 小时 × 周一至周日</span></h2>
     <div class="heat" id="heat"></div>
   </div>
 
   <div class="grid2">
     <div class="card">
       <h2>按工具</h2>
-      <table><thead><tr><th>工具</th><th>计费</th><th>占比</th></tr></thead><tbody id="tBySource"></tbody></table>
+      <table><thead><tr><th>工具</th><th class="distValueLabel">Token</th><th>占比</th></tr></thead><tbody id="tBySource"></tbody></table>
     </div>
     <div class="card">
       <h2>按模型 <span>点击展开明细</span></h2>
-      <table><thead><tr><th>模型</th><th>计费</th><th>占比</th></tr></thead><tbody id="tByModel"></tbody></table>
+      <table><thead><tr><th>模型</th><th class="distValueLabel">Token</th><th>占比</th></tr></thead><tbody id="tByModel"></tbody></table>
     </div>
   </div>
 
   <div class="card">
     <h2>项目足迹 <span>点击项目名筛选，按钮直接打开</span></h2>
-    <table><thead><tr><th>项目</th><th>计费</th><th>吞吐</th><th>占比</th><th></th></tr></thead>
+    <table><thead><tr><th>项目</th><th class="distValueLabel">Token</th><th>占比</th><th></th></tr></thead>
       <tbody id="tByProject"></tbody></table>
     <p class="note" id="projectNote" hidden></p>
+  </div>
+
+  <div class="card">
+    <h2>30 分钟明细 <span id="recordMeta"></span></h2>
+    <table><thead><tr><th>时间</th><th>工具 / 项目</th><th>模型</th><th>Token</th><th>估算费用</th></tr></thead>
+      <tbody id="tRecords"></tbody></table>
+    <button class="chip" id="moreRecords" hidden>加载更多</button>
   </div>
 
   <div class="card">
@@ -167,10 +184,12 @@
 
 <script>
 const RANGES = [
-  ['today','今天'],['yesterday','昨天'],['week','本周'],
-  ['last_week','上周'],['month','本月'],['year','今年'],['all','全部'],
+  ['today','今天'],['24h','24H'],['7d','7D'],['30d','30D'],['90d','90D'],
+  ['yesterday','昨天'],['week','本周'],['last_week','上周'],
+  ['month','本月'],['year','今年'],['all','全部'],
 ];
-const state = { range:'today', source:'', model:'', project:'', settings:{}, data:null };
+const state = { range:'30d', source:'', model:'', project:'', settings:{}, data:null,
+  analytics:null, trendMetric:'tokens', distributionMetric:'tokens', customFrom:'', customTo:'' };
 
 const fmt = (n) => {
   n = Number(n)||0;
@@ -185,6 +204,14 @@ const dur = (s) => {
   const h = Math.floor(s/3600), m = Math.round((s%3600)/60);
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 };
+const trendValue = (row) => state.trendMetric === 'cost' ? Number(row.estimatedCost||0)
+  : state.trendMetric === 'active' ? Number(row.activeSeconds||0) : Number(row.totalTokens||0);
+const distributionValue = (row) => state.distributionMetric === 'cost'
+  ? (row.estimatedCost ?? 0) : row.totalTokens;
+const metricText = (value, metric) => metric === 'cost' ? '估算 $'+Number(value).toFixed(2)
+  : metric === 'active' ? dur(value) : fmt(value);
+const trendMetricText = (row) => state.trendMetric === 'cost' && row.estimatedCost === null
+  ? '未计价' : metricText(trendValue(row), state.trendMetric);
 const el = (id) => document.getElementById(id);
 
 function renderRanges(){
@@ -203,11 +230,11 @@ const esc = (s) => String(s).replace(/[&<>"']/g, c =>
 
 /** 表格通用渲染：名字 + 计费 + 占比条。 */
 function rows(tbody, entries, total, { onClick, extra } = {}){
-  tbody.innerHTML = entries.map(([key, bill, tp]) => {
+  tbody.innerHTML = entries.map(([key, bill, tp, unpriced]) => {
     const share = total > 0 ? bill/total : 0;
     return `<tr class="row" data-key="${esc(key)}">
       <td>${esc(key)}</td>
-      <td>${fmt(bill)}</td>
+      <td>${unpriced ? '—' : metricText(bill, state.distributionMetric)}</td>
       ${tp !== undefined ? `<td>${fmt(tp)}</td>` : ''}
       <td><span class="track"><i style="width:${(share*100).toFixed(1)}%"></i></span></td>
       ${extra ? `<td>${extra(key)}</td>` : ''}
@@ -217,106 +244,104 @@ function rows(tbody, entries, total, { onClick, extra } = {}){
     tr.querySelector('td').onclick = () => onClick(tr.dataset.key));
 }
 
-const bill = (b) => (b.input||0)+(b.write5m||0)+(b.write1h||0)+(b.output||0);
-const tput = (b) => bill(b)+(b.cacheRead||0);
-
 function render(){
   const d = state.data;
-  if (!d || d.empty){
+  const a = state.analytics;
+  if (!a || a.empty){
     el('mainNum').textContent = '–';
     el('footer').textContent = state.data?.stale
       ? '聚合数据是旧版本结构，需要重新扫描才能读取。点右上角「重新扫描」。'
       : '还没有用量记录。点右上角「重新扫描」。';
     return;
   }
-  const s = d.summary;
-  const showCost = d.settings.showCost;
-  const primary = d.settings.primaryMetric === 'throughput' ? s.throughput : s.billable;
+  const primary = a.totals.totalTokens;
 
   el('mainNum').textContent = fmt(primary);
-  el('mainUnit').textContent = d.settings.primaryMetric === 'throughput' ? '吞吐 tokens' : '计费 tokens';
-  el('mainNum').title = `计费 ${fmt(s.billable)} · 吞吐 ${fmt(s.throughput)}（差额即缓存读 ${fmt(s.cacheRead)}）`;
+  el('mainUnit').textContent = '总 Token';
+  el('mainNum').title = `输入 ${fmt(a.totals.inputTokens)} · 输出 ${fmt(a.totals.outputTokens)} · 推理 ${fmt(a.totals.reasoningTokens)} · 缓存 ${fmt(a.totals.cachedTokens)}`;
 
-  el('costNum').textContent = showCost && s.cost !== null ? '$'+s.cost.toFixed(2) : '—';
-  el('coverage').textContent = pct(d.coverage);
-  el('hit').textContent = pct(s.hitRate);
-  el('active').textContent = dur(d.sessions.activeSeconds);
+  el('costNum').textContent = a.cost.estimated !== null ? '$'+a.cost.estimated.toFixed(2) : '—';
+  el('coverage').textContent = pct(a.cost.coverage);
+  el('hit').textContent = pct(a.totals.cachedTokens / Math.max(1, a.totals.cachedTokens + a.totals.inputTokens));
+  el('active').textContent = a.sessions.available ? dur(a.sessions.totals.activeSeconds) : '筛选后不可用';
 
-  // 「比平时」用个人 14 天中位数，不用固定阈值——固定阈值会让重度用户永远看到红色。
-  if (d.baseline && state.range === 'today' && s.throughput > 0){
-    const delta = (s.throughput - d.baseline) / d.baseline;
-    el('compare').textContent = `比平时${delta>=0?'多':'少'} ${pct(Math.abs(delta))}（14 天中位数 ${fmt(d.baseline)}）`;
-  } else el('compare').textContent = `${d.sessions.sessions} 会话 · ${fmt(d.sessions.messageCount)} 消息`;
+  if (a.comparison?.totalTokens !== null && a.comparison?.totalTokens !== undefined){
+    const delta = a.comparison.totalTokens;
+    el('compare').textContent = `较上个等长区间${delta>=0?'多':'少'} ${pct(Math.abs(delta))}`;
+  } else el('compare').textContent = a.sessions.available
+    ? `${a.sessions.totals.sessions} 会话 · ${fmt(a.sessions.totals.messageCount)} 消息`
+    : '按模型筛选时无法归属会话';
 
   el('fields').innerHTML = [
-    ['输入（非缓存）', s.input], ['输出', s.output],
-    ['缓存读', s.cacheRead], ['缓存写', s.cacheWrite],
-    ['推理', s.reasoning],
-  ].map(([k,v]) => `<div class="kv"><b>${fmt(v)}</b>${k}</div>`).join('');
+    ['输入', fmt(a.totals.inputTokens)], ['输出', fmt(a.totals.outputTokens)],
+    ['推理', fmt(a.totals.reasoningTokens)], ['缓存读取', fmt(a.totals.cachedTokens)],
+    ['计费 Token', fmt(a.totals.billableTokens)],
+    ['墙钟时长', a.sessions.available ? dur(a.sessions.totals.durationSeconds) : '—'],
+    ['用户消息', a.sessions.available ? fmt(a.sessions.totals.userMessageCount) : '—'],
+  ].map(([k,v]) => `<div class="kv"><b>${v}</b>${k}</div>`).join('');
 
-  if (s.unpricedModels?.length){
+  if (a.cost.unpricedModels?.length){
     el('coverageNote').hidden = false;
     const stale = !d.pricing?.fetchedAt;
     el('coverageNote').textContent = stale
-      ? `价格表还没拉取过，${fmt(s.unpricedTokens)} tokens 未计价。点「更新价格表」——实测能把覆盖率从 10% 提到 97.8%。`
-      : `${fmt(s.unpricedTokens)} tokens 未计价，缺：${s.unpricedModels.slice(0,6).join('、')}。`
+      ? `价格表还没拉取过，${fmt(a.cost.unpricedTokens)} tokens 未计价。点「更新价格表」。`
+      : `${fmt(a.cost.unpricedTokens)} tokens 未计价，缺：${a.cost.unpricedModels.slice(0,6).join('、')}。`
         + '未知模型不猜价格；这些多是厂商自有的新模型，补 usage/pricing.overrides.json 即可计入。';
   } else el('coverageNote').hidden = true;
 
-  // 作息
-  el('hoursNote').hidden = s.hoursAvailable;
-  if (s.hoursAvailable){
-    const blocks = '▁▂▃▄▅▆▇█', max = Math.max(...s.hours, 1);
-    el('hours').textContent = s.hours.map(v =>
-      v===0 ? ' ' : blocks[Math.min(7, Math.floor(v/max*7.999))]).join('');
-  } else el('hours').textContent = '';
+  // 7×24 槽位可在任意筛选下重新聚合为小时作息。
+  const hours = Array.from({length:24}, (_, hour) => a.heatmap
+    .filter(cell => cell.hour === hour).reduce((sum, cell) => sum + trendValue(cell), 0));
+  el('hoursNote').hidden = true;
+  const blocks = '▁▂▃▄▅▆▇█', hourMax = Math.max(...hours, 1);
+  el('hours').textContent = hours.map(v =>
+    v===0 ? ' ' : blocks[Math.min(7, Math.floor(v/hourMax*7.999))]).join('');
 
   // 每日趋势
-  const daily = s.daily.slice(-60);
-  const dmax = Math.max(...daily.map(x => x.throughput), 1);
+  const daily = a.series.slice(-60);
+  const dmax = Math.max(...daily.map(trendValue), 1);
   el('dailyMeta').textContent = `最近 ${daily.length} 天`;
   el('daily').innerHTML = daily.map(x =>
-    `<i style="height:${Math.max(2, x.throughput/dmax*100)}%" title="${x.day} · 计费 ${fmt(x.billable)} · 吞吐 ${fmt(x.throughput)}"></i>`).join('');
+    `<i style="height:${Math.max(2, trendValue(x)/dmax*100)}%" title="${x.day} · ${trendMetricText(x)}"></i>`).join('');
 
-  // 周热力：纵轴周一至周日，列为周
-  const byDay = new Map(s.daily.map(x => [x.day, x.throughput]));
-  const hmax = Math.max(...byDay.values(), 1);
-  const cells = [];
-  if (s.daily.length){
-    const first = new Date(s.daily[0].day+'T00:00:00');
-    const last = new Date(s.daily.at(-1).day+'T00:00:00');
-    const start = new Date(first); start.setDate(start.getDate() - ((start.getDay()+6)%7));
-    for (let c = new Date(start); c <= last; c.setDate(c.getDate()+1)){
-      const key = `${c.getFullYear()}-${String(c.getMonth()+1).padStart(2,'0')}-${String(c.getDate()).padStart(2,'0')}`;
-      const v = byDay.get(key) || 0;
-      const a = v === 0 ? 0 : 0.18 + 0.82*Math.pow(v/hmax, .45);
-      cells.push(`<i style="background:${v?`rgba(222,136,109,${a.toFixed(2)})`:'rgba(30,30,46,.06)'}" title="${key} · ${fmt(v)}"></i>`);
-    }
-  }
-  el('heat').innerHTML = cells.join('');
+  // 24 列 × 7 行，列是小时，纵轴是周一至周日。
+  const heatMax = Math.max(...a.heatmap.map(trendValue), 1);
+  el('heat').innerHTML = Array.from({length:24}, (_, hour) =>
+    Array.from({length:7}, (_, weekday) => a.heatmap.find(x => x.hour===hour && x.weekday===weekday+1))
+      .map(cell => {
+        const v = cell ? trendValue(cell) : 0;
+        const alpha = v === 0 ? 0 : 0.18 + 0.82*Math.pow(v/heatMax, .45);
+        return `<i style="background:${v?`rgba(222,136,109,${alpha.toFixed(2)})`:'rgba(30,30,46,.06)'}" title="周${weekday+1} ${hour}:00 · ${cell ? trendMetricText(cell) : '—'}"></i>`;
+      }).join('')).join('');
 
-  // 三个维度
-  const sortEntries = (map) => Object.entries(map)
-    .map(([k,b]) => [k, bill(b), tput(b)]).sort((a,b) => b[1]-a[1]);
-
-  rows(el('tBySource'), sortEntries(s.bySource).map(([k,b]) => [d.labels[k] ?? k, b]), s.billable, {
+  // 三个维度与原生面板共用分析接口，费用和 Token 不会再出现两套口径。
+  const distributionTotal = (items) => items.reduce((sum, item) => sum + distributionValue(item), 0);
+  document.querySelectorAll('.distValueLabel').forEach(node => {
+    node.textContent = state.distributionMetric === 'cost' ? '估算费用' : 'Token';
+  });
+  rows(el('tBySource'), a.distributions.tools.map(x =>
+    [d.labels[x.id] ?? x.id, distributionValue(x), undefined,
+      state.distributionMetric === 'cost' && x.estimatedCost === null]),
+    distributionTotal(a.distributions.tools), {
     onClick: (label) => {
       const id = Object.keys(d.labels).find(k => d.labels[k] === label) ?? label;
       state.source = state.source === id ? '' : id; load();
     },
   });
 
-  const models = sortEntries(s.byModel);
-  el('tByModel').innerHTML = models.map(([k, b]) => {
-    const bucket = s.byModel[k], share = s.billable>0 ? b/s.billable : 0;
-    return `<tr class="row" data-model="${esc(k)}">
-        <td>${esc(k)}</td><td>${fmt(b)}</td>
+  const models = a.distributions.models;
+  const modelTotal = distributionTotal(models);
+  el('tByModel').innerHTML = models.map(bucket => {
+    const value = distributionValue(bucket), share = modelTotal>0 ? value/modelTotal : 0;
+    return `<tr class="row" data-model="${esc(bucket.id)}">
+        <td>${esc(bucket.id)}</td><td>${state.distributionMetric === 'cost' && bucket.estimatedCost === null
+          ? '—' : metricText(value, state.distributionMetric)}</td>
         <td><span class="track"><i style="width:${(share*100).toFixed(1)}%"></i></span></td>
       </tr>
       <tr class="detail" hidden><td colspan="3">
-        输入 ${fmt(bucket.input)} · 输出 ${fmt(bucket.output)} ·
-        缓存读 ${fmt(bucket.cacheRead)} · 缓存写 ${fmt((bucket.write5m||0)+(bucket.write1h||0))} ·
-        推理 ${fmt(bucket.reasoning)} · 吞吐 ${fmt(tput(bucket))}
+        输入 ${fmt(bucket.inputTokens)} · 输出 ${fmt(bucket.outputTokens)} ·
+        推理 ${fmt(bucket.reasoningTokens)} · 缓存 ${fmt(bucket.cachedTokens)} ·
+        总量 ${fmt(bucket.totalTokens)} · 估算 ${bucket.estimatedCost === null ? '—' : '$'+Number(bucket.estimatedCost).toFixed(2)}
       </td></tr>`;
   }).join('') || '<tr><td colspan="3" style="color:var(--muted)">暂无数据</td></tr>';
   el('tByModel').querySelectorAll('tr.row').forEach(tr => {
@@ -330,7 +355,9 @@ function render(){
   // 隐藏与置顶：设置里存的是项目名列表，这里真正生效
   const hidden = new Set(d.settings.hiddenProjects ?? []);
   const pinned = d.settings.pinnedProjects ?? [];
-  const projects = sortEntries(s.byProject)
+  const projects = a.distributions.projects
+    .map(x => [x.id, distributionValue(x), undefined,
+      state.distributionMetric === 'cost' && x.estimatedCost === null])
     .filter(([key]) => !hidden.has(key))
     .sort((a, b) => {
       const pa = pinned.indexOf(a[0]), pb = pinned.indexOf(b[0]);
@@ -342,7 +369,7 @@ function render(){
     el('projectNote').textContent = `已隐藏 ${hidden.size} 个项目（在设置里管理）`;
   } else el('projectNote').hidden = true;
 
-  rows(el('tByProject'), projects, s.billable, {
+  rows(el('tByProject'), projects, projects.reduce((sum, row) => sum + row[1], 0), {
     onClick: (key) => { state.project = state.project===key?'':key; load(); },
     extra: (key) => {
       const path = d.projectPaths[key];
@@ -386,6 +413,17 @@ function render(){
     };
   });
 
+  el('recordMeta').textContent = `${a.records.items.length} / ${a.records.total}`;
+  el('tRecords').innerHTML = a.records.items.map(row => {
+    const when = new Date(row.slotStart).toLocaleString('zh-CN', {
+      month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false,
+    });
+    const cost = row.estimatedCost === null ? '—' : '估算 $'+Number(row.estimatedCost).toFixed(2);
+    return `<tr><td>${esc(when)}</td><td>${esc(row.source)} / ${esc(row.project)}</td>
+      <td>${esc(row.model)}</td><td>${fmt(row.totalTokens)}</td><td>${cost}</td></tr>`;
+  }).join('') || '<tr><td colspan="5" style="color:var(--muted)">暂无数据</td></tr>';
+  el('moreRecords').hidden = !a.records.nextCursor;
+
   const w = d.wrapped;
   el('wrapped').innerHTML = [
     ['活跃天数', `${w.activeDays} 天`],
@@ -396,24 +434,33 @@ function render(){
     ['起始', w.firstDay ?? '—'],
   ].map(([k,v]) => `<div class="kv"><b>${esc(v)}</b>${k}</div>`).join('');
 
-  fillSelect(el('fSource'), d.dimensions.sources, state.source, '全部工具', d.labels);
-  fillSelect(el('fModel'), d.dimensions.models, state.model, '全部模型');
-  fillSelect(el('fProject'), d.dimensions.projects, state.project, '全部项目');
+  fillSelect(el('fSource'), a.dimensions.sources, state.source, '全部工具', d.labels);
+  fillSelect(el('fModel'), a.dimensions.models, state.model, '全部模型');
+  fillSelect(el('fProject'), a.dimensions.projects, state.project, '全部项目');
 
   const pm = d.pricing ?? {};
-  el('footer').textContent = `${s.days.length} 天数据 · 价格表 `
+  el('footer').textContent = `${a.series.length} 天区间 · 价格表 `
     + (pm.fetchedAt ? `${pm.models} 个模型，更新于 ${pm.fetchedAt.slice(0,10)}` : '未拉取')
-    + ` · 主数字口径「`
-    + (d.settings.primaryMetric === 'throughput' ? '吞吐' : '计费')
-    + `」，两者差额即缓存读。成本${showCost?'':'（已在设置中隐藏）'}仅为按 API 单价的估算，与订阅费无关。`;
+    + ` · 主数字为输入、输出、推理与缓存读取之和。成本仅为按 API 单价的估算，与订阅费无关。`;
 }
 
-async function load(){
+function analyticsQuery(cursor = ''){
   const q = new URLSearchParams({ range: state.range });
   if (state.source) q.set('source', state.source);
   if (state.model) q.set('model', state.model);
   if (state.project) q.set('project', state.project);
-  state.data = await (await fetch('/api/summary?'+q)).json();
+  if (state.range === 'custom') { q.set('from', state.customFrom); q.set('to', state.customTo); }
+  if (cursor) q.set('cursor', cursor);
+  return q;
+}
+
+async function load(){
+  const q = analyticsQuery();
+  const [summaryResponse, analyticsResponse] = await Promise.all([
+    fetch('/api/summary?range=all'), fetch('/api/analytics?'+q),
+  ]);
+  state.data = await summaryResponse.json();
+  state.analytics = await analyticsResponse.json();
   if (state.data.settings) state.settings = state.data.settings;
   renderRanges();
   render();
@@ -438,6 +485,21 @@ el('fSource').onchange = (e) => { state.source = e.target.value; load(); };
 el('fModel').onchange = (e) => { state.model = e.target.value; load(); };
 el('fProject').onchange = (e) => { state.project = e.target.value; load(); };
 el('clearFilters').onclick = () => { state.source = state.model = state.project = ''; load(); };
+el('trendMetric').onchange = (e) => { state.trendMetric = e.target.value; render(); };
+el('distributionMetric').onchange = (e) => { state.distributionMetric = e.target.value; render(); };
+el('customApply').onclick = () => {
+  const from = el('customFrom').value, to = el('customTo').value;
+  if (!from || !to || from > to) return;
+  state.customFrom = from; state.customTo = to; state.range = 'custom'; load();
+};
+el('moreRecords').onclick = async () => {
+  const cursor = state.analytics?.records?.nextCursor;
+  if (!cursor) return;
+  const next = await (await fetch('/api/analytics?'+analyticsQuery(cursor))).json();
+  state.analytics.records.items.push(...next.records.items);
+  state.analytics.records.nextCursor = next.records.nextCursor;
+  render();
+};
 el('updatePrices').onclick = async () => {
   const b = el('updatePrices');
   b.textContent = '拉取中…';
@@ -459,6 +521,10 @@ el('rescan').onclick = async () => {
   setTimeout(() => { el('rescan').textContent = '重新扫描'; }, 1600);
 };
 
+const today = new Date(), monthAgo = new Date(); monthAgo.setDate(today.getDate()-29);
+const inputDate = (date) => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+el('customFrom').value = inputDate(monthAgo); el('customTo').value = inputDate(today);
+state.customFrom = el('customFrom').value; state.customTo = el('customTo').value;
 load();
 live();
 setInterval(live, 3000);

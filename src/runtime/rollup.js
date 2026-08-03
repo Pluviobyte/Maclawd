@@ -12,7 +12,7 @@ import {
  * 全部历史，不需要 tokei 那样的 _recalc_costs 重算过程。
  */
 
-export const ROLLUP_VERSION = 2;
+export const ROLLUP_VERSION = 3;
 
 export const RANGES = [
   'today', 'yesterday', 'week', 'last_week', 'month', 'year', 'all',
@@ -28,6 +28,12 @@ export function localDayKey(ts) {
 
 export function localHour(ts) {
   return new Date(ts).getHours();
+}
+
+/** UTC epoch keeps repeated/skipped DST hours distinct while still sorting numerically. */
+export function halfHourStart(ts) {
+  const value = Number(ts);
+  return Math.floor(value / (30 * 60 * 1000)) * 30 * 60 * 1000;
 }
 
 function dayKeyFromDate(d) {
@@ -109,23 +115,35 @@ function emptyDay() {
   return { hours: new Array(24).fill(0), sources: {} };
 }
 
+function emptySlot() {
+  return { sources: {} };
+}
+
+function addRecordToSource(container, record) {
+  const sourceId = record.source ?? 'unknown';
+  const source = container.sources[sourceId] ?? (container.sources[sourceId] = emptySource());
+  addInto(source, record);
+
+  const model = record.model || 'unknown';
+  const project = record.project || 'unknown';
+  const key = cellKey(model, project);
+  const cell = source.cells[key] ?? (source.cells[key] = emptyBucket());
+  addInto(cell, record);
+}
+
 /** 记录 → 日聚合。records 必须已经去重。 */
 export function buildRollup(records, sessionsBySource = {}, projectPaths = {}) {
   const days = {};
+  const slots = {};
 
   for (const record of records) {
     const dayKey = localDayKey(record.ts);
     const day = days[dayKey] ?? (days[dayKey] = emptyDay());
+    addRecordToSource(day, record);
 
-    const sourceId = record.source ?? 'unknown';
-    const source = day.sources[sourceId] ?? (day.sources[sourceId] = emptySource());
-    addInto(source, record);
-
-    const model = record.model || 'unknown';
-    const project = record.project || 'unknown';
-    const key = cellKey(model, project);
-    const cell = source.cells[key] ?? (source.cells[key] = emptyBucket());
-    addInto(cell, record);
+    const slotKey = String(halfHourStart(record.ts));
+    const slot = slots[slotKey] ?? (slots[slotKey] = emptySlot());
+    addRecordToSource(slot, record);
 
     // hours 是跨 source 汇总的吞吐量，供作息视图使用。
     day.hours[localHour(record.ts)] += throughput(record);
@@ -137,7 +155,7 @@ export function buildRollup(records, sessionsBySource = {}, projectPaths = {}) {
   for (const [source, list] of Object.entries(sessionsBySource)) {
     if (Array.isArray(list) && list.length > 0) sessions[source] = list;
   }
-  return { v: ROLLUP_VERSION, days, sessions, projectPaths };
+  return { v: ROLLUP_VERSION, days, slots, sessions, projectPaths };
 }
 
 function accumulate(map, key, bucket) {

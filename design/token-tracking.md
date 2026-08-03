@@ -225,7 +225,7 @@ hit% = cache_read / (cache_read + cache_write + input) × 100
 ### 8. 时间归类
 
 - 用记录自身的 `timestamp`，转**本地时区**后归入日期与小时。
-- 只预聚合到「日」，7 个区间（今天/昨天/本周/上周/本月/今年/全部）**读时计算**。
+- 同时预聚合到「日」与稀疏的 30 分钟槽；所有区间仍然**读时计算**。
 
 tokei 预存 7 个区间，但 days 最多 365 条，读时算的开销可以忽略，且不存在跨天
 边界的失效问题。这里比 tokei 简化。
@@ -237,7 +237,7 @@ tokei 预存 7 个区间，但 days 最多 365 条，读时算的开销可以忽
 ```
 ~/Library/Application Support/Maclawd/
 ├── usage/
-│   ├── rollup.json          # 日聚合，权威数据
+│   ├── rollup.json          # 日聚合 + 30 分钟槽，权威派生数据
 │   ├── scan-cache.json      # 每文件 mtime:size → 已解析事件（可删）
 │   ├── tail-state.json      # 每文件 offset（可删）
 │   ├── pricing.json         # 价格表
@@ -249,17 +249,21 @@ tokei 预存 7 个区间，但 days 最多 365 条，读时算的开销可以忽
 
 ```json
 {
-  "v": 1,
+  "v": 3,
   "days": {
     "2026-07-30": {
       "hours": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
       "sources": {
         "claude-code": {
           "input": 0, "output": 0, "cacheRead": 0, "write5m": 0, "write1h": 0, "reasoning": 0,
-          "models":   { "<model>":   "<bucket>" },
-          "projects": { "<project>": "<bucket>" }
+          "cells": { "<model>\\0<project>": "<bucket>" }
         }
       }
+    }
+  },
+  "slots": {
+    "<epoch rounded down to 30m>": {
+      "sources": { "<source>": { "cells": { "<model>\\0<project>": "<bucket>" } } }
     }
   },
   "sessions": {
@@ -272,6 +276,7 @@ tokei 预存 7 个区间，但 days 最多 365 条，读时算的开销可以忽
 ```
 
 `hours[24]` 是跨 source 汇总的吞吐量，用于作息分析——Maclawd 判断「该睡了」的依据之一。
+30 分钟槽用于精确范围、联动筛选、7×24 热力图和分页明细；只创建有数据的槽与交叉单元。
 
 **不存成本。** 只存分模型的 token 明细，成本在读取时按当前价格表推导，
 价格表更新自动修正全部历史，不需要 tokei 那样的 `_recalc_costs` 重算过程。

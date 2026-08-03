@@ -168,16 +168,277 @@ struct PanelSummary: Equatable {
     }
 }
 
+// MARK: - Usage Analytics
+
+/// JSONSerialization represents every JSON number as NSNumber. Centralising the
+/// conversion keeps the analytics decoder tolerant of integer/decimal changes in
+/// the runtime response.
+private func jsonDouble(_ value: Any?) -> Double {
+    (value as? NSNumber)?.doubleValue ?? 0
+}
+
+private func jsonOptionalDouble(_ value: Any?) -> Double? {
+    (value as? NSNumber)?.doubleValue
+}
+
+private func jsonInt(_ value: Any?) -> Int {
+    (value as? NSNumber)?.intValue ?? 0
+}
+
+struct AnalyticsTotals: Equatable {
+    var inputTokens = 0.0
+    var outputTokens = 0.0
+    var reasoningTokens = 0.0
+    var cachedTokens = 0.0
+    var totalTokens = 0.0
+    var billableTokens = 0.0
+
+    init() {}
+    init(_ raw: Any?) {
+        let d = raw as? [String: Any] ?? [:]
+        inputTokens = jsonDouble(d["inputTokens"])
+        outputTokens = jsonDouble(d["outputTokens"])
+        reasoningTokens = jsonDouble(d["reasoningTokens"])
+        cachedTokens = jsonDouble(d["cachedTokens"])
+        totalTokens = jsonDouble(d["totalTokens"])
+        billableTokens = jsonDouble(d["billableTokens"])
+    }
+}
+
+struct AnalyticsCost: Equatable {
+    var estimated: Double?
+    var coverage = 1.0
+    var pricedTokens = 0.0
+    var unpricedTokens = 0.0
+    var unpricedModels: [String] = []
+
+    init() {}
+    init(_ raw: Any?) {
+        let d = raw as? [String: Any] ?? [:]
+        estimated = jsonOptionalDouble(d["estimated"])
+        coverage = d["coverage"] == nil ? 1 : jsonDouble(d["coverage"])
+        pricedTokens = jsonDouble(d["pricedTokens"])
+        unpricedTokens = jsonDouble(d["unpricedTokens"])
+        unpricedModels = d["unpricedModels"] as? [String] ?? []
+    }
+}
+
+struct AnalyticsSessionTotals: Equatable {
+    var sessions = 0
+    var activeSeconds = 0
+    var durationSeconds = 0
+    var messageCount = 0
+    var userMessageCount = 0
+
+    init() {}
+    init(_ raw: Any?) {
+        let d = raw as? [String: Any] ?? [:]
+        sessions = jsonInt(d["sessions"])
+        activeSeconds = jsonInt(d["activeSeconds"])
+        durationSeconds = jsonInt(d["durationSeconds"])
+        messageCount = jsonInt(d["messageCount"])
+        userMessageCount = jsonInt(d["userMessageCount"])
+    }
+}
+
+struct AnalyticsSessions: Equatable {
+    var available = true
+    var reason: String?
+    var totals = AnalyticsSessionTotals()
+
+    init() {}
+    init(_ raw: Any?) {
+        let d = raw as? [String: Any] ?? [:]
+        available = d["available"] as? Bool ?? true
+        reason = d["reason"] as? String
+        totals = AnalyticsSessionTotals(d["totals"])
+    }
+}
+
+struct AnalyticsSeriesPoint: Identifiable, Equatable {
+    var id: String { day }
+    let day: String
+    let inputTokens: Double
+    let outputTokens: Double
+    let reasoningTokens: Double
+    let cachedTokens: Double
+    let totalTokens: Double
+    let estimatedCost: Double?
+    let activeSeconds: Int
+    let durationSeconds: Int
+
+    init?(_ raw: [String: Any]) {
+        guard let day = raw["day"] as? String else { return nil }
+        self.day = day
+        inputTokens = jsonDouble(raw["inputTokens"])
+        outputTokens = jsonDouble(raw["outputTokens"])
+        reasoningTokens = jsonDouble(raw["reasoningTokens"])
+        cachedTokens = jsonDouble(raw["cachedTokens"])
+        totalTokens = jsonDouble(raw["totalTokens"])
+        estimatedCost = jsonOptionalDouble(raw["estimatedCost"])
+        activeSeconds = jsonInt(raw["activeSeconds"])
+        durationSeconds = jsonInt(raw["durationSeconds"])
+    }
+}
+
+struct AnalyticsHeatCell: Identifiable, Equatable {
+    var id: String { "\(weekday)-\(hour)" }
+    let weekday: Int
+    let hour: Int
+    let totalTokens: Double
+    let estimatedCost: Double?
+    let activeSeconds: Int
+
+    init?(_ raw: [String: Any]) {
+        guard raw["weekday"] != nil, raw["hour"] != nil else { return nil }
+        weekday = jsonInt(raw["weekday"])
+        hour = jsonInt(raw["hour"])
+        totalTokens = jsonDouble(raw["totalTokens"])
+        estimatedCost = jsonOptionalDouble(raw["estimatedCost"])
+        activeSeconds = jsonInt(raw["activeSeconds"])
+    }
+}
+
+struct AnalyticsDistributionItem: Identifiable, Equatable {
+    let id: String
+    let totalTokens: Double
+    let billableTokens: Double
+    let estimatedCost: Double?
+
+    init?(_ raw: [String: Any]) {
+        guard let id = raw["id"] as? String else { return nil }
+        self.id = id
+        totalTokens = jsonDouble(raw["totalTokens"])
+        billableTokens = jsonDouble(raw["billableTokens"])
+        estimatedCost = jsonOptionalDouble(raw["estimatedCost"])
+    }
+}
+
+struct AnalyticsDistributions: Equatable {
+    var tools: [AnalyticsDistributionItem] = []
+    var models: [AnalyticsDistributionItem] = []
+    var projects: [AnalyticsDistributionItem] = []
+
+    init() {}
+    init(_ raw: Any?) {
+        let d = raw as? [String: Any] ?? [:]
+        tools = (d["tools"] as? [[String: Any]] ?? []).compactMap(AnalyticsDistributionItem.init)
+        models = (d["models"] as? [[String: Any]] ?? []).compactMap(AnalyticsDistributionItem.init)
+        projects = (d["projects"] as? [[String: Any]] ?? []).compactMap(AnalyticsDistributionItem.init)
+    }
+}
+
+struct AnalyticsDimensions: Equatable {
+    var sources: [String] = []
+    var models: [String] = []
+    var projects: [String] = []
+
+    init() {}
+    init(_ raw: Any?) {
+        let d = raw as? [String: Any] ?? [:]
+        sources = d["sources"] as? [String] ?? []
+        models = d["models"] as? [String] ?? []
+        projects = d["projects"] as? [String] ?? []
+    }
+}
+
+struct AnalyticsRecord: Identifiable, Equatable {
+    var id: String { "\(Int(slotStart))-\(source)-\(model)-\(project)" }
+    let slotStart: Double
+    let source: String
+    let model: String
+    let project: String
+    let inputTokens: Double
+    let outputTokens: Double
+    let reasoningTokens: Double
+    let cachedTokens: Double
+    let totalTokens: Double
+    let estimatedCost: Double?
+
+    init?(_ raw: [String: Any]) {
+        guard let source = raw["source"] as? String,
+              let model = raw["model"] as? String,
+              let project = raw["project"] as? String else { return nil }
+        slotStart = jsonDouble(raw["slotStart"])
+        self.source = source
+        self.model = model
+        self.project = project
+        inputTokens = jsonDouble(raw["inputTokens"])
+        outputTokens = jsonDouble(raw["outputTokens"])
+        reasoningTokens = jsonDouble(raw["reasoningTokens"])
+        cachedTokens = jsonDouble(raw["cachedTokens"])
+        totalTokens = jsonDouble(raw["totalTokens"])
+        estimatedCost = jsonOptionalDouble(raw["estimatedCost"])
+    }
+}
+
+struct AnalyticsRecords: Equatable {
+    var items: [AnalyticsRecord] = []
+    var total = 0
+    var nextCursor: String?
+
+    init() {}
+    init(_ raw: Any?) {
+        let d = raw as? [String: Any] ?? [:]
+        items = (d["items"] as? [[String: Any]] ?? []).compactMap(AnalyticsRecord.init)
+        total = jsonInt(d["total"])
+        nextCursor = d["nextCursor"] as? String
+    }
+}
+
+struct AnalyticsSnapshot: Equatable {
+    var empty = true
+    var range = "30d"
+    var totals = AnalyticsTotals()
+    var previous = AnalyticsTotals()
+    var comparison: [String: Double] = [:]
+    var cost = AnalyticsCost()
+    var sessions = AnalyticsSessions()
+    var series: [AnalyticsSeriesPoint] = []
+    var heatmap: [AnalyticsHeatCell] = []
+    var distributions = AnalyticsDistributions()
+    var dimensions = AnalyticsDimensions()
+    var records = AnalyticsRecords()
+
+    static func decode(_ json: [String: Any]) -> AnalyticsSnapshot {
+        var out = AnalyticsSnapshot()
+        out.empty = json["empty"] as? Bool ?? false
+        out.range = json["range"] as? String ?? "30d"
+        out.totals = AnalyticsTotals(json["totals"])
+        out.previous = AnalyticsTotals(json["previous"])
+        if let comparisons = json["comparison"] as? [String: Any] {
+            out.comparison = comparisons.reduce(into: [:]) { result, item in
+                if let number = item.value as? NSNumber { result[item.key] = number.doubleValue }
+            }
+        }
+        out.cost = AnalyticsCost(json["cost"])
+        out.sessions = AnalyticsSessions(json["sessions"])
+        out.series = (json["series"] as? [[String: Any]] ?? []).compactMap(AnalyticsSeriesPoint.init)
+        out.heatmap = (json["heatmap"] as? [[String: Any]] ?? []).compactMap(AnalyticsHeatCell.init)
+        out.distributions = AnalyticsDistributions(json["distributions"])
+        out.dimensions = AnalyticsDimensions(json["dimensions"])
+        out.records = AnalyticsRecords(json["records"])
+        return out
+    }
+}
+
 // MARK: - Store
 
 @MainActor
 final class PanelStore: ObservableObject {
     @Published private(set) var summary = PanelSummary()
+    @Published private(set) var analytics = AnalyticsSnapshot()
     @Published private(set) var quota = QuotaSnapshot()
     @Published private(set) var settings: [String: Any] = [:]
     @Published private(set) var loading = false
     @Published private(set) var lastError: String?
-    @Published var range: String = "today" { didSet { if range != oldValue { refresh() } } }
+    /// 保留 `range` 这个名字给面板探针；它现在只控制统计页，概览始终是今天。
+    @Published var range: String = "30d" { didSet { if range != oldValue { refreshAnalytics() } } }
+    @Published private(set) var selectedSource: String?
+    @Published private(set) var selectedModel: String?
+    @Published private(set) var selectedProject: String?
+    @Published private(set) var customFrom: String?
+    @Published private(set) var customTo: String?
 
     private let session: URLSession
     private var port: Int
@@ -233,16 +494,57 @@ final class PanelStore: ObservableObject {
     }
 
     func refresh() {
-        var query = "range=\(range)"
-        if range.isEmpty { query = "range=today" }
-        get("/api/summary?\(query)") { [weak self] json in
+        get("/api/summary?range=today") { [weak self] json in
             guard let self, let json else { return }
             self.summary = Self.decodeSummary(json)
         }
+        refreshAnalytics()
         get("/api/quota") { [weak self] json in
             guard let self, let json else { return }
             self.quota = QuotaSnapshot.decode(json)
         }
+    }
+
+    func applyAnalyticsFilters(source: String?, model: String?, project: String?) {
+        selectedSource = source
+        selectedModel = model
+        selectedProject = project
+        refreshAnalytics()
+    }
+
+    func setCustomRange(from: String, to: String) {
+        customFrom = from
+        customTo = to
+        if range == "custom" { refreshAnalytics() } else { range = "custom" }
+    }
+
+    func refreshAnalytics(cursor: String? = nil, append: Bool = false) {
+        var components = URLComponents()
+        components.path = "/api/analytics"
+        var items = [URLQueryItem(name: "range", value: range.isEmpty ? "30d" : range)]
+        if range == "custom" {
+            if let customFrom { items.append(URLQueryItem(name: "from", value: customFrom)) }
+            if let customTo { items.append(URLQueryItem(name: "to", value: customTo)) }
+        }
+        if let selectedSource { items.append(URLQueryItem(name: "source", value: selectedSource)) }
+        if let selectedModel { items.append(URLQueryItem(name: "model", value: selectedModel)) }
+        if let selectedProject { items.append(URLQueryItem(name: "project", value: selectedProject)) }
+        if let cursor { items.append(URLQueryItem(name: "cursor", value: cursor)) }
+        components.queryItems = items
+        guard let path = components.string else { return }
+        get(path) { [weak self] json in
+            guard let self, let json else { return }
+            var next = AnalyticsSnapshot.decode(json)
+            if append {
+                next.records.items = self.analytics.records.items + next.records.items
+            }
+            self.analytics = next
+        }
+    }
+
+    func loadMoreAnalytics() {
+        guard let cursor = analytics.records.nextCursor else { return }
+        refreshAnalytics(cursor: cursor, append: true)
     }
 
     // MARK: 解码

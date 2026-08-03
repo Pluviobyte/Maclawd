@@ -5,8 +5,8 @@ import {
 } from '../src/runtime/rollup.js';
 
 /** 本地时区的某天某点，避免测试受运行机器时区影响。 */
-function at(year, month, day, hour = 12) {
-  return new Date(year, month - 1, day, hour).getTime();
+function at(year, month, day, hour = 12, minute = 0) {
+  return new Date(year, month - 1, day, hour, minute).getTime();
 }
 
 function record(ts, overrides = {}) {
@@ -71,6 +71,21 @@ test('buildRollup 的 hours 记录吞吐量并按本地小时归位', () => {
   assert.equal(hours.length, 24);
   assert.equal(hours[14], 1050, 'input+output+cacheRead');
   assert.equal(hours.reduce((a, b) => a + b, 0), 1050);
+});
+
+test('buildRollup 同时持久化稀疏的 30 分钟槽', () => {
+  const first = at(2026, 7, 30, 14, 5);
+  const second = at(2026, 7, 30, 14, 35);
+  const rollup = buildRollup([
+    record(first, { input: 10 }),
+    record(second, { input: 20 }),
+  ]);
+  assert.deepEqual(Object.keys(rollup.slots).map(Number).sort(), [
+    at(2026, 7, 30, 14, 0), at(2026, 7, 30, 14, 30),
+  ]);
+  assert.equal(Object.keys(
+    rollup.slots[at(2026, 7, 30, 14, 0)].sources['claude-code'].cells,
+  ).length, 1);
 });
 
 test('区间按周一为一周之始切分', () => {

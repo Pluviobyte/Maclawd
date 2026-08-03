@@ -58,7 +58,7 @@ struct PanelView: View {
                 Group {
                     switch tab {
                     case .overview: OverviewPage(client: client, store: store)
-                    case .stats: StatsPage(store: store)
+                    case .stats: StatsPage(store: store, disabled: client.state.disabled)
                     case .settings:
                         SettingsPage(store: store, onOpenBrowser: onOpenBrowser, onQuit: onQuit)
                     }
@@ -343,118 +343,6 @@ private struct QuotaRow: View {
             .font(.system(size: 9.5))
             .foregroundStyle(.tertiary)
             .padding(.leading, 52)
-        }
-    }
-}
-
-// MARK: - 统计
-
-private struct StatsPage: View {
-    @ObservedObject var store: PanelStore
-
-    private static let ranges: [(String, String)] = [
-        ("today", "今天"), ("yesterday", "昨天"), ("week", "本周"),
-        ("last_week", "上周"), ("month", "本月"), ("year", "今年"), ("all", "全部"),
-    ]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    ForEach(Self.ranges, id: \.0) { id, label in
-                        Button { store.range = id } label: {
-                            Text(label)
-                                .font(.system(size: 11, weight: store.range == id ? .semibold : .regular))
-                                .padding(.horizontal, 10).padding(.vertical, 4)
-                                .background(
-                                    Capsule().fill(store.range == id
-                                                   ? PanelTheme.accent.opacity(0.16)
-                                                   : Color.secondary.opacity(0.1))
-                                )
-                                .foregroundStyle(store.range == id ? PanelTheme.accent : Color.primary)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
-
-            if store.summary.empty {
-                Text("这个区间没有数据").font(.system(size: 12)).foregroundStyle(.secondary)
-            } else {
-                headline
-                // 少于 3 天没有「趋势」可言。实测只有 1 天数据时，那根柱子会
-                // 铺满整个宽度，读起来是一块色块而不是图表——比不画更糟。
-                if store.summary.daily.count >= 3 {
-                    SectionCard(title: "每日趋势") { DailyBars(points: store.summary.daily) }
-                }
-                BreakdownList(title: "项目", items: store.summary.byProject,
-                              total: store.summary.billable)
-                BreakdownList(title: "模型", items: store.summary.byModel,
-                              total: store.summary.billable)
-                BreakdownList(title: "工具", items: store.summary.bySource,
-                              total: store.summary.billable)
-            }
-        }
-    }
-
-    private var headline: some View {
-        HStack(alignment: .firstTextBaseline) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(Fmt.tokens(store.summary.primary))
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                Text(store.summary.primaryMetric == "throughput" ? "吞吐 tokens" : "计费 tokens")
-                    .font(.system(size: 10)).foregroundStyle(.secondary)
-            }
-            Spacer()
-            if store.summary.showCost, let cost = store.summary.cost {
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(String(format: "$%.2f", cost))
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    // 「估算」两个字不能省：本地价格表算的是 API 单价，与订阅费无关。
-                    Text("估算成本").font(.system(size: 10)).foregroundStyle(.secondary)
-                }
-            }
-        }
-    }
-}
-
-private struct BreakdownList: View {
-    let title: String
-    let items: [NamedBucket]
-    let total: Double
-
-    var body: some View {
-        // 值为 0 的行不显示。`<synthetic>` 这类占位模型会带着一个 0 出现，
-        // 是纯噪音——用户看到「某某 0」只会疑惑它为什么在这。
-        let items = items.filter { $0.billable > 0 }
-        return Group {
-            if !items.isEmpty {
-                SectionCard(title: title) {
-                    VStack(spacing: 7) {
-                        ForEach(items.prefix(8)) { item in
-                            VStack(spacing: 3) {
-                                HStack {
-                                    Text(item.id).font(.system(size: 11.5)).lineLimit(1)
-                                    Spacer()
-                                    Text(Fmt.tokens(item.billable))
-                                        .font(.system(size: 11.5, design: .rounded))
-                                        .foregroundStyle(.secondary)
-                                }
-                                GeometryReader { geo in
-                                    ZStack(alignment: .leading) {
-                                        Capsule().fill(Color.secondary.opacity(0.12))
-                                        Capsule().fill(PanelTheme.body.opacity(0.75))
-                                            .frame(width: total > 0
-                                                   ? max(2, geo.size.width * item.billable / total)
-                                                   : 2)
-                                    }
-                                }
-                                .frame(height: 4)
-                            }
-                        }
-                    }
-                }
-            }
         }
     }
 }
