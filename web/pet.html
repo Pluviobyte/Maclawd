@@ -376,13 +376,7 @@ function renderSettings(){
       <button class="sw" role="switch" data-key="${key}"
         aria-checked="${!!settings[key]}" ${disabled?'disabled':''}></button>
     </div>`;
-  }).join('') + `<div class="row">
-      <div style="flex:1"><strong>面板主口径</strong>
-        <p>非缓存读取量不含缓存读，吞吐量四项全加。缓存读仍会收费，所以任何数字都必须标注口径。</p></div>
-      <select id="metric" style="padding:6px 10px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:12px">
-        <option value="billable"${settings.primaryMetric==='billable'?' selected':''}>非缓存读取量</option>
-        <option value="throughput"${settings.primaryMetric==='throughput'?' selected':''}>吞吐量 throughput</option>
-      </select></div>`;
+  }).join('');
 
   el('settings').querySelectorAll('.sw').forEach(sw => {
     sw.onclick = async () => {
@@ -390,7 +384,6 @@ function renderSettings(){
       await patch({ [key]: !settings[key] });
     };
   });
-  el('metric').onchange = (e) => patch({ primaryMetric: e.target.value });
 }
 
 async function patch(body){

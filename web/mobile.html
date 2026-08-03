@@ -66,7 +66,7 @@
   </div>
 
   <div class="card">
-    <div class="big"><span id="today">—</span><small id="unit">非缓存读取 tokens</small></div>
+    <div class="big"><span id="today">—</span><small id="unit">总 Token</small></div>
     <div class="kv" id="compare" style="margin-top:6px"></div>
     <div class="grid">
       <div class="kv"><b id="cost">—</b>估算成本</div>
@@ -147,9 +147,8 @@ async function tick(){
     }
     const s = summary.summary;
     const lowerBound = collection.complete ? '' : '≥ ';
-    const useThroughput = summary.settings?.primaryMetric === 'throughput';
-    el('today').textContent = lowerBound + fmt(useThroughput ? s.throughput : s.billable);
-    el('unit').textContent = useThroughput ? '吞吐 tokens' : '非缓存读取 tokens';
+    el('today').textContent = lowerBound + fmt(s.throughput);
+    el('unit').textContent = '总 Token';
     el('cost').textContent = (summary.settings?.showCost && s.cost != null)
       ? lowerBound+'$'+s.cost.toFixed(2) : '—';
     el('hit').textContent = pct(s.hitRate);

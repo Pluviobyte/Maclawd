@@ -61,9 +61,18 @@ cp AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 # 只带运行必需的目录，不带 .git / build / previews 这些体积大头。
 RUNTIME="$APP/Contents/Resources/runtime"
 mkdir -p "$RUNTIME"
-for item in bin src web design package.json; do
+# hooks 必须带上。安装器把**包内**的脚本路径写进 ~/.claude/settings.json
+# （hookScriptPath / statuslineScriptPath 都基于 repoRoot），
+# 包里没有这个目录的话，写进去的是一条指向不存在文件的命令：
+#   - hook：静默失效，桌宠再也收不到事件，而且没有任何报错
+#   - 状态行：更糟，用户终端里那一行直接变空白
+# 此前这个目录一直没进包，只是没人从 .app 里装过 hook 才没暴露。
+for item in bin src hooks web design package.json; do
   cp -R "$REPO_ROOT/$item" "$RUNTIME/"
 done
+# 设置页的一键安装来源。这里只打包最终宠物包，不带生成过程和 QA 中间件。
+mkdir -p "$RUNTIME/assets"
+cp -R "$REPO_ROOT/assets/codex-pet" "$RUNTIME/assets/"
 # 解析缓存与聚合数据是用户数据，绝不打进包里
 rm -rf "$RUNTIME/node_modules"
 

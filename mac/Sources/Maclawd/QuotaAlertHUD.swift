@@ -81,8 +81,12 @@ enum QuotaAlertHUD {
                     context.duration = 0.35
                     window.animator().alphaValue = 0
                 }, completionHandler: {
-                    window.close()
-                    if panel === window { panel = nil }
+                    // completionHandler 是 @Sendable，静态属性不能直接在里面改。
+                    // 它实际就在主线程上回调，所以再断言一次而不是把整条链染成 async。
+                    MainActor.assumeIsolated {
+                        window.close()
+                        if panel === window { panel = nil }
+                    }
                 })
             }
         }

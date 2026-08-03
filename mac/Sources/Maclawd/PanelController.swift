@@ -55,6 +55,32 @@ final class PanelController {
 
     var isShown: Bool { popover.isShown }
 
+    /**
+     调试探针：按固定间隔轮换统计页的区间，并打印面板窗口框。
+
+     「换区间面板不该动」没有别的自动化验证手段——popover 点不到，
+     也没法从外部驱动 SwiftUI 的按钮。没有这个探针，这条只能靠肉眼看，
+     而肉眼看不出 3pt 的漂移。
+     */
+    func startRangeProbe() {
+        let ranges = ["today", "yesterday", "month", "week", "all"]
+        var index = 0
+        Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self, self.popover.isShown else { return }
+                let frame = self.popover.contentViewController?.view.window?.frame ?? .zero
+                // 写 stderr 而不是 print：stdout 到管道是块缓冲的，
+                // 进程被 kill 时那一批日志会整个丢掉，看起来像探针没跑。
+                let line = "PROBE range=\(self.store.range.padding(toLength: 10, withPad: " ", startingAt: 0))"
+                    + " origin=(\(Int(frame.origin.x)),\(Int(frame.origin.y)))"
+                    + " size=\(Int(frame.width))x\(Int(frame.height))\n"
+                FileHandle.standardError.write(Data(line.utf8))
+                self.store.range = ranges[index % ranges.count]
+                index += 1
+            }
+        }
+    }
+
     func toggle(relativeTo view: NSView) {
         if popover.isShown { close() } else { show(relativeTo: view) }
     }

@@ -40,6 +40,60 @@ test('部分空态不伪装成暂无数据，且不完整时隐藏比较并标�
   assert.match(analyticsSwift, /lowerBound.*activeSeconds/s);
 });
 
+test('原生概览用普通语言解释首次索引，不用数学符号要求用户猜', () => {
+  const panelSwift = readFileSync(
+    new URL('../mac/Sources/Maclawd/PanelView.swift', import.meta.url), 'utf8',
+  );
+  assert.match(panelSwift, /正在整理历史用量/);
+  assert.match(panelSwift, /已完成/);
+  assert.match(panelSwift, /最终数字可能更高/);
+  assert.match(panelSwift, /nextCollectionScanLabel/);
+  assert.doesNotMatch(panelSwift, /collectionComplete \? "" : "≥ "/);
+});
+
+test('概览统一显示总 Token，不让用户选择技术口径', () => {
+  const panelSwift = readFileSync(
+    new URL('../mac/Sources/Maclawd/PanelView.swift', import.meta.url), 'utf8',
+  );
+  const menuSwift = readFileSync(
+    new URL('../mac/Sources/Maclawd/MenuBarController.swift', import.meta.url), 'utf8',
+  );
+  const pet = readFileSync(new URL('../web/pet.html', import.meta.url), 'utf8');
+  const mobile = readFileSync(new URL('../web/mobile.html', import.meta.url), 'utf8');
+  assert.match(panelSwift, /总 Token/);
+  assert.doesNotMatch(panelSwift, /非缓存读取 tokens|吞吐 tokens/);
+  assert.match(menuSwift, /client\.usage\.throughput/);
+  assert.doesNotMatch(pet, /面板主口径/);
+  assert.match(mobile, /fmt\(s\.throughput\)/);
+  assert.match(mobile, /总 Token/);
+});
+
+test('原生每日趋势在图表内显示悬浮读数，不叠加系统提示', () => {
+  const source = readFileSync(
+    new URL('../mac/Sources/Maclawd/AnalyticsView.swift', import.meta.url), 'utf8',
+  );
+  const chart = source.slice(
+    source.indexOf('struct AnalyticsTrendChart'),
+    source.indexOf('struct AnalyticsHeatmap'),
+  );
+  assert.match(chart, /悬浮柱状图查看具体数值/);
+  assert.match(chart, /shown\.first\(where:/);
+  assert.doesNotMatch(chart, /\.help\(/);
+  assert.doesNotMatch(chart, /\.overlay\(/);
+});
+
+test('分布维度和数值选择器之间有明确的视觉分隔', () => {
+  const source = readFileSync(
+    new URL('../mac/Sources/Maclawd/AnalyticsView.swift', import.meta.url), 'utf8',
+  );
+  const card = source.slice(
+    source.indexOf('private var distributionCard'),
+    source.indexOf('private var detailCard'),
+  );
+  assert.match(card, /Rectangle\(\)[\s\S]*frame\(width: 1, height: 18\)/);
+  assert.match(card, /accessibilityHidden\(true\)/);
+});
+
 test('网页从非空筛选切到空结果时清除上一轮统计', () => {
   const html = readFileSync(new URL('../web/usage.html', import.meta.url), 'utf8');
   const match = html.match(/function clearUsageData\(\)\{([\s\S]*?)\n\}/);

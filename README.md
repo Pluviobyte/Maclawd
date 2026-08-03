@@ -23,6 +23,7 @@ Maclawd is planned as a complete Mac product:
 - contextual props only when they make the character's action more expressive
 - live reactions to AI-agent activity
 - Mac desktop, menu bar, notification, and settings behavior
+- one-click local installation of the bundled Maclawd animation pack as a Codex custom pet
 - independent product identity, icon, packaging, update flow, and release system
 - a signed and notarized universal macOS application
 
@@ -125,6 +126,14 @@ See [`PROGRESS.md`](PROGRESS.md) for completed work and the full build sequence.
 
 Open [`index.html`](index.html) in a browser. The preview has no build step and
 loads the production SVG directly.
+
+## Use Maclawd as a Codex pet
+
+Open the Maclawd panel, choose **Settings**, and select **一键安装到 Codex**.
+Maclawd validates its bundled v2 sprite atlas, then installs only that package at
+`~/.codex/pets/maclawd`. If another Maclawd version is present, the app asks before
+replacing it; an unrelated directory at the same path is never overwritten. Refresh
+**Codex Settings → Pets** after installation and select Maclawd.
 
 ## Character notice
 

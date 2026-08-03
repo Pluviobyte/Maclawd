@@ -136,7 +136,7 @@ final class MenuBarController {
         case .iconOnly:
             item.button?.title = ""
         case .todayTokens:
-            item.button?.title = " \(fmt(client.usage.billable))"
+            item.button?.title = " \(fmt(client.usage.throughput))"
         case .todayCost:
             if let cost = client.usage.cost {
                 item.button?.title = String(format: " $%.2f", cost)

@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /**
@@ -9,6 +10,7 @@ import SwiftUI
  */
 struct SettingsPage: View {
     @ObservedObject var store: PanelStore
+    let repoRoot: URL
     var onOpenBrowser: (String) -> Void
     var onQuit: () -> Void
 
@@ -16,6 +18,9 @@ struct SettingsPage: View {
     @State private var statuslineNote: String?
     @State private var confirmingReset = false
     @State private var rescanNote: String?
+    @State private var codexPetState: CodexPetInstallationState = .ready
+    @State private var codexPetNote: String?
+    @State private var confirmingPetUpdate = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -23,7 +28,15 @@ struct SettingsPage: View {
             quotaSection
             alertSection
             menuBarSection
+            codexPetSection
             dangerSection
+        }
+        .onAppear { refreshCodexPetState() }
+        .alert("替换 Codex 中的 Maclawd？", isPresented: $confirmingPetUpdate) {
+            Button("取消", role: .cancel) {}
+            Button("替换") { installCodexPet(replacing: true) }
+        } message: {
+            Text("检测到已安装的版本不同。只会替换 ~/.codex/pets/maclawd 中可识别的 Maclawd 宠物包。")
         }
     }
 
@@ -167,6 +180,95 @@ struct SettingsPage: View {
             .labelsHidden()
             .pickerStyle(.menu)
         }
+    }
+
+    // MARK: Codex 宠物
+
+    private var codexPetSection: some View {
+        SectionCard(title: "Codex 宠物") {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("把随应用附带、已经校验过的 Maclawd v2 动画包安装到 ~/.codex/pets/maclawd。不会联网，也不会读取其他宠物。")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 8) {
+                    Button {
+                        switch codexPetState {
+                        case .installed:
+                            openCodexSettings()
+                        case .updateAvailable:
+                            confirmingPetUpdate = true
+                        case .ready:
+                            installCodexPet(replacing: false)
+                        case .blocked:
+                            refreshCodexPetState()
+                        }
+                    } label: {
+                        Text(codexPetButtonTitle).font(.system(size: 11))
+                    }
+                    .disabled(isCodexPetBlocked)
+
+                    if codexPetState == .installed {
+                        Button("打开 Codex 设置") { openCodexSettings() }
+                            .font(.system(size: 11))
+                    }
+                }
+
+                if let note = codexPetNote {
+                    Text(note)
+                        .font(.system(size: 10))
+                        .foregroundStyle(isCodexPetBlocked ? .orange : .secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    private var codexPetButtonTitle: String {
+        switch codexPetState {
+        case .ready: return "一键安装到 Codex"
+        case .installed: return "已安装"
+        case .updateAvailable: return "更新 Codex 宠物"
+        case .blocked: return "无法安装"
+        }
+    }
+
+    private var isCodexPetBlocked: Bool {
+        if case .blocked = codexPetState { return true }
+        return false
+    }
+
+    private func refreshCodexPetState() {
+        let installer = CodexPetInstaller()
+        let package = CodexPetInstaller.bundledPackage(in: repoRoot)
+        codexPetState = installer.state(packageAt: package)
+        switch codexPetState {
+        case .ready: codexPetNote = nil
+        case .installed: codexPetNote = "已安装。若 Codex 尚未显示，请在 Settings > Pets 中刷新。"
+        case .updateAvailable: codexPetNote = "Codex 中已有另一个 Maclawd 版本，更新前会再次确认。"
+        case .blocked(let reason): codexPetNote = reason
+        }
+    }
+
+    private func installCodexPet(replacing: Bool) {
+        let installer = CodexPetInstaller()
+        let package = CodexPetInstaller.bundledPackage(in: repoRoot)
+        do {
+            _ = try installer.install(packageAt: package, replacing: replacing)
+            codexPetState = .installed
+            codexPetNote = "安装完成。请在 Codex 的 Settings > Pets 中刷新并选择 Maclawd。"
+        } catch CodexPetInstallerError.replacementRequired {
+            confirmingPetUpdate = true
+        } catch {
+            codexPetState = .blocked(error.localizedDescription)
+            codexPetNote = error.localizedDescription
+        }
+    }
+
+    private func openCodexSettings() {
+        guard let url = URL(string: "codex://settings") else { return }
+        NSWorkspace.shared.open(url)
     }
 
     // MARK: 危险区

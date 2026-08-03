@@ -122,9 +122,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                           variant: self.client.state.variant)
             // 位移要在 show 之后：先换上走路的画面，再开始挪窗口。
             // 反过来的话会先看到「静止的宠物在滑动」。
-            self.pet.applyDrift(self.client.state.drift,
-                                key: self.client.state.source ?? "",
-                                durationMs: self.client.state.durationMs ?? 3000)
+            //
+            // 面板开着时不让它溜达：菜单栏被折叠时面板就锚在桌宠身上
+            // （见 PanelController.usableAnchor），桌宠一挪，面板跟着滑走——
+            // 用户正在看数字，画面自己在飘。
+            if !self.panel.isShown {
+                self.pet.applyDrift(self.client.state.drift,
+                                    key: self.client.state.source ?? "",
+                                    durationMs: self.client.state.durationMs ?? 3000)
+            }
         }
 
         pet.orderFront(nil)
@@ -151,6 +157,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 MainActor.assumeIsolated {
                     guard let self, let anchor = self.menuBar.anchorView else { return }
                     self.panel.show(relativeTo: anchor)
+                    if CommandLine.arguments.contains("--debug-range-probe") {
+                        self.panel.startRangeProbe()
+                    }
                 }
             }
         }

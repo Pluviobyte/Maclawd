@@ -232,10 +232,15 @@ struct StatsPage: View {
     private var distributionCard: some View {
         SectionCard(title: "分布") {
             VStack(spacing: 8) {
-                HStack {
+                HStack(spacing: 8) {
                     Picker("维度", selection: $distribution) {
                         ForEach(DistributionKind.allCases) { Text($0.title).tag($0) }
                     }.pickerStyle(.segmented).labelsHidden()
+                    Rectangle()
+                        .fill(Color.secondary.opacity(0.28))
+                        .frame(width: 1, height: 18)
+                        .padding(.horizontal, 2)
+                        .accessibilityHidden(true)
                     Picker("值", selection: $distributionCost) {
                         Text("Token").tag(false); Text("估算费用").tag(true)
                     }.pickerStyle(.segmented).labelsHidden().frame(width: 112)
@@ -293,6 +298,19 @@ struct AnalyticsTrendChart: View {
         let shown = Array(points.suffix(45))
         let peak = max(shown.map(value).max() ?? 1, 1)
         VStack(alignment: .leading, spacing: 4) {
+            Group {
+                if let hovered = shown.first(where: { $0.day == hoveredDay }) {
+                    Text("\(hovered.day) · \(formattedExact(hovered))")
+                        .foregroundStyle(.primary)
+                } else {
+                    Text("悬浮柱状图查看具体数值")
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .font(.system(size: 9.5, weight: .medium))
+            .lineLimit(1)
+            .frame(maxWidth: .infinity, minHeight: 14, alignment: .leading)
+
             HStack(alignment: .bottom, spacing: 1.5) {
                 ForEach(shown) { point in
                     chartBar(point, peak: peak)
@@ -310,25 +328,10 @@ struct AnalyticsTrendChart: View {
             .fill(PanelTheme.body.opacity(value(point) > 0 ? 0.82 : 0.12))
             .frame(maxWidth: 9)
             .frame(height: max(2, 48 * value(point) / peak))
-            .overlay(alignment: .top) {
-                if hoveredDay == point.day {
-                    Text("\(point.day) · \(formattedExact(point))")
-                        .font(.system(size: 9.5, weight: .semibold))
-                        .foregroundStyle(Color(nsColor: .windowBackgroundColor))
-                        .fixedSize()
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 4)
-                        .background(Color(nsColor: .labelColor), in: RoundedRectangle(cornerRadius: 6))
-                        .offset(y: -27)
-                        .allowsHitTesting(false)
-                }
-            }
-            .zIndex(hoveredDay == point.day ? 1 : 0)
             .onHover { hovering in
                 if hovering { hoveredDay = point.day }
                 else if hoveredDay == point.day { hoveredDay = nil }
             }
-            .help("\(point.day) · \(formattedExact(point))")
     }
 
     private func formattedExact(_ point: AnalyticsSeriesPoint) -> String {

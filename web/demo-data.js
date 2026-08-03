@@ -158,7 +158,7 @@
     cursorCloud: false,
     showCost: true,
     reducedMotion: false,
-    primaryMetric: 'billable',
+    primaryMetric: 'throughput',
     hiddenProjects: [],
     pinnedProjects: [],
   };

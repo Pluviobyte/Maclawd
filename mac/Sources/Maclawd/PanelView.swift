@@ -30,9 +30,32 @@ enum PanelTheme {
     static let body = Color(nsColor: Design.bodyColor)
     static let accent = Color(nsColor: Design.accent)
     static let width: CGFloat = 360
-    /// 高度上限。**超过就在页面内滚动，不加宽**——面板一旦要横向找东西
-    /// 就不再是「一瞥」了。
-    static let maxHeight: CGFloat = 560
+
+    /**
+     **面板尺寸必须是常量。**
+
+     此前用的是「高度跟着内容走、上限 560」。实测下来那是个明显的缺陷：
+     切一次区间，行数变了，整个面板就跳一下。探针量到的实际数字——
+
+     | 区间 | 窗口原点     | 尺寸    |
+     | ---- | ------------ | ------- |
+     | 今天 | (1126,187)   | 386×633 |
+     | 昨天 | (1126,187)   | 386×577 |
+     | 本月 | (1126,187)   | 386×728 |
+     | 全部 | (944,60)     | 386×793 |
+
+     AppKit 原点在左下，所以原点不变 + 高度变 = **顶边每次都在跳**，
+     最大 151pt。到「全部」时面板高到放不下，AppKit 干脆把它整个搬到了
+     另一个位置（左移 182、下移 127）。
+
+     高度还会**自己**变：台头那行速率只在有速率时渲染，桌宠从工作转到发呆
+     就矮 16pt——用户什么都没做，面板自己跳一下，更难理解。
+
+     所以三段全部定高：台头、内容视口、页签栏。内容短就留白，
+     内容长就在视口内滚。留白不好看，但面板乱跳是**不可用**。
+     */
+    static let headerHeight: CGFloat = 152
+    static let contentHeight: CGFloat = 420
 }
 
 struct PanelView: View {
@@ -60,13 +83,22 @@ struct PanelView: View {
                     case .overview: OverviewPage(client: client, store: store)
                     case .stats: StatsPage(store: store, disabled: client.state.disabled)
                     case .settings:
-                        SettingsPage(store: store, onOpenBrowser: onOpenBrowser, onQuit: onQuit)
+                        SettingsPage(
+                            store: store,
+                            repoRoot: repoRoot,
+                            onOpenBrowser: onOpenBrowser,
+                            onQuit: onQuit
+                        )
                     }
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
+                // 内容比视口短时顶部对齐，不要垂直居中——居中会让
+                // 「今日」这一块的位置随行数上下浮动，看起来还是在跳。
+                .frame(maxWidth: .infinity, alignment: .topLeading)
             }
-            .frame(maxHeight: PanelTheme.maxHeight)
+            // 定高，不是上限。理由见 PanelTheme。
+            .frame(height: PanelTheme.contentHeight)
             Divider().opacity(0.5)
             tabBar
         }
@@ -92,16 +124,20 @@ struct PanelView: View {
             Text(client.state.disabled ? "用量记录已关闭"
                  : (client.state.name.isEmpty ? "连接中…" : client.state.name))
                 .font(.system(size: 13, weight: .semibold))
+                .lineLimit(1)
 
-            if !client.state.disabled && client.state.tokensPerMin > 0 {
-                Text("每分钟 \(Fmt.tokens(Double(client.state.tokensPerMin)))")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-            }
+            // 速率行**永远占位**。只在有速率时才渲染的话，桌宠从工作转到
+            // 发呆会让台头矮一行，整个面板自己跳一下——用户什么都没做，
+            // 那比点击引起的跳更难理解。没速率时留空串占住行高。
+            Text(!client.state.disabled && client.state.tokensPerMin > 0
+                 ? "每分钟 \(Fmt.tokens(Double(client.state.tokensPerMin)))"
+                 : " ")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
         }
         .frame(maxWidth: .infinity)
-        .padding(.top, 14)
-        .padding(.bottom, 12)
+        .frame(height: PanelTheme.headerHeight)
     }
 
     private var tabBar: some View {
@@ -139,9 +175,15 @@ private struct OverviewPage: View {
             } else {
                 todayBlock
                 projectsBlock
+                // 内容比视口短时把脚注推到底，空白留在中间而不是堆在末尾。
+                // 顺带让脚注变成一条固定的底栏——上面的行数怎么变它都不动。
+                Spacer(minLength: 0)
                 footnote
             }
         }
+        // ScrollView 会给内容无限高度，Spacer 在里面撑不开。
+        // 给一个最小高度，Spacer 才知道要占多少。
+        .frame(minHeight: PanelTheme.contentHeight - 28, alignment: .top)
     }
 
     /// 关闭态**不显示任何历史数字**，即使数据还在盘上。用户关掉的是
@@ -171,13 +213,13 @@ private struct OverviewPage: View {
         SectionCard(title: "今日") {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text((store.summary.collectionComplete ? "" : "≥ ") + Fmt.tokens(store.summary.primary))
+                    Text(Fmt.tokens(store.summary.primary))
                         .font(.system(size: 30, weight: .bold, design: .rounded))
-                    Text(store.summary.primaryMetric == "throughput" ? "吞吐 tokens" : "非缓存读取 tokens")
+                    Text((store.summary.collectionComplete ? "" : "已统计的 ") + "总 Token")
                         .font(.system(size: 11)).foregroundStyle(.secondary)
                     Spacer()
                     if store.summary.showCost, let cost = store.summary.cost {
-                        Text((store.summary.collectionComplete ? "" : "≥ ") + String(format: "$%.2f", cost))
+                        Text(String(format: "$%.2f", cost))
                             .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(.secondary)
                     }
@@ -189,8 +231,15 @@ private struct OverviewPage: View {
                         .font(.system(size: 11)).foregroundStyle(.secondary)
                 }
                 if !store.summary.collectionComplete {
-                    Text("采集索引中 · 待处理 \(store.summary.deferredFiles) 个文件，当前为下限")
-                        .font(.system(size: 10)).foregroundStyle(.orange)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(indexingProgressTitle)
+                            .font(.system(size: 10.5, weight: .medium))
+                            .foregroundStyle(.orange)
+                        Text("还剩 \(store.summary.deferredFiles) 个文件，\(store.summary.nextCollectionScanLabel)。完成前显示的是已找到的用量，最终数字可能更高。")
+                            .font(.system(size: 9.5))
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                 if store.summary.hoursAvailable && !store.summary.hours.isEmpty {
                     HourSparkline(values: store.summary.hours)
@@ -202,14 +251,14 @@ private struct OverviewPage: View {
     private var projectsBlock: some View {
         Group {
             if !store.summary.byProject.isEmpty {
-                SectionCard(title: "项目") {
+                SectionCard(title: store.summary.collectionComplete ? "项目" : "项目 · 已统计") {
                     VStack(spacing: 6) {
                         // 最多三行 + 「其他 N 个」。完整列表在统计页。
                         ForEach(store.summary.byProject.prefix(3)) { item in
                             HStack {
                                 Text(item.id).font(.system(size: 12)).lineLimit(1)
                                 Spacer()
-                                Text((store.summary.collectionComplete ? "" : "≥ ") + Fmt.tokens(item.billable))
+                                Text(Fmt.tokens(item.throughput))
                                     .font(.system(size: 12, design: .rounded))
                                     .foregroundStyle(.secondary)
                             }
@@ -219,9 +268,8 @@ private struct OverviewPage: View {
                                 Text("其他 \(store.summary.byProject.count - 3) 个")
                                     .font(.system(size: 11)).foregroundStyle(.secondary)
                                 Spacer()
-                                Text((store.summary.collectionComplete ? "" : "≥ ")
-                                     + Fmt.tokens(store.summary.byProject.dropFirst(3)
-                                        .reduce(0) { $0 + $1.billable }))
+                                Text(Fmt.tokens(store.summary.byProject.dropFirst(3)
+                                        .reduce(0) { $0 + $1.throughput }))
                                     .font(.system(size: 11, design: .rounded))
                                     .foregroundStyle(.secondary)
                             }
@@ -233,17 +281,21 @@ private struct OverviewPage: View {
     }
 
     private var footnote: some View {
-        let lowerBound = store.summary.collectionComplete ? "" : "≥ "
-        return HStack(spacing: 10) {
+        HStack(spacing: 10) {
             Label("缓存 \(Fmt.percent(store.summary.hitRate))", systemImage: "bolt.horizontal")
-            Label(lowerBound + Fmt.duration(store.summary.activeSeconds), systemImage: "clock")
+            Label(Fmt.duration(store.summary.activeSeconds), systemImage: "clock")
             if store.summary.sessions > 0 {
-                Label("\(lowerBound)\(store.summary.sessions) 会话", systemImage: "bubble.left")
+                Label("\(store.summary.sessions) 会话", systemImage: "bubble.left")
             }
         }
         .font(.system(size: 10))
         .foregroundStyle(.secondary)
         .labelStyle(.titleAndIcon)
+    }
+
+    private var indexingProgressTitle: String {
+        guard let progress = store.summary.collectionProgress else { return "正在整理历史用量" }
+        return "正在整理历史用量 · 已完成 \(Fmt.percent(progress))"
     }
 }
 

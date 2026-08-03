@@ -155,12 +155,28 @@ struct PanelSummary: Equatable {
     var bySource: [NamedBucket] = []
     var coverage: Double = 1
     var unpricedModels: [String] = []
-    var primaryMetric: String = "billable"
+    var primaryMetric: String = "throughput"
     var showCost = false
     var collectionComplete = false
     var deferredFiles = 0
+    var collectionTotalFiles = 0
+    var collectionProcessedFiles = 0
+    var collectionScannedAt: Date?
 
-    var primary: Double { primaryMetric == "throughput" ? throughput : billable }
+    var primary: Double { throughput }
+
+    var collectionProgress: Double? {
+        guard collectionTotalFiles > 0 else { return nil }
+        return min(1, max(0, Double(collectionProcessedFiles) / Double(collectionTotalFiles)))
+    }
+
+    var nextCollectionScanLabel: String {
+        guard let collectionScannedAt else { return "稍后会自动继续处理" }
+        let seconds = collectionScannedAt.addingTimeInterval(30 * 60).timeIntervalSinceNow
+        if seconds <= 30 { return "即将自动继续处理" }
+        let minutes = max(1, Int(ceil(seconds / 60)))
+        return "约 \(minutes) 分钟后自动继续"
+    }
 
     /// 与个人 14 天中位数比。**不用「比昨天」**——昨天可能正好休息，
     /// 波动没有信息量。
@@ -611,13 +627,21 @@ final class PanelStore: ObservableObject {
         var out = PanelSummary()
         out.empty = json["empty"] as? Bool ?? false
         let settings = json["settings"] as? [String: Any] ?? [:]
-        out.primaryMetric = settings["primaryMetric"] as? String ?? "billable"
+        out.primaryMetric = "throughput"
         out.showCost = settings["showCost"] as? Bool ?? false
         out.coverage = json["coverage"] as? Double ?? 1
         out.baseline = json["baseline"] as? Double
         if let collection = json["collection"] as? [String: Any] {
             out.collectionComplete = collection["complete"] as? Bool ?? false
             out.deferredFiles = jsonInt(collection["deferredFiles"])
+            if let scannedAt = collection["scannedAt"] as? String {
+                out.collectionScannedAt = ISO8601DateFormatter().date(from: scannedAt)
+            }
+            for value in (collection["sources"] as? [String: Any] ?? [:]).values {
+                guard let source = value as? [String: Any] else { continue }
+                out.collectionTotalFiles += jsonInt(source["discoveredFiles"])
+            }
+            out.collectionProcessedFiles = max(0, out.collectionTotalFiles - out.deferredFiles)
         }
 
         if let s = json["summary"] as? [String: Any] {
