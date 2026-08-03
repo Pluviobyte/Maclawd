@@ -21,6 +21,11 @@ export const DEFAULTS = {
   showCost: false,
   // 与系统「减弱动效」独立的应用内开关。
   reducedMotion: false,
+  // 开 Claude Code 时如果 Maclawd 没在跑，自动把它拉起来。
+  // 默认开：**用户开了 agent 却没开桌宠是常态，不是异常**——不拉起的话
+  // 那段时间的事件全丢，而这正是桌宠该出场的时候。只在 hook 装在 .app
+  // 里时才有效果（源码目录里没有可拉起的东西），且永远后台启动不抢焦点。
+  autoStart: true,
   // 面板默认口径：billable（近似计费量）或 throughput（上下文吞吐）。
   primaryMetric: 'billable',
   // 在桌宠上批准权限。拦截别人的权限流程是很重的行为，默认关闭；

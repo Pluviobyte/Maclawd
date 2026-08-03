@@ -26,6 +26,9 @@ import { loadSettings, saveSettings, usageEnabled } from './settings.js';
 import { readJson, writeJson, removeJson } from './store.js';
 import { COVERAGE_FILE, ROLLUP_FILE, SCAN_CACHE_FILE, TAIL_STATE_FILE } from './paths.js';
 import { classify, createCoverage } from './coverage.js';
+import { clearEndpoint, writeEndpoint } from './endpoint.js';
+import { readLeases } from './session-lease.js';
+import { watchHooks } from './hook-health.js';
 
 /**
  * 本地前端服务。零依赖，只绑 127.0.0.1。
@@ -354,6 +357,20 @@ export function createUsageServer({ collector = null } = {}) {
   const engine = createStateEngine({
     onChange: (state) => coverage.observe(state.actionId, Date.now()),
   });
+  // 桌宠没开的那段时间里，hook 写的租约是唯一留下的痕迹。启动时读回来，
+  // 免得一个任务跑到一半时桌宠从 idle 开始演。
+  // 失败不能挡住启动——租约是尽力而为的增强，不是必要条件。
+  try {
+    engine.restore(readLeases());
+  } catch {
+    // 磁盘上的东西坏了就当没有，照常从 idle 起步
+  }
+
+  // hook 掉了就补回去。不看着的话，settings.json 被别的工具覆盖之后
+  // 桌宠会永远停在 idle——而「没有事件」和「一切正常但很闲」在我们这边
+  // 长得一模一样，用户只会觉得「它坏了」，没有任何线索指向原因。
+  let hookHealth = { action: 'healthy' };
+  const stopHookWatch = watchHooks({ onResult: (r) => { hookHealth = r; } });
   // 落盘节流：状态变化很频繁，每次都写会把一个诊断功能变成 IO 负担。
   let coverageSavedAt = 0;
   const COVERAGE_SAVE_MS = 60_000;
@@ -443,6 +460,9 @@ export function createUsageServer({ collector = null } = {}) {
     });
     return {
       state, plan, mini: miniMode, energyEnabled: settings.petEnergy, debug: engine.debug(),
+      // 当前这个状态是谁发起的。外壳据此实现「点桌宠跳回那个终端」——
+      // needs_owner 亮着却没法一键过去，等于只提醒不解决。
+      focus: state.focus ?? null,
     };
   }
 
@@ -570,12 +590,25 @@ export function createUsageServer({ collector = null } = {}) {
           sendJson(res, 400, { error: '未知操作' });
           return;
         }
-        sendJson(res, 200, { ...hookStatus(), permission: permissionHookStatus() });
+        sendJson(res, 200, {
+          ...hookStatus(),
+          permission: permissionHookStatus(),
+          // 自愈的最近一次结论。面板要能看见「修过一次」与「修不好了」——
+          // 静默自愈和静默失效一样难查。
+          health: hookHealth,
+        });
         return;
       }
 
       if (pathname === '/api/status') {
         sendJson(res, 200, worker.status());
+        return;
+      }
+
+      // 身份探针：端口被占时用来分辨「占位的是另一个 Maclawd」还是「别人」。
+      // 刻意做成最轻的一条路由——它会被启动路径同步等待。
+      if (pathname === '/api/ping') {
+        sendJson(res, 200, { maclawd: true, pid: process.pid, port: currentPort });
         return;
       }
 
@@ -702,19 +735,94 @@ export function createUsageServer({ collector = null } = {}) {
     const address = server.address();
     if (address && typeof address === 'object') currentPort = address.port;
   });
+  // 看门狗挂在文件上，服务关掉就得撤——测试里一个进程会起关好几次服务，
+  // 留着的话文件监听会越堆越多。
+  server.on('close', stopHookWatch);
 
   return { server, worker };
 }
 
+/** 端口被占时最多往后试几个。够覆盖「同机开了几个 Vite」，又不会无限游走。 */
+export const PORT_SCAN_LIMIT = 12;
+
+/** 占住这个端口的是不是另一个 Maclawd。 */
+async function probeMaclawd(port, timeoutMs = 400) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  timer.unref?.();
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/api/ping`, { signal: controller.signal });
+    if (!res.ok) return null;
+    const body = await res.json();
+    return body?.maclawd === true ? body : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * 启动本地服务。
+ *
+ * **端口被占不再是致命的。** 此前这里的 `listen` 没有 error 处理，
+ * EADDRINUSE 会以未捕获异常的形式打死整个运行时进程；外壳把 stderr
+ * 接到 /dev/null，用户只看到桌宠不动、毫无提示。而 4173 恰好是
+ * Vite preview 的默认端口，撞车概率一点都不低。
+ *
+ * 现在分两种情况：
+ *   · 占位的是另一个 Maclawd → 不启动第二份（两个采集器会重复计数），
+ *     抛出带 `alreadyRunning` 的错误交给调用方决定。
+ *   · 占位的是别人 → 顺次往后找一个空端口。
+ *
+ * 拿到端口后写端点文件，hook 与外壳靠它找到我们，谁都不用写死常量。
+ */
 export function serve({ port = 4173, host = null, collector = null } = {}) {
-  return new Promise((resolvePromise) => {
-    const { server, worker } = createUsageServer({ collector });
-    // 只有显式开启局域网镜像才监听外部地址；否则严格绑回环。
-    const bind = host ?? (loadSettings().lanMirror === true ? '0.0.0.0' : '127.0.0.1');
+  const { server, worker } = createUsageServer({ collector });
+  // 只有显式开启局域网镜像才监听外部地址；否则严格绑回环。
+  const bind = host ?? (loadSettings().lanMirror === true ? '0.0.0.0' : '127.0.0.1');
+
+  return new Promise((resolvePromise, rejectPromise) => {
+    let attempt = 0;
+
+    const onError = async (err) => {
+      if (err?.code !== 'EADDRINUSE') {
+        server.removeListener('error', onError);
+        rejectPromise(err);
+        return;
+      }
+      const candidate = port + attempt;
+      const other = await probeMaclawd(candidate);
+      if (other) {
+        server.removeListener('error', onError);
+        const conflict = new Error(`Maclawd 已经在 ${candidate} 端口运行（pid ${other.pid ?? '?'}）`);
+        conflict.code = 'EALREADYRUNNING';
+        conflict.alreadyRunning = other;
+        conflict.port = candidate;
+        rejectPromise(conflict);
+        return;
+      }
+      attempt += 1;
+      if (attempt >= PORT_SCAN_LIMIT) {
+        server.removeListener('error', onError);
+        const exhausted = new Error(
+          `${port}…${port + PORT_SCAN_LIMIT - 1} 全部被占用，无法启动本地服务`,
+        );
+        exhausted.code = 'EPORTEXHAUSTED';
+        rejectPromise(exhausted);
+        return;
+      }
+      server.listen(port + attempt, bind);
+    };
+
+    server.on('error', onError);
     server.listen(port, bind, () => {
+      server.removeListener('error', onError);
+      const actual = server.address()?.port ?? port;
+      writeEndpoint({ port: actual });
       // 后台开始采集，页面打开即有数据。
       worker.start().catch(() => {});
-      resolvePromise({ server, worker, port, host: bind });
+      resolvePromise({ server, worker, port: actual, host: bind });
     });
   });
 }

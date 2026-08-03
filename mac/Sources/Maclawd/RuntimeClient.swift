@@ -45,6 +45,9 @@ struct RuntimeState {
     /// 这个动作要不要让窗口跟着位移（自发溜达）。单位是 pt。
     var drift: (dx: CGFloat, dy: CGFloat)?
     var reason: String = ""
+    /// 发起当前这个状态的进程。点桌宠跳回那个终端窗口时用。
+    /// nil 表示当前画面不属于任何会话（静默链、自发行为、外壳交互）。
+    var focusPid: pid_t?
     var tokensPerMin: Int = 0
     var disabled: Bool = false
     var energy: Double = 1
@@ -70,7 +73,10 @@ struct UsageSnapshot {
  外壳负责把 Node 运行时作为子进程带起来，用户不需要自己开终端。
  */
 final class RuntimeClient {
-    private let port: Int
+    /// 运行时**实际**监听的端口。首选端口被占时它会往后找，
+    /// 然后把结果写进端点文件——外壳跟着文件走，不自己假设。
+    private var port: Int
+    private let preferredPort: Int
     private var process: Process?
     private let session: URLSession
     private let repoRoot: URL
@@ -84,6 +90,7 @@ final class RuntimeClient {
     init(repoRoot: URL, port: Int = 4173) {
         self.repoRoot = repoRoot
         self.port = port
+        self.preferredPort = port
         let config = URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = 5
         self.session = URLSession(configuration: config)
@@ -148,6 +155,27 @@ final class RuntimeClient {
         return nil
     }
 
+    /// 运行时日志。**不能再往 /dev/null 倒。**
+    ///
+    /// 之前子进程的 stdout/stderr 都接的是 nullDevice，于是端口被占这类
+    /// 会打死运行时的错误彻底不可见——用户看到的只是「桌宠不动」，
+    /// 没有任何线索能自查。日志落到数据目录下，菜单里可以一键打开。
+    var logURL: URL {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library/Application Support")
+        return base.appendingPathComponent("Maclawd/runtime.log")
+    }
+
+    private func openLogHandle() -> FileHandle? {
+        let url = logURL
+        let fm = FileManager.default
+        try? fm.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        // 每次启动截断重开：我们要的是「这次为什么没起来」，不是历史归档。
+        // 留着追加的话，一个反复重启的运行时能把日志写到几百兆。
+        fm.createFile(atPath: url.path, contents: nil)
+        return try? FileHandle(forWritingTo: url)
+    }
+
     func startRuntime() {
         guard process == nil else { return }
         guard let node = findNode() else {
@@ -162,10 +190,25 @@ final class RuntimeClient {
 
         let task = Process()
         task.executableURL = URL(fileURLWithPath: node)
-        task.arguments = [script.path, "serve", String(port)]
+        task.arguments = [script.path, "serve", String(preferredPort)]
         task.currentDirectoryURL = repoRoot
-        task.standardOutput = FileHandle.nullDevice
-        task.standardError = FileHandle.nullDevice
+        if let log = openLogHandle() {
+            task.standardOutput = log
+            task.standardError = log
+        }
+        // 运行时自己会挑一个空闲端口并写进端点文件；退出码告诉我们它为什么没起来。
+        task.terminationHandler = { [weak self] proc in
+            guard let self, proc.terminationStatus != 0 else { return }
+            let hint: String
+            switch proc.terminationStatus {
+            case 3: hint = "已有另一个 Maclawd 在运行"
+            case 4: hint = "端口全被占用"
+            default: hint = "退出码 \(proc.terminationStatus)"
+            }
+            DispatchQueue.main.async {
+                self.lastError = "采集运行时已退出（\(hint)）。详见 runtime.log"
+            }
+        }
         do {
             try task.run()
             process = task
@@ -211,7 +254,24 @@ final class RuntimeClient {
         session.dataTask(with: request) { _, _, _ in }.resume()
     }
 
+    /// 端点文件（运行时写的）→ 实际端口。
+    ///
+    /// 每次 refresh 前对一遍，因为运行时可能在我们轮询的间隙重启并换了端口。
+    /// 读一个几十字节的本地文件比一次失败的 HTTP 往返便宜得多。
+    private func syncPortFromEndpoint() {
+        let url = FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
+            .appendingPathComponent("Maclawd/runtime-endpoint.json")
+        guard let url,
+              let data = try? Data(contentsOf: url),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let discovered = json["port"] as? Int, discovered > 0
+        else { return }
+        if discovered != port { port = discovered }
+    }
+
     func refresh() {
+        syncPortFromEndpoint()
         get("/api/state") { [weak self] json in
             guard let self, let json else { return }
             var next = RuntimeState()
@@ -231,6 +291,9 @@ final class RuntimeClient {
                     next.hitBox = NormalizedRect(g["hit"])
                     next.marginBox = NormalizedRect(g["margin"])
                 }
+            }
+            if let f = json["focus"] as? [String: Any], let pid = f["pid"] as? Int, pid > 1 {
+                next.focusPid = pid_t(pid)
             }
             next.mini = json["mini"] as? Bool ?? false
             if let p = json["plan"] as? [String: Any],

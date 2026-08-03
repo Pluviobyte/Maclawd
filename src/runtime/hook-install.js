@@ -69,7 +69,12 @@ export function settingsPath() {
   return join(configured || join(homedir(), '.claude'), 'settings.json');
 }
 
-function readSettings(path) {
+/**
+ * 读用户的 settings.json。**导出**是刻意的：状态行注册器
+ * （statusline-install.js）必须和这里用同一份实现。两份「安全读写别人的
+ * 配置文件」的代码必然漂移，而漂移的表现是把用户的 Claude Code 弄坏。
+ */
+export function readSettings(path = settingsPath()) {
   try {
     const text = readFileSync(path, 'utf-8');
     if (!text.trim()) return {};
@@ -82,18 +87,47 @@ function readSettings(path) {
   }
 }
 
-function writeSettings(path, value) {
+export function writeSettings(path, value) {
   mkdirSync(dirname(path), { recursive: true });
   const temp = `${path}.maclawd.${process.pid}.tmp`;
   writeFileSync(temp, `${JSON.stringify(value, null, 2)}\n`, 'utf-8');
   renameSync(temp, path);
 }
 
-/** 判断一个 hook 条目是不是我们写的。只认脚本路径，不依赖任何自定义字段。 */
+/** 首次修改前留一份备份。已存在就不覆盖——第一份才是「动手之前」的样子。 */
+export function backupOnce(path = settingsPath()) {
+  try {
+    copyFileSync(path, `${path}${BACKUP_SUFFIX}`, 0);
+    return true;
+  } catch {
+    // 原文件不存在、或备份已存在（copyFileSync 的 mode 0 表示不覆盖）
+    return false;
+  }
+}
+
+/**
+ * 判断一个 hook 条目是不是我们写的。
+ *
+ * **按脚本文件名认，不按完整路径认。** 原来比的是完整路径，实测撞车：
+ * hook 从源码目录装上（`~/Desktop/Maclawd/hooks/maclawd-hook.js`），
+ * 而打包后的 app 把 `hookScriptPath()` 解析到自己包里的那份副本，
+ * 两条路径对不上，于是**装好的 14 个 hook 被报成「一个都没装」**。
+ * 移动过 .app、或者装完之后升级过版本，都会撞上同一件事。
+ *
+ * 后果不只是显示不准：自愈看到「没装」，一旦判定该修，就会再装一套
+ * 指向新路径的——用户拿到的是每个事件触发两次。
+ *
+ * 文件名是够用的身份：`maclawd-hook.js` 不会是别人的东西。
+ * 认出来之后 installHooks 会把命令刷新成当前路径，路径漂移自动收敛。
+ */
 function isOurs(entry, scriptPath) {
   const command = entry?.command;
-  return typeof command === 'string' && command.includes(scriptPath);
+  if (typeof command !== 'string') return false;
+  return command.includes(scriptPath) || command.includes(HOOK_SCRIPT_NAME);
 }
+
+/** 只取文件名部分，用作身份判据。 */
+const HOOK_SCRIPT_NAME = HOOK_SCRIPT.split('/').pop();
 
 /** 权限 hook 认 URL 而不是命令路径。 */
 function isOurPermission(entry) {
@@ -121,13 +155,7 @@ export function installHooks({ nodePath = process.execPath } = {}) {
   const script = hookScriptPath();
   const settings = readSettings(path);
 
-  let backedUp = false;
-  try {
-    copyFileSync(path, `${path}${BACKUP_SUFFIX}`, 0);
-    backedUp = true;
-  } catch {
-    // 原文件不存在就没什么可备份的
-  }
+  const backedUp = backupOnce(path);
 
   const hooks = (settings.hooks && typeof settings.hooks === 'object') ? settings.hooks : {};
   const installed = [];

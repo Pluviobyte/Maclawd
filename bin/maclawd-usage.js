@@ -10,6 +10,7 @@ import { costOf, updatePrices, pricingMeta } from '../src/runtime/pricing.js';
 import { summarizeSessions } from '../src/runtime/sessions.js';
 import { createTailer, intensityFromRate } from '../src/runtime/tail.js';
 import { loadActions, serve } from '../src/runtime/server.js';
+import { clearEndpoint } from '../src/runtime/endpoint.js';
 import { createCollector } from '../src/runtime/daemon.js';
 import { installHooks, uninstallHooks, hookStatus } from '../src/runtime/hook-install.js';
 import { probe, diffProbe } from '../src/runtime/probe.js';
@@ -423,13 +424,43 @@ async function runDaemon(args) {
 
 async function runServe(args) {
   const portArg = Number(args.find((a) => /^\d+$/.test(a)));
-  const port = Number.isFinite(portArg) && portArg > 0 ? portArg : 4173;
-  const { host } = await serve({ port });
+  const wanted = Number.isFinite(portArg) && portArg > 0 ? portArg : 4173;
+
+  let started;
+  try {
+    started = await serve({ port: wanted });
+  } catch (err) {
+    // 端口相关的失败必须说人话。此前这里是未捕获异常，外壳又把 stderr
+    // 丢掉了，用户只看到桌宠不动——那是最难自查的一种失败。
+    if (err?.code === 'EALREADYRUNNING') {
+      console.error(`Maclawd 已经在 ${err.port} 端口运行，不再启动第二份。`);
+      console.error(dim('  两个采集器同时跑会重复计数。要重启请先退出原来那个。'));
+      process.exit(3);
+    }
+    if (err?.code === 'EPORTEXHAUSTED') {
+      console.error(err.message);
+      console.error(dim('  用 `maclawd-usage serve <端口>` 指定一个空闲端口。'));
+      process.exit(4);
+    }
+    throw err;
+  }
+
+  const { host, port } = started;
+  // 退出时把端点文件清掉，免得下一次启动的 hook 去连一个已经死了的端口。
+  const cleanup = () => { clearEndpoint(); };
+  process.on('exit', cleanup);
+
   console.log(bold('Maclawd 本地面板'));
   console.log(`  宠物管理   http://${host}:${port}/`);
   console.log(`  用量统计   http://${host}:${port}/usage`);
+  if (port !== wanted) {
+    console.log();
+    console.log(dim(`  ${wanted} 已被占用，改用 ${port}。hook 会自动跟上。`));
+  }
   console.log();
   console.log(dim('  只监听回环地址。Ctrl+C 退出。'));
+  process.on('SIGINT', () => { cleanup(); process.exit(0); });
+  process.on('SIGTERM', () => { cleanup(); process.exit(0); });
 }
 
 // ---------- main ----------

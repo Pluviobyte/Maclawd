@@ -210,6 +210,10 @@ const DEFAULTS = {
   // 同一个工作态持续多久算「久战」。三分钟是个分界：
   // 短于它多半是一次普通的工具调用，长于它用户会开始想「它是不是卡了」。
   longWorkMs: 3 * 60_000,
+  // Stop 去抖窗口。只用于「后台任务还在跑但模型已经把话说完」这一种拿不准的情况：
+  // 按住 working 这么久，期间有任何前进事件就取消，没有就照常兑现。
+  // 2 秒是取舍——短于它挡不住紧接着的续跑，长于它庆祝会明显迟到。
+  stopDebounceMs: 2_000,
   // 最小驻留时长。动作契约给每个动作锁了 durationMs，如果状态切得比这还快，
   // 用户永远看不完一个完整循环。低优先级状态要等驻留期满才能顶掉当前状态；
   // 高优先级（要人决定、出错）永远可以立刻抢占。
@@ -247,6 +251,22 @@ export function createStateEngine(options = {}) {
    * （它的会话还在），而人真的离开后，完整的 idle → away → sleeping 才走得完。
    */
   let quietSince = 0;
+  /**
+   * 最后一次观察到**人还在**的时刻。
+   *
+   * 睡眠链此前完全由「agent 沉默了多久」驱动，那是个错误的依据：
+   * 你读代码、写文档、开会、看别的窗口的时候 agent 全都是沉默的，
+   * 而人一直在；反过来 agent 跑长任务时你完全可以去泡咖啡。
+   * **这两件事本来就是正交的**，用一个去推另一个永远会错一半。
+   *
+   * 于是加第二根轴：外壳轮询光标位置，动了就报 shell.presence；
+   * 人自己敲的 UserPromptSubmit 同样算。睡眠链改成「两个条件都满足才走」——
+   * agent 静下来了**并且**人也不在。
+   *
+   * 0 表示「从来没有过存在信号」（外壳不支持、或纯引擎测试），
+   * 这时 max(quietSince, 0) 退化回旧行为，不会凭空多睡或少睡。
+   */
+  let presenceAt = 0;
   const random = options.random ?? Math.random;
 
   /**
@@ -282,7 +302,11 @@ const SYNTHETIC_SESSIONS = new Set(['rate', 'shell']);
   const session = (id) => {
     let s = sessions.get(id);
     if (!s) {
-      s = { state: 'idle', variant: null, at: 0, subagents: new Set(), pendingPermission: false };
+      s = {
+        state: 'idle', variant: null, at: 0, subagents: new Set(), pendingPermission: false,
+        // 被去抖按住、还没兑现的 Stop。见 stopGate。
+        pendingStop: null,
+      };
       sessions.set(id, s);
     }
     return s;
@@ -344,15 +368,102 @@ const SYNTHETIC_SESSIONS = new Set(['rate', 'shell']);
     return false;
   }
 
+  /**
+   * 这次 Stop 该怎么处理。
+   *
+   * 'hold'      —— 确定还有活在跑，按住 working 不放，永不自动兑现
+   * 'debounce'  —— 拿不准，按住一个安静窗口再说
+   * 'complete'  —— 真的结束了，照常收尾
+   *
+   * 判据与 clawd-on-desk 的 #406 一致（他们踩过同一个坑）：
+   * cron 挂着、Stop hook 否决、后台任务还在跑且没有最终回复文本，
+   * 这三种都不是回合结束。后台任务**已经**有最终回复文本时不硬按——
+   * 模型已经把话说完了，后台那条命令跑不跑完不该拖住庆祝，
+   * 但仍然给一个短窗口，免得紧接着的续跑把庆祝夹在中间。
+   */
+  function stopGate(event) {
+    const crons = Number(event?.sessionCrons) || 0;
+    const background = Number(event?.backgroundTasks) || 0;
+    const hookActive = event?.stopHookActive === true;
+    // disposition === 'complete' 意味着最后一条 assistant 消息是 end_turn，
+    // 也就是「模型确实把话说完了」——正好是我们要的 hasFinalAssistantText。
+    const hasFinalText = event?.disposition === undefined || event?.disposition === 'complete';
+
+    if (crons > 0 || hookActive || (background > 0 && !hasFinalText)) return 'hold';
+    if (background > 0) return 'debounce';
+    return 'complete';
+  }
+
+  /** 真正兑现一次 Stop。按住与去抖两条路最终都汇到这里。 */
+  function applyStop(s, disposition, now) {
+    s.state = 'idle';
+    s.variant = null;
+    // 只有确认是自然收尾才庆祝。用户按 ESC 打断时 Stop 照样触发，
+    // 那时候欢呼是会烦人的。写入器读 transcript 尾部判定，
+    // 判不出来就安静收场——宁可少一个动作，不要说错话。
+    // 没有 disposition 字段时按老行为庆祝（面板手动触发、旧版写入器）。
+    if (disposition === undefined || disposition === 'complete') {
+      pushOneshot('success', now);
+    }
+  }
+
+  /**
+   * 任何「循环还在跑」的事件都取消待兑现的 Stop。
+   *
+   * 这一条不能漏：漏了的话，一个被去抖按住的 Stop 会在几秒后突然兑现，
+   * 把一个**已经继续跑起来的**会话打回 idle 并欢呼一次。
+   */
+  const COMPLETION_CANCEL = new Set([
+    'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'PostToolBatch', 'PostToolUseFailure',
+    'SubagentStart', 'SubagentStop', 'PreCompact', 'PostCompact',
+    'PermissionRequest', 'PermissionResolved', 'Notification', 'StopFailure', 'SessionEnd',
+  ]);
+
+  /**
+   * 人还在。
+   *
+   * 刻意**不**更新 lastActivityAt：那个变量的语义是「agent 有过动静」，
+   * 混进人的动静会让「为什么它还在演工作」变得没法解释。两根轴各记各的。
+   *
+   * 睡着时被这个信号唤醒是对的——你回到座位，它伸个懒腰醒过来。
+   * 这也是 waking（Morning Stretch）在真实使用中唯一稳定的触发源：
+   * 之前要等 agent 先来事件，而人回来的第一件事往往是先动鼠标。
+   */
+  function observePresence(now = 0) {
+    presenceAt = now;
+    if (wakeIfAsleep(now)) resolve(now);
+  }
+
+  /**
+   * 当前在屏幕上的那个状态，是谁发起的。
+   *
+   * 给外壳用：桌宠亮着 needs_owner 的时候，点它就跳回**那个**终端窗口。
+   * 只在赢家是真会话时有值——静默链、自发行为、外壳交互都不属于任何终端。
+   */
+  function focusTarget() {
+    const s = current.sessionId ? sessions.get(current.sessionId) : null;
+    if (!s?.pid) return null;
+    return { pid: s.pid, cwd: s.cwd ?? null };
+  }
+
   function observeEvent(event, now = 0) {
     const { type, sessionId = 'default' } = event ?? {};
     if (!type) return;
+
+    // 存在信号不是动作，只是「人还在」的一次打卡：不进会话表、不参与仲裁、
+    // 也不该 logEvent（外壳每 20 秒报一次，会把事件日志淹掉）。
+    if (type === 'shell.presence') {
+      observePresence(now);
+      return;
+    }
 
     // 外壳事件走单独一条路：它们不属于任何 agent 会话。
     const shellAction = SHELL_ACTIONS[type];
     if (shellAction) {
       logEvent(type, 'shell', now, { action: shellAction });
       lastActivityAt = now;
+      // 戳它、拖它、把鼠标停在它上面——都是人干的，一律算存在。
+      presenceAt = now;
       if (ONESHOT.has(shellAction)) {
         pushOneshot(shellAction, now);
         // 落地是拖拽的**终止**事件，必须顺手清掉还持有着的 interaction.drag。
@@ -380,6 +491,13 @@ const SYNTHETIC_SESSIONS = new Set(['rate', 'shell']);
 
     const s = session(sessionId);
     s.at = now;
+    // 发起方信息。每个事件都可能带，取最后一次——同一个会话换终端的情况
+    // （tmux attach 到别处）下，新的那个才是你现在能跳过去的。
+    if (Number.isInteger(event.pid) && event.pid > 1) s.pid = event.pid;
+    if (typeof event.cwd === 'string' && event.cwd) s.cwd = event.cwd;
+    // 循环还在跑 → 取消待兑现的 Stop。必须在 switch 之前，
+    // 否则一个已经继续跑起来的会话会在几秒后被旧的 Stop 打回 idle。
+    if (COMPLETION_CANCEL.has(type)) s.pendingStop = null;
     // 先判断再更新时间戳：wakeIfAsleep 要看的是「醒来之前」的状态
     const wasAsleep = wakeIfAsleep(now);
     lastActivityAt = now;
@@ -398,6 +516,9 @@ const SYNTHETIC_SESSIONS = new Set(['rate', 'shell']);
       case 'UserPromptSubmit':
         s.state = 'thinking';
         s.pendingPermission = false;
+        // 有人刚敲了一段字进去——这是最硬的存在证据，比光标移动还硬。
+        // 光靠光标会漏掉「一直在终端里打字、鼠标没动过」的人。
+        presenceAt = now;
         break;
       case 'PreToolUse': {
         const tool = event.toolName;
@@ -473,17 +594,28 @@ const SYNTHETIC_SESSIONS = new Set(['rate', 'shell']);
       case 'TeammateIdle':
         s.state = 'waiting';
         break;
-      case 'Stop':
-        s.state = 'idle';
-        s.variant = null;
-        // 只有确认是自然收尾才庆祝。用户按 ESC 打断时 Stop 照样触发，
-        // 那时候欢呼是会烦人的。写入器读 transcript 尾部判定，
-        // 判不出来就安静收场——宁可少一个动作，不要说错话。
-        // 没有 disposition 字段时按老行为庆祝（面板手动触发、旧版写入器）。
-        if (event.disposition === undefined || event.disposition === 'complete') {
-          pushOneshot('success', now);
+      case 'Stop': {
+        const gate = stopGate(event);
+        if (gate === 'hold') {
+          // 硬按住：确定还有活在跑，这个 Stop 根本不是回合结束。
+          // 状态保持 working，**事件本身不留痕**——不欢呼、不回 idle、
+          // 也不重置 stateSince（否则久战计时会被反复清零，working.long 再也升不上去）。
+          if (!String(s.state).startsWith('working')) s.state = 'working';
+          s.pendingStop = null;
+          break;
         }
+        if (gate === 'debounce') {
+          // 拿不准：先按住 working，给一个安静窗口。窗口内任何前进事件
+          // 都会取消它（见 COMPLETION_CANCEL）；窗口过完还没动静，
+          // resolve() 会把这次 Stop 补上，该欢呼的照样欢呼。
+          if (!String(s.state).startsWith('working')) s.state = 'working';
+          s.pendingStop = { at: now, disposition: event.disposition };
+          break;
+        }
+        s.pendingStop = null;
+        applyStop(s, event.disposition, now);
         break;
+      }
       case 'StopFailure':
         s.state = 'error';
         s.variant = event.matcher ?? null;
@@ -539,6 +671,17 @@ const SYNTHETIC_SESSIONS = new Set(['rate', 'shell']);
   }
 
   function resolve(now) {
+    // 兑现过了安静窗口的 Stop。**必须排在一次性动作那道闸门之前**——
+    // 兑现动作本身会插播 success，排在闸门之后的话这一帧看不到它，
+    // 庆祝要等到下一次 tick 才出现（实测：迟一整帧）。
+    for (const s of sessions.values()) {
+      if (s.pendingStop && now - s.pendingStop.at >= config.stopDebounceMs) {
+        const { disposition } = s.pendingStop;
+        s.pendingStop = null;
+        applyStop(s, disposition, now);
+      }
+    }
+
     // 一次性动作插播期间不切换
     if (oneshot) {
       if (now < oneshot.until) {
@@ -582,7 +725,7 @@ const SYNTHETIC_SESSIONS = new Set(['rate', 'shell']);
         : (PRIORITY[state] ?? PRIORITY.idle);
       if (priority >= PRIORITY.idle) continue;
       if (!best || priority < best.priority || (priority === best.priority && s.at > best.at)) {
-        best = { priority, id, state, variant: s.variant, at: s.at };
+        best = { priority, id, state, variant: s.variant, at: s.at, pid: s.pid, cwd: s.cwd };
       }
       s.priority = priority;
     }
@@ -596,7 +739,10 @@ const SYNTHETIC_SESSIONS = new Set(['rate', 'shell']);
     // 没有可显示的会话了。静默链从**这一刻**起算，而不是从最后一次事件——
     // 见 quietSince 的说明。
     if (!quietSince) quietSince = now;
-    const silent = now - quietSince;
+    // 两根轴取更晚的那个：agent 静下来了**并且**人也走了，才开始倒计时。
+    // 人还在的时候 presenceAt 一直被刷新，silent 恒接近 0，链条根本不启动——
+    // 于是显示的是 idle（那个专门画了 5 个图层的安静观察），而不是睡着。
+    const silent = now - Math.max(quietSince, presenceAt);
     // 从深到浅依次判断。顺序不能反——先判浅的会让链条永远停在第一段。
     if (lastActivityAt > 0) {
       const away = awayThreshold();
@@ -637,15 +783,54 @@ const SYNTHETIC_SESSIONS = new Set(['rate', 'shell']);
     return current;
   }
 
+  // busy 与 focus 都实时算，不在 emit 时冻结：emit 只在动作**变化**时触发，
+  // 而多开一个窗口并不改变赢家——冻结下来的并发数会一直是旧的。
+  // focus 同理，一个持续 working 的会话不会再 emit，但它的 pid 一直有效。
+  const snapshot = () => ({ ...current, busy: busyCount(), focus: focusTarget() });
+
+  /**
+   * 从磁盘租约恢复在途会话。
+   *
+   * hook 每次都往磁盘写一份租约，**不依赖服务在线**——这正是它的意义：
+   * 桌宠没开的那段时间里，租约是唯一留下的痕迹。启动时读回来，
+   * 桌宠就不会在一个任务跑到一半的时候从 idle 开始演。
+   *
+   * `at` 用租约里记的事件时刻，不是"现在"：一份 12 分钟前写的 working
+   * 租约，恢复后应该只剩不到 3 分钟就被兜底过期，而不是重新计时 10 分钟。
+   */
+  function restore(leases, now = Date.now()) {
+    let restored = 0;
+    for (const lease of leases ?? []) {
+      if (!lease?.sessionId || !lease.state) continue;
+      const s = session(lease.sessionId);
+      s.state = lease.state;
+      s.at = Number.isFinite(lease.at) ? lease.at : now;
+      s.stateSince = s.at;
+      if (Number.isInteger(lease.pid) && lease.pid > 1) s.pid = lease.pid;
+      if (typeof lease.cwd === 'string' && lease.cwd) s.cwd = lease.cwd;
+      lastActivityAt = Math.max(lastActivityAt, s.at);
+      restored += 1;
+    }
+    if (restored) resolve(now);
+    return restored;
+  }
+
   return {
     observeEvent,
     observeRate,
+    observePresence,
+    restore,
     setEnergy,
-    /** 推进时钟，让静默转场与 idle 轮换生效。 */
-    tick: (now) => resolve(now),
-    // busy 实时算，不在 emit 时冻结：emit 只在动作**变化**时触发，
-    // 而多开一个窗口并不改变赢家——冻结下来的并发数会一直是旧的。
-    current: () => ({ ...current, busy: busyCount() }),
+    /**
+     * 推进时钟，让静默转场与 idle 轮换生效。
+     *
+     * 返回的是**加料后**的快照。此前这里直接把内部的 current 抛出去，
+     * 少了 busy —— 而服务端正是拿 `state.busy` 去挑并发分档的，
+     * `Number.isFinite(undefined)` 为假，于是分档静默地一次都没生效过：
+     * 素材做好了、收敛表配好了、测试也过了，唯独真实路径上传的是 undefined。
+     */
+    tick: (now) => { resolve(now); return snapshot(); },
+    current: snapshot,
     /** 诊断用：当前活跃会话与派生量。 */
     debug: () => ({
       energy,
@@ -655,6 +840,8 @@ const SYNTHETIC_SESSIONS = new Set(['rate', 'shell']);
       // 排查时这两个数是唯一能自证的东西。
       lastActivityAt,
       quietSince,
+      // 第二根轴。面板上「为什么它不睡」只有看到这个数才解释得通。
+      presenceAt,
       minDwellMs: config.minDwellMs,
       oneshot: oneshot ? { id: oneshot.id, until: oneshot.until } : null,
       busy: busyCount(),

@@ -23,6 +23,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var lastLowBattery = false
     private var lastOnline = true
 
+    // MARK: - 存在感知
+    //
+    // 人在不在 ≠ agent 忙不忙。睡眠链此前完全由 agent 的沉默驱动，
+    // 于是「你在读代码、agent 没事做」和「你出门了」被当成同一件事。
+    // 光标位置是最便宜的存在证据：NSEvent.mouseLocation 不需要任何权限
+    // （键盘要辅助功能授权，那会破坏「装上就能用」）。
+    private var lastCursor: NSPoint?
+    private var lastPresenceSent: Date?
+    /// 小于这个距离算抖动，不算人动了。触控板的静止漂移能有一两像素。
+    private let cursorMoveThreshold: CGFloat = 3
+    /// 人一直在的时候没必要每 2 秒报一次——away 阈值是分钟级的，
+    /// 20 秒的精度绰绰有余，而请求量少一个数量级。
+    private let presenceThrottle: TimeInterval = 20
+
     /// 仓库根目录：开发时是 mac/ 的上一级；打包后是 .app 内的 Resources/runtime。
     private func resolveRepoRoot() -> URL {
         if let bundled = Bundle.main.resourceURL?.appendingPathComponent("runtime"),
@@ -52,6 +66,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSWorkspace.shared.open(self.client.usageURL)
         }
         // 缺失已久的回路：外壳的交互事件回灌状态引擎。
+        // 单击：桌宠在**等你**的时候，点它就跳回那个终端窗口。
+        //
+        // 严格限定在这三个状态里。任何时候单击都跳窗口会很讨厌——
+        // 你戳它玩一下，前台应用就换了。只有它主动在要你的时候，
+        // 「点一下」才读得懂是「好，我来」。其余时候单击照旧只有 Poke Squish。
+        pet.onClick = { [weak self] in
+            guard let self else { return }
+            let waiting = ["needs_owner", "error", "waiting"]
+            guard waiting.contains(where: { self.client.state.actionId.hasPrefix($0) }),
+                  let pid = self.client.state.focusPid
+            else { return }
+            TerminalFocus.activate(pid: pid)
+        }
         pet.onShellEvent = { [weak self] type in
             self?.client.send(shellEvent: type)
         }
@@ -94,6 +121,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             MainActor.assumeIsolated {
                 self?.client.refresh()
                 self?.checkBattery()
+                self?.checkPresence()
             }
         }
         startNetworkMonitor()
@@ -121,6 +149,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             return
         }
+    }
+
+    /// 光标动了 → 人还在。
+    ///
+    /// 只报「动了」，不报「没动」——没有信号本身就是「可能不在」，
+    /// 由引擎那边的时钟去判断多久算走了。这样离开期间一个请求都不发。
+    private func checkPresence() {
+        let now = NSEvent.mouseLocation
+        defer { lastCursor = now }
+        guard let previous = lastCursor else { return }   // 第一帧只记录，不判断
+        let moved = hypot(now.x - previous.x, now.y - previous.y)
+        guard moved >= cursorMoveThreshold else { return }
+
+        if let sent = lastPresenceSent, Date().timeIntervalSince(sent) < presenceThrottle { return }
+        lastPresenceSent = Date()
+        client.send(shellEvent: "shell.presence")
     }
 
     /// 断网 → Signal Listen；恢复 → Ready Wiggle。
