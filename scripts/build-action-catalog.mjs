@@ -35,7 +35,17 @@ async function hookTriggers() {
   const src = await readFile(join(ROOT, 'src/runtime/state-engine.js'), 'utf8');
   const out = {};
 
-  // 静默路径：resolve() 里按 reason 'silence' 直接 emit
+  // 静默链：resolve() 里按静默时长选段，写成一串三元表达式，
+  // actionId 是变量而不是字面量——**这是解析器第三次在同类路径上失配**
+  // （前两次：静默转场改写、working.long 的时长派生）。
+  //
+  // 没有换成「引擎自己声明触发表」的做法，是因为那样只是把漂移
+  // 从解析器挪到声明里，而声明没人验证。这里靠的是另一条防线：
+  // 总表测试会断言成品里不出现「没有触发源」，每次失配都会立刻炸——
+  // 上面三次全是这么发现的。解析器可以笨，但反馈必须快。
+  for (const m of src.matchAll(/silent\s*>\s*[^?]+\?\s*'([a-z_.]+)'/g)) {
+    (out[m[1]] ??= new Set()).add('静默转场');
+  }
   for (const m of src.matchAll(/emit\(\{ actionId: '([a-z_.]+)'[^)]*\}, '(silence|idle)'/g)) {
     (out[m[1]] ??= new Set()).add(m[2] === 'silence' ? '静默转场' : 'idle 加权轮换');
   }

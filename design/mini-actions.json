@@ -120,6 +120,8 @@
     "idle.drowsy": "mini.idle",
     "away": "mini.idle",
     "sleeping": "mini.idle",
+    "drowsing": "mini.idle",
+    "collapsing": "mini.idle",
     "paused": "mini.idle",
     "ambient.edge": "mini.idle",
     "thinking": "mini.busy",

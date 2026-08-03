@@ -555,7 +555,12 @@ test('会话被强杀后不能永远卡在工作态——否则桌宠再也不�
   assert.ok(after.actionId.startsWith('idle'),
     `清掉之后应先回到 idle，实际是 ${after.actionId}`);
 
-  // 再等满 away 与 sleeping 的阈值，完整的链才走得完
-  assert.equal(e.tick(20 * 60 * SEC + 6 * 60 * SEC).actionId, 'away', '没有进入 away');
-  assert.equal(e.tick(20 * 60 * SEC + 8 * 60 * SEC).actionId, 'sleeping', '没有睡着');
+  // 再等下去，五段睡眠链要按顺序走完：
+  //   drowsing(0.7×away) → away → collapsing(+30s) → sleeping(+60s)
+  // 链条是单向的，中间任何一段都不能被跳过——跳过就等于那个动作永远看不到。
+  const base = 20 * 60 * SEC;
+  assert.equal(e.tick(base + 4 * 60 * SEC).actionId, 'drowsing', '没有先犯困');
+  assert.equal(e.tick(base + 5 * 60 * SEC + SEC).actionId, 'away', '没有进入 away');
+  assert.equal(e.tick(base + 5 * 60 * SEC + 40 * SEC).actionId, 'collapsing', '没有倒下');
+  assert.equal(e.tick(base + 7 * 60 * SEC).actionId, 'sleeping', '没有睡着');
 });

@@ -2099,3 +2099,154 @@ ANIMATIONS.push(
     ],
   },
 );
+
+// ============================================================================
+// 睡眠链补齐：3 段 → 5 段
+//
+//   idle → drowsing → away → collapsing → sleeping → waking
+//            ↑新增             ↑新增
+//
+// 毛毯是贯穿这条链的道具：away 去身侧把它拉过来，collapsing 把它盖到身上，
+// sleeping 躺在下面，waking 时它滑落。此前 away 与 sleeping 之间是硬切，
+// 毯子会瞬间从身侧跳到身上——collapsing 补的就是这一段。
+// ============================================================================
+
+ANIMATIONS.push(
+  {
+    state: 'drowsing',
+    svg: {
+      file: 'fading-watch.svg',
+      title: 'Fading Watch',
+      desc: 'Eyelids keep losing the fight; each recovery is weaker than the last.',
+    },
+    duration: 4200,
+    comment: '犯困。与 idle 变体 Drowsy Nod 的区别是**会不会回头**：\n'
+      + '   那个点两下头就精神了，这个每一次「撑住」都比上一次弱。\n'
+      + '   所以眼睛的开合幅度必须**递减**——1 → .7 → .45 → .25，\n'
+      + '   递减本身就是「快撑不住了」的全部表意。没有道具，毯子要等 away 才拿。',
+    layers: [
+      {
+        sel: '.actor',
+        name: 'fading-body',
+        // 前后晃动幅度递增：越困晃得越大
+        poses: [
+          p('translate(0,0)', 3), p('translate(0,1px)', 2), p('translate(0,0)', 1),
+          p('translate(0,2px)', 3), p('translate(0,0)', 1), p('translate(0,2px)', 2),
+          p('translate(0,3px)', 4), p('translate(0,1px)', 1), p('translate(0,3px)', 3),
+        ],
+      },
+      {
+        sel: '.left-claw',
+        name: 'fading-left',
+        poses: [
+          p('translate(0,1px)', 4), p('translate(0,2px)', 3), p('translate(1px,2px)', 2),
+          p('translate(0,3px)', 5), p('translate(0,4px)', 3),
+        ],
+      },
+      {
+        sel: '.right-claw',
+        name: 'fading-right',
+        poses: [
+          p('translate(0,1px)', 4), p('translate(0,2px)', 3), p('translate(-1px,2px)', 2),
+          p('translate(0,3px)', 5), p('translate(0,4px)', 3),
+        ],
+      },
+      {
+        sel: '.eyes',
+        name: 'fading-eyes',
+        poses: [
+          p('translateY(1px)', 3), p('translateY(2px)', 4), p('translateY(1px)', 1),
+          p('translateY(3px)', 4), p('translateY(2px)', 1), p('translateY(3px)', 4),
+        ],
+      },
+      {
+        sel: '.blink',
+        name: 'fading-blink',
+        // 一次比一次睁不开：这是整个动作的核心，别的都是陪衬
+        poses: [
+          p('scaleY(1)', 3), p('scaleY(.15)', 2), p('scaleY(.7)', 3),
+          p('scaleY(.15)', 3), p('scaleY(.45)', 3), p('scaleY(.15)', 4),
+          p('scaleY(.25)', 3), p('scaleY(.15)', 3),
+        ],
+      },
+    ],
+  },
+
+  {
+    state: 'collapsing',
+    svg: {
+      file: 'blanket-fold.svg',
+      title: 'Blanket Fold',
+      desc: 'Gives up standing: the body compresses down while the blanket folds over it.',
+      // 毯子沿用 away 那条的形状与配色，起始位置也在身侧——
+      // 换一条会让「同一条毯子」的连续性断掉。
+      props: '<g class="blanket motion"><path d="M-7 10H-1V11H2V16H0V18H-2V17H-5V18H-7Z" fill="#B9A1D9"/>'
+        + '<path d="M-6 10H-1V11H1V12H-6Z" fill="#E7DCF2"/>'
+        + '<rect x="-6" y="14" width="7" height="1" fill="#8B73B3"/></g>',
+    },
+    duration: 3000,
+    comment: '倒下。承担的是**构图过渡**：away 站着、毯子在身侧；\n'
+      + '   sleeping 俯视平躺、盖着被子。此前两者硬切，毯子瞬间从身侧跳到身上。\n'
+      + '   所以这一段必须**单向**——压下去就不再起来，起来是 waking 的事。\n'
+      + '   身体逐段压扁下沉，毯子同步向右上移动并展开，最后停在盖住躯干的位置。',
+    layers: [
+      {
+        sel: '.actor',
+        name: 'fold-collapse-body',
+        // 单向压扁：scaleY 只减不增，末帧最扁，正好接 sleeping 的平躺。
+        // 分级要够密——只有六段的话「倒下」会读成几次跳变而不是一个过程。
+        poses: [
+          p('translateY(1px) scaleY(.94)', 3), p('translateY(1px) scaleY(.88)', 1),
+          p('translateY(2px) scaleY(.82)', 2), p('translateY(2px) scaleY(.76)', 1),
+          p('translateY(3px) scaleY(.70)', 2), p('translateY(3px) scaleY(.64)', 1),
+          p('translateY(4px) scaleY(.58)', 2), p('translateY(4px) scaleY(.52)', 1),
+          p('translateY(5px) scaleY(.46)', 3), p('translateY(5px) scaleY(.42)', 2),
+        ],
+      },
+      {
+        sel: '.left-claw',
+        name: 'fold-collapse-left',
+        poses: [
+          p('translate(0,2px)', 3), p('translate(1px,3px)', 2), p('translate(1px,4px)', 3),
+          p('translate(2px,5px)', 2), p('translate(2px,6px)', 7),
+        ],
+      },
+      {
+        sel: '.right-claw',
+        name: 'fold-collapse-right',
+        poses: [
+          p('translate(0,2px)', 3), p('translate(-1px,3px)', 2), p('translate(-1px,4px)', 3),
+          p('translate(-2px,5px)', 2), p('translate(-2px,6px)', 7),
+        ],
+      },
+      {
+        // 毯子从身侧（x-7…2）移到盖住躯干（+8 单位），同时展开
+        sel: '.blanket',
+        name: 'fold-collapse-blanket',
+        origin: '-3px 14px',
+        // 与身体同步下压，但走自己的节奏——完全同步会读成「毯子粘在身上」
+        period: 3000,
+        poses: [
+          p('translate(0,0)', 2), p('translate(1px,-1px) rotate(-4deg)', 1),
+          p('translate(3px,-1px) rotate(-9deg)', 2), p('translate(5px,-1px) rotate(-12deg)', 1),
+          p('translate(6px,0) rotate(-9deg)', 2), p('translate(7px,0) rotate(-6deg)', 1),
+          p('translate(8px,1px) rotate(-3deg)', 3), p('translate(8px,2px) rotate(0)', 2),
+        ],
+      },
+      {
+        sel: '.eyes',
+        name: 'fold-collapse-eyes',
+        poses: [
+          p('translateY(1px)', 3), p('translateY(2px)', 3), p('translateY(3px)', 4),
+          p('translateY(4px)', 7),
+        ],
+      },
+      {
+        sel: '.blink',
+        name: 'fold-collapse-blink',
+        // 闭上就不再睁开——单向
+        poses: [p('scaleY(.4)', 3), p('scaleY(.2)', 3), p('scaleY(.15)', 11)],
+      },
+    ],
+  },
+);

@@ -30,7 +30,11 @@ export const PRIORITY = {
   working: 6,
   thinking: 7,
   idle: 8,
+  // 睡眠链是一条单向链，越往后越深。任何真实事件都能立刻打断它——
+  // 这些优先级只在「没有任何会话可显示」时才被用到。
+  drowsing: 8.5,
   away: 9,
+  collapsing: 9.5,
   sleeping: 10,
 };
 
@@ -160,7 +164,12 @@ const DEFAULTS = {
   staleActiveMs: 10 * 60_000,
   // 全部会话静默多久后进入 away（energy 低时缩短）
   awayMs: 5 * 60_000,
-  // away 之后多久睡着
+  // 进入 away 之前先犯困。取 away 阈值的比例而不是绝对值——
+  // energy 低时整条链一起缩短，「累的时候睡得早」才成立。
+  drowsyRatio: 0.7,
+  // away 之后多久撑不住倒下
+  collapseMs: 30_000,
+  // away 之后多久睡着（必须晚于 collapseMs，否则倒下那一段永远看不到）
   sleepMs: 60_000,
   // 无 hook 时，token 速率高于此值判定为 working
   workingRateThreshold: 200,
@@ -555,13 +564,18 @@ const SYNTHETIC_SESSIONS = new Set(['rate', 'shell']);
     // 见 quietSince 的说明。
     if (!quietSince) quietSince = now;
     const silent = now - quietSince;
-    if (lastActivityAt > 0 && silent > awayThreshold() + config.sleepMs) {
-      emit({ actionId: 'sleeping', variant: null, sessionId: null }, 'silence', now);
-      return current;
-    }
-    if (lastActivityAt > 0 && silent > awayThreshold()) {
-      emit({ actionId: 'away', variant: null, sessionId: null }, 'silence', now);
-      return current;
+    // 从深到浅依次判断。顺序不能反——先判浅的会让链条永远停在第一段。
+    if (lastActivityAt > 0) {
+      const away = awayThreshold();
+      const stage = silent > away + config.sleepMs ? 'sleeping'
+        : silent > away + config.collapseMs ? 'collapsing'
+          : silent > away ? 'away'
+            : silent > away * config.drowsyRatio ? 'drowsing'
+              : null;
+      if (stage) {
+        emit({ actionId: stage, variant: null, sessionId: null }, 'silence', now);
+        return current;
+      }
     }
 
     // idle 变体轮换，权重受 energy 影响
@@ -587,6 +601,10 @@ const SYNTHETIC_SESSIONS = new Set(['rate', 'shell']);
       energy,
       rate,
       awayThresholdMs: Math.round(awayThreshold()),
+      // 睡眠链的两个内部时钟。不暴露的话，「为什么还没睡」只能靠读代码猜——
+      // 排查时这两个数是唯一能自证的东西。
+      lastActivityAt,
+      quietSince,
       minDwellMs: config.minDwellMs,
       oneshot: oneshot ? { id: oneshot.id, until: oneshot.until } : null,
       busy: busyCount(),

@@ -107,6 +107,17 @@
       "exit": "event-driven"
     },
     {
+      "id": "drowsing",
+      "name": "Fading Watch",
+      "mode": "loop",
+      "durationMs": 4200,
+      "accessory": "none",
+      "action": "Eyelids keep losing the fight; each recovery is weaker than the last.",
+      "source": "src/animations/fading-watch.svg",
+      "exit": "event-driven",
+      "designNote": "与 idle 变体 Drowsy Nod 的区别是**会不会回头**：那个点两下头就精神了、随机轮播；这个是睡眠链的第一段，只在真的要睡时才走，而且每一次「撑住」都比上一次弱。没有道具——毯子要等到 away 才拿。"
+    },
+    {
       "id": "away",
       "name": "Blanket Tug",
       "mode": "loop",
@@ -115,6 +126,17 @@
       "action": "Grow drowsy and pull the blanket against the body.",
       "source": "src/animations/blanket-drag.svg",
       "exit": "sleeping"
+    },
+    {
+      "id": "collapsing",
+      "name": "Blanket Fold",
+      "mode": "loop",
+      "durationMs": 3000,
+      "accessory": "the same blanket, pulled from the side onto the body",
+      "action": "Gives up standing: the body compresses down while the blanket folds over it.",
+      "source": "src/animations/blanket-fold.svg",
+      "exit": "event-driven",
+      "designNote": "这一段承担的是**构图过渡**：away 是站着、毯子在身侧（x-7…2）；sleeping 是俯视平躺、盖着被子。此前两者硬切，毯子瞬间从身侧跳到身上。collapsing 把这段补上——身体逐段压扁下沉，毯子同步从身侧移到身上。所以它必须**单向**：压下去就不再起来，起来是 waking 的事。"
     },
     {
       "id": "sleeping",

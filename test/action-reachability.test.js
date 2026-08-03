@@ -70,8 +70,12 @@ const SCENARIOS = {
     return e.tick(60 * SEC).actionId;
   },
 
-  away: () => idleFor(6 * 60 * SEC).actionId,
-  sleeping: () => idleFor(8 * 60 * SEC).actionId,
+  // 睡眠链五段，各自的门槛见引擎的 DEFAULTS：
+  //   drowsing 0.7×away · away · collapsing +30s · sleeping +60s
+  drowsing: () => idleFor(4 * 60 * SEC).actionId,
+  away: () => idleFor(5 * 60 * SEC + 10 * SEC).actionId,
+  collapsing: () => idleFor(5 * 60 * SEC + 40 * SEC).actionId,
+  sleeping: () => idleFor(7 * 60 * SEC).actionId,
 
   // 睡着之后来任何事件都要先伸个懒腰。这条曾经完全断掉。
   waking: () => {

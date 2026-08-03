@@ -59,10 +59,10 @@
       <p class="lede">这一页由契约生成，不是手写的——手写的表和契约必然漂移，
         而漂移之后它会变成一份看起来权威、实际在骗人的文档。</p>
       <div class="stats">
-        <div class="stat"><b>41</b>个动作</div>
+        <div class="stat"><b>43</b>个动作</div>
         <div class="stat"><b>8</b>个 mini 档</div>
-        <div class="stat"><b>41</b>个有触发源</div>
-        <div class="stat"><b>33</b>条收敛映射</div>
+        <div class="stat"><b>43</b>个有触发源</div>
+        <div class="stat"><b>35</b>条收敛映射</div>
       </div>
       <div class="note">
         <b>怎么读这张表。</b><br>
@@ -79,7 +79,7 @@
       
       <section>
         <div class="head">
-          <h2>主状态 <span class="count">11</span></h2>
+          <h2>主状态 <span class="count">13</span></h2>
           <p>Agent 与 owner 的稳定状态。休眠链、任务链、结果链都有明确转场。</p>
         </div>
         <div class="grid">
@@ -101,6 +101,23 @@
           </div>
         </article>
         <article class="act">
+          <div class="stage"><object data="src/animations/fading-watch.svg" type="image/svg+xml">Fading Watch</object></div>
+          <div class="body">
+            <code class="id">drowsing</code>
+            <h3>Fading Watch</h3>
+            <p>Eyelids keep losing the fight; each recovery is weaker than the last.</p>
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>4.2s · loop</dd></div>
+              <div><dt>道具</dt><dd>无道具</dd></div>
+              <div><dt>优先级</dt><dd>8.5</dd></div>
+              <div><dt>姿态密度</dt><dd>5.7 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.idle</code></dd></div>
+              
+            </dl>
+            <div class="trig"><span class="chip">hook · 静默转场</span></div>
+          </div>
+        </article>
+        <article class="act">
           <div class="stage"><object data="src/animations/blanket-drag.svg" type="image/svg+xml">Blanket Tug</object></div>
           <div class="body">
             <code class="id">away</code>
@@ -111,6 +128,23 @@
               <div><dt>道具</dt><dd>one small attached blanket</dd></div>
               <div><dt>优先级</dt><dd>9</dd></div>
               <div><dt>姿态密度</dt><dd>3.9 /秒</dd></div>
+              <div><dt>mini 收敛到</dt><dd><code>mini.idle</code></dd></div>
+              
+            </dl>
+            <div class="trig"><span class="chip">hook · 静默转场</span></div>
+          </div>
+        </article>
+        <article class="act">
+          <div class="stage"><object data="src/animations/blanket-fold.svg" type="image/svg+xml">Blanket Fold</object></div>
+          <div class="body">
+            <code class="id">collapsing</code>
+            <h3>Blanket Fold</h3>
+            <p>Gives up standing: the body compresses down while the blanket folds over it.</p>
+            <dl>
+              <div><dt>时长 / 模式</dt><dd>3s · loop</dd></div>
+              <div><dt>道具</dt><dd>the same blanket, pulled from the side onto the body</dd></div>
+              <div><dt>优先级</dt><dd>9.5</dd></div>
+              <div><dt>姿态密度</dt><dd>7.3 /秒</dd></div>
               <div><dt>mini 收敛到</dt><dd><code>mini.idle</code></dd></div>
               
             </dl>
@@ -342,7 +376,7 @@
               <div><dt>mini 收敛到</dt><dd><code>mini.busy</code></dd></div>
               
             </dl>
-            <div class="trig"><span class="chip">hook · 由持续时长升级</span><span class="chip">hook · 通用 working 持续超过 longWorkMs</span></div>
+            <div class="trig"><span class="chip">hook · 静默转场</span><span class="chip">hook · 由持续时长升级</span><span class="chip">hook · 通用 working 持续超过 longWorkMs</span></div>
           </div>
         </article></div>
       </section>
