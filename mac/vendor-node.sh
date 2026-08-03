@@ -20,20 +20,29 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 # 锁死版本：构建产物必须可复现，不能因为上游发新版就悄悄变了
-VERSION="${1:-v24.18.1}"
-ARCH="$(uname -m)"
-case "$ARCH" in
-  arm64) NODE_ARCH="arm64" ;;
-  x86_64) NODE_ARCH="x64" ;;
-  *) echo "不支持的架构: $ARCH" >&2; exit 1 ;;
-esac
+VERSION="v24.18.1"
+WANT=()
+for arg in "$@"; do
+  case "$arg" in
+    --all) WANT=(arm64 x64) ;;
+    v*) VERSION="$arg" ;;
+  esac
+done
+if [ ${#WANT[@]} -eq 0 ]; then
+  case "$(uname -m)" in
+    arm64) WANT=(arm64) ;;
+    x86_64) WANT=(x64) ;;
+    *) echo "不支持的架构: $(uname -m)" >&2; exit 1 ;;
+  esac
+fi
 
+for NODE_ARCH in "${WANT[@]}"; do
 DEST="vendor/node-$NODE_ARCH"
 if [ -x "$DEST/bin/node" ]; then
   HAVE="$("$DEST/bin/node" --version 2>/dev/null || echo unknown)"
   if [ "$HAVE" = "$VERSION" ]; then
     echo "已就绪: $DEST/bin/node $HAVE"
-    exit 0
+    continue
   fi
   echo "版本不符（本地 $HAVE，需要 $VERSION），重新取"
   rm -rf "$DEST"
@@ -72,4 +81,6 @@ if otool -L "$DEST/bin/node" | grep -q "/opt/homebrew\|/usr/local/opt"; then
   exit 1
 fi
 
-echo "完成: $DEST/bin/node $("$DEST/bin/node" --version)  $(du -h "$DEST/bin/node" | cut -f1)"
+# 交叉架构的 node 在本机跑不起来，不能用 --version 验；比对文件里的架构标记
+echo "完成: $DEST/bin/node  $(lipo -archs "$DEST/bin/node")  $(du -h "$DEST/bin/node" | cut -f1)"
+done

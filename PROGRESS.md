@@ -142,8 +142,11 @@ not started.
   right-click → Open (or `xattr -d com.apple.quarantine`). Real distribution needs
   a paid Apple Developer account; set `MACLAWD_SIGN_ID` and the script takes the
   Developer ID path instead.
-- **Apple Silicon only.** `vendor-node.sh` fetches the runtime for the build
-  machine's architecture. A universal build needs both Node binaries.
+- ~~Apple Silicon only.~~ **Fixed.** `MACLAWD_UNIVERSAL=1 ./package.sh` (implied by
+  `MACLAWD_DMG=1`) produces a universal binary — `lipo`-joined arm64 + x86_64 Swift
+  slices, plus both Node runtimes selected per-slice at build time. The DMG path
+  forces it, so a single-architecture build can never be handed to anyone.
+  Cost: the app goes 117 MB → 235 MB, because it carries two full Node runtimes.
 - **14 of 21 tool parsers are unverified** — they are written against documented
   log formats but have never been run against real samples from those tools.
 - **Never dogfooded for a full working day.** Everything above is verified by tests

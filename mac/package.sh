@@ -19,15 +19,37 @@ echo "==> 生成图标"
 # 图标按角色几何合同程序化绘制，与桌宠本体必然同源，不会漂移
 swift make-icon.swift
 
+# 通用包（arm64 + x86_64）。分发必须开——只有 arm64 的话，
+# Intel Mac 上应用根本起不来，而用户只会看到「打不开」。
+# 本地自测默认关，省一半时间和一半体积。
+UNIVERSAL="${MACLAWD_UNIVERSAL:-0}"
+# DMG 是给别人下载的，不允许出单架构的
+if [ "${MACLAWD_DMG:-}" = "1" ]; then UNIVERSAL=1; fi
+
 echo "==> 准备 Node 运行时"
 # 必须打包：不打的话应用要求用户自己装 Node 20+，而 nvm 装的 node 不在
 # login shell 之外的 PATH 里、版本过旧、或只有 x86 版——每一种都会让应用
 # 静默起不来，用户只看到「桌宠没出来」。见 vendor-node.sh 顶部的说明。
-./vendor-node.sh
+if [ "$UNIVERSAL" = "1" ]; then ./vendor-node.sh --all; else ./vendor-node.sh; fi
 
-echo "==> 编译 ($CONFIG)"
-swift build -c "$CONFIG"
-BIN="$(swift build -c "$CONFIG" --show-bin-path)/Maclawd"
+WORK="$(mktemp -d)"
+trap 'rm -rf "$WORK"' EXIT
+
+if [ "$UNIVERSAL" = "1" ]; then
+  echo "==> 编译通用二进制 ($CONFIG, arm64 + x86_64)"
+  # `swift build --arch a --arch b` 需要完整 Xcode 的 xcbuild，
+  # 只装了命令行工具时它会直接报错。所以分别交叉编译再 lipo 拼起来。
+  for triple in arm64-apple-macos13.0 x86_64-apple-macos13.0; do
+    swift build -c "$CONFIG" -Xswiftc -target -Xswiftc "$triple" >/dev/null
+    cp "$(swift build -c "$CONFIG" --show-bin-path)/Maclawd" "$WORK/${triple%%-*}"
+  done
+  lipo -create "$WORK/arm64" "$WORK/x86_64" -output "$WORK/Maclawd"
+  BIN="$WORK/Maclawd"
+else
+  echo "==> 编译 ($CONFIG, 仅本机架构)"
+  swift build -c "$CONFIG"
+  BIN="$(swift build -c "$CONFIG" --show-bin-path)/Maclawd"
+fi
 
 echo "==> 组装 $APP"
 rm -rf "$APP"
@@ -45,12 +67,16 @@ done
 # 解析缓存与聚合数据是用户数据，绝不打进包里
 rm -rf "$RUNTIME/node_modules"
 
-# 自包含的 Node 运行时。放在 Resources/node 下，应用优先用它，
-# 找不到才回落到系统 node（开发时方便，分发时用不到）。
-ARCH="$(uname -m)"
-case "$ARCH" in arm64) NODE_ARCH=arm64 ;; x86_64) NODE_ARCH=x64 ;; esac
-mkdir -p "$APP/Contents/Resources/node/bin"
-cp "vendor/node-$NODE_ARCH/bin/node" "$APP/Contents/Resources/node/bin/node"
+# 自包含的 Node 运行时。按架构分目录，应用在运行时挑自己那一份
+# （通用二进制里 #if arch 是按切片解析的，正好选对）。
+# 应用优先用随包的，找不到才回落到系统 node（开发时方便，分发时用不到）。
+if [ "$UNIVERSAL" = "1" ]; then NODE_ARCHES="arm64 x64"; else
+  case "$(uname -m)" in arm64) NODE_ARCHES=arm64 ;; x86_64) NODE_ARCHES=x64 ;; esac
+fi
+for na in $NODE_ARCHES; do
+  mkdir -p "$APP/Contents/Resources/node/$na/bin"
+  cp "vendor/node-$na/bin/node" "$APP/Contents/Resources/node/$na/bin/node"
+done
 
 VERSION="$(python3 -c "import json;print(json.load(open('$REPO_ROOT/package.json'))['version'])")"
 
@@ -92,6 +118,11 @@ fi
 
 echo "==> 完成: $(pwd)/$APP"
 du -sh "$APP" | sed 's/^/    /'
+echo "    架构: $(lipo -archs "$APP/Contents/MacOS/Maclawd")"
+if [ "$UNIVERSAL" != "1" ]; then
+  echo "    ⚠️  仅本机架构，**不能分发**——换架构的机器上起不来。"
+  echo "       出分发包：MACLAWD_UNIVERSAL=1 ./package.sh 或 MACLAWD_DMG=1 ./package.sh"
+fi
 
 if [ "${MACLAWD_DMG:-}" = "1" ]; then
   echo "==> 打包 DMG"

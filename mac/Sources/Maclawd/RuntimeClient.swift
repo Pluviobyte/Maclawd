@@ -75,9 +75,18 @@ final class RuntimeClient {
      */
     private func findNode() -> String? {
         var candidates: [String] = []
-        if let bundled = Bundle.main.resourceURL?
-            .appendingPathComponent("node/bin/node").path {
-            candidates.append(bundled)
+        if let resources = Bundle.main.resourceURL {
+            // 通用包里两个架构的运行时都在。`#if arch` 在通用二进制里是
+            // **按切片**解析的——arm64 切片编译出 "arm64"，x86_64 切片编译出
+            // "x64"，所以每一份跑起来都会挑到自己那个。运行时判断反而做不到这点。
+            #if arch(arm64)
+            let slice = "arm64"
+            #else
+            let slice = "x64"
+            #endif
+            candidates.append(resources.appendingPathComponent("node/\(slice)/bin/node").path)
+            // 旧布局（单架构包把 node 直接放在 node/bin 下），保持兼容
+            candidates.append(resources.appendingPathComponent("node/bin/node").path)
         }
         candidates += [
             "/opt/homebrew/bin/node",

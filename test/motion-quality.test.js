@@ -313,3 +313,20 @@ test('没有契约动作能绕过运动质量门槛', () => {
   assert.deepEqual(outside, [],
     `这些动作没走姿态谱管线，整个躲过了密度与缓动门槛：${outside.join(', ')}`);
 });
+
+test('分发包必须是通用二进制——DMG 不允许出单架构', () => {
+  // 只有 arm64 的包在 Intel Mac 上根本起不来，而用户只会看到「打不开」，
+  // 不会知道是架构不对。所以 DMG（唯一给别人下载的产物）必须强制通用。
+  const sh = read('mac/package.sh');
+  assert.match(sh, /MACLAWD_DMG.*=.*1.*\]; then UNIVERSAL=1/s,
+    'DMG 没有强制通用构建——可能出单架构的分发包');
+  assert.match(sh, /lipo -create/, '缺少 lipo 拼接，通用二进制无从产生');
+  // 两个架构的 Node 也都要带：Swift 是通用的但运行时不是，一样起不来
+  assert.match(sh, /vendor-node\.sh --all/, '通用包没有取两个架构的 Node 运行时');
+
+  // 运行时选择必须按编译期切片，不能在运行时判断——
+  // 通用二进制里 #if arch 是按切片解析的，每份跑起来自然挑到自己那个
+  const swift = read('mac/Sources/Maclawd/RuntimeClient.swift');
+  assert.match(swift, /#if arch\(arm64\)/, '没有按架构选择随包运行时');
+  assert.match(swift, /node\/\\\(slice\)\/bin\/node/, '随包运行时路径没有按架构分目录');
+});
