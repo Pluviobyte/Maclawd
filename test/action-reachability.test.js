@@ -244,3 +244,55 @@ test('产出的动作都能选出自己的素材，不许静默回落', () => {
   }
   assert.deepEqual(degraded, [], `这些动作被静默降级了：${degraded.join(', ')}`);
 });
+
+// ---------- 并发分档 ----------
+
+test('分档按并发会话数换素材，但状态 id 始终不变', () => {
+  // tier 是**渲染层**的机制：多开几个窗口，画面该变，但状态机不该多出一档。
+  // 一旦有人把它做成新状态，优先级表和收敛表都要跟着改，那就走错路了。
+  const orchestrator = createOrchestrator({ actions: loadActions() });
+  const seen = new Set();
+  for (const busy of [1, 2, 3, 9]) {
+    const plan = orchestrator.plan('working', { busy });
+    assert.equal(plan.actionId, 'working', `并发 ${busy} 时状态 id 变了`);
+    seen.add(plan.source);
+  }
+  assert.equal(seen.size, 3, `1/2/3 档应该是三份不同素材，实际 ${seen.size} 份`);
+});
+
+test('并发计数只数真实会话，合成会话不算', () => {
+  // `rate`（速率推断兜底）与 `shell`（外壳交互）不是真实的 agent 会话。
+  // 把它们算进去，用户只开一个窗口也会看到「三条流水线」。
+  const e = engine();
+  e.observeEvent({ type: 'PreToolUse', sessionId: 'a', toolName: 'x' }, SEC);
+  assert.equal(e.current().busy, 1);
+  e.observeRate(9999, 2 * SEC);
+  assert.equal(e.current().busy, 1, '速率兜底被计入了并发');
+  e.observeEvent({ type: 'shell.hover' }, 3 * SEC);
+  assert.equal(e.current().busy, 1, '外壳会话被计入了并发');
+  e.observeEvent({ type: 'UserPromptSubmit', sessionId: 'b' }, 4 * SEC);
+  assert.equal(e.current().busy, 2, '第二个真实会话没被计入');
+});
+
+test('并发数必须实时算，不能在状态变化时冻结', () => {
+  // emit() 只在**动作变化**时触发，而多开一个窗口并不改变赢家
+  // （working 压过 thinking）。冻结在 emit 里的话，并发数会一直是旧的。
+  const e = engine();
+  e.observeEvent({ type: 'PreToolUse', sessionId: 'a', toolName: 'x' }, SEC);
+  const before = e.current().actionId;
+  e.observeEvent({ type: 'UserPromptSubmit', sessionId: 'b' }, 2 * SEC);
+  assert.equal(e.current().actionId, before, '前提：动作不该变');
+  assert.equal(e.current().busy, 2, '动作没变时并发数也必须更新');
+});
+
+test('占位素材必须被标出来，不能悄悄变成成品', () => {
+  // 分档的动作设计还没定，现在用的是占位。契约里标了 placeholder，
+  // 计划里也要透出来——不标的话，占位会在某次「看起来能用」之后
+  // 默默留下来，没人记得它本来是临时的。
+  const orchestrator = createOrchestrator({ actions: loadActions() });
+  assert.equal(orchestrator.plan('working', { busy: 1 }).tier.placeholder, false);
+  for (const busy of [2, 3]) {
+    assert.equal(orchestrator.plan('working', { busy }).tier.placeholder, true,
+      `第 ${busy} 档没有标成占位`);
+  }
+});

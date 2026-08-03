@@ -268,6 +268,10 @@ export function loadActions() {
           exit: node.exit ?? null,
           variants: node.variants ?? null,
           mapsTo: node.mapsTo ?? null,
+          // 分档：同一状态按并发会话数换素材。白名单必须显式列出——
+          // 漏了这一行的表现是「契约里配了 tier，运行时永远只播第一档」，
+          // 而且没有任何东西会报错。
+          tiers: node.tiers ?? null,
         });
       }
     }
@@ -431,6 +435,9 @@ export function createUsageServer({ collector = null } = {}) {
       variant: state.variant,
       reduced: settings.reducedMotion,
       mini: miniMode,
+      // 并发会话数决定播第几档。引擎实时算，编排器只负责挑素材——
+      // 状态 id 始终不变，分档是渲染层的事。
+      busy: state.busy,
     });
     return {
       state, plan, mini: miniMode, energyEnabled: settings.petEnergy, debug: engine.debug(),

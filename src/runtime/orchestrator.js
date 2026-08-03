@@ -96,7 +96,29 @@ export function createOrchestrator({
    *   convergedFrom: string|null, unmapped: boolean
    * }}
    */
-  function plan(actionId, { variant = null, reduced = reducedMotion, mini: miniMode = false } = {}) {
+  /**
+   * 按并发会话数挑素材。
+   *
+   * **状态 id 不变**——tier 是渲染层的事，状态机与优先级表都不该知道它。
+   * levels 按 minSessions 降序取第一个满足的；一个都不满足就用动作本身的素材。
+   *
+   * 参考 clawd-on-desk 的机制，但不抄它的映射：它用「戴耳机摇摆」表示
+   * 2 个会话，用户读不出这个对应关系——那是换皮不是传信息。
+   * 我们让数量本身可见，几条流水线就是几个会话。
+   */
+  function pickTier(action, busy) {
+    const levels = action.tiers?.levels;
+    if (!Array.isArray(levels) || !Number.isFinite(busy)) return null;
+    const sorted = [...levels].sort((a, b) => b.minSessions - a.minSessions);
+    for (const level of sorted) {
+      if (busy >= level.minSessions && level.source) return level;
+    }
+    return null;
+  }
+
+  function plan(actionId, {
+    variant = null, reduced = reducedMotion, mini: miniMode = false, busy = null,
+  } = {}) {
     // mini 是主状态的**投影**，不是第二套状态机——引擎照常产出 39 档之一，
     // 收敛只发生在这一步。绝不为 mini 建独立状态机，那必然漂移。
     const converged = miniMode ? converge(actionId) : null;
@@ -110,10 +132,13 @@ export function createOrchestrator({
       ? action.exit
       : null;
 
+    // mini 档不分档：取景已经裁到只剩演员，几条流水线都放不下。
+    const tier = miniMode ? null : pickTier(action, busy);
+
     return {
       actionId: action.id,
-      name: action.name,
-      source: action.source,
+      name: tier?.name ?? action.name,
+      source: tier?.source ?? action.source,
       // 减弱动效下不缩短时长，只是不播放位移——时长是契约锁定的。
       durationMs: action.durationMs ?? null,
       mode: isOneshot ? 'oneshot' : 'loop',
@@ -130,6 +155,9 @@ export function createOrchestrator({
       // 命中区与可见画面框，随动作变。外壳直接用，不在 Swift 里再算一遍——
       // 契约是唯一来源。mini 档整个窗口就是角色，不需要收窄。
       geometry: miniMode ? null : geometryFor(action.id, contract),
+      // 面板与测试要能看出「现在播的是第几档、是不是占位素材」。
+      // 不暴露的话，分档在画面上生效了却无从解释，占位也会悄悄变成成品。
+      tier: tier ? { minSessions: tier.minSessions, placeholder: !!tier.placeholder } : null,
     };
   }
 

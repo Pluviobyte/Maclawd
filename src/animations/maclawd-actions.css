@@ -870,5 +870,43 @@
 @keyframes long-pile { 0%,17%{transform:scaleY(.34)} 18%,35%{transform:scaleY(.5)} 36%,54%{transform:scaleY(.67)} 55%,72%{transform:scaleY(.84)} 73%,94%{transform:scaleY(1)} 95%,100%{opacity:0;transform:scaleY(1) translateY(-3px)} }
 @keyframes long-eyes { 0%,37%{transform:translateY(1px) scaleY(.6)} 38%,61%{transform:translateY(1px) scaleY(.5)} 62%,76%{transform:translateY(1px) scaleY(.65)} 77%,100%{transform:translateY(1px) scaleY(.55)} }
 @keyframes long-blink { 0%,69%{transform:scaleY(1)} 70%,74%{transform:scaleY(.15)} 75%,100%{transform:scaleY(1)} }
+/* work-tier2：**占位**。两个会话 = 两条并行的流水线，数量直接可见。
+   动作本身待定：现在只是把 Tile Feed 的流动复制两份、错开半个周期，
+   够验证「并发数变了画面真的会变」这件事，不是最终设计。 */
+.state-work-tier2 { --duration: 3.4s; }
+.state-work-tier2 .actor { animation-name: tier2-body; }
+.state-work-tier2 .left-claw { animation-name: tier2-left; animation-duration: 1.7s; }
+.state-work-tier2 .right-claw { animation-name: tier2-right; animation-duration: 1.7s; }
+.state-work-tier2 .lane-a { animation-name: tier2-lane-a; }
+.state-work-tier2 .lane-b { animation-name: tier2-lane-b; }
+.state-work-tier2 .eyes { animation-name: tier2-eyes; animation-duration: 2.9s; }
+.state-work-tier2 .blink { animation-name: tier2-blink; animation-duration: 4.7s; }
+@keyframes tier2-body { 0%,24%{transform:translate(0,-1px)} 25%,32%{transform:translate(-1px,0)} 33%,49%{transform:translate(-1px,1px)} 50%,74%{transform:translate(0,-1px)} 75%,82%{transform:translate(1px,0)} 83%,100%{transform:translate(1px,1px)} }
+@keyframes tier2-left { 0%,37%{transform:translate(1px,2px)} 38%,62%{transform:translate(1px,0)} 63%,87%{transform:translate(2px,-1px)} 88%,100%{transform:translate(1px,1px)} }
+@keyframes tier2-right { 0%,24%{transform:translate(-2px,-1px)} 25%,37%{transform:translate(-1px,1px)} 38%,74%{transform:translate(-1px,2px)} 75%,100%{transform:translate(-1px,0)} }
+@keyframes tier2-lane-a { 0%,9%{opacity:0;transform:translate(0px,8px)} 10%,29%{opacity:1;transform:translate(0px,6px)} 30%,49%{opacity:1;transform:translate(0px,4px)} 50%,69%{opacity:1;transform:translate(0px,2px)} 70%,89%{opacity:1;transform:translate(0px,0)} 90%,100%{opacity:0;transform:translate(0px,-2px)} }
+@keyframes tier2-lane-b { 0%,19%{opacity:1;transform:translate(0px,2px)} 20%,39%{opacity:1;transform:translate(0px,0)} 40%,49%{opacity:0;transform:translate(0px,-2px)} 50%,59%{opacity:0;transform:translate(0px,8px)} 60%,79%{opacity:1;transform:translate(0px,6px)} 80%,100%{opacity:1;transform:translate(0px,4px)} }
+@keyframes tier2-eyes { 0%,32%{transform:translate(0,1px)} 33%,55%{transform:translate(-1px,1px)} 56%,77%{transform:translate(1px,1px)} 78%,100%{transform:translate(0,0)} }
+@keyframes tier2-blink { 0%,68%{transform:scaleY(1)} 69%,74%{transform:scaleY(.15)} 75%,100%{transform:scaleY(1)} }
+/* work-tier3：**占位**。三条及以上并行。三条相位各差三分之一周期，
+   画面上任何时刻都有牌在不同高度——这是「同时在跑好几摊」的读法。
+   动作待定，现在只验证机制。 */
+.state-work-tier3 { --duration: 3.4s; }
+.state-work-tier3 .actor { animation-name: tier3-body; }
+.state-work-tier3 .left-claw { animation-name: tier3-left; animation-duration: 1.13s; }
+.state-work-tier3 .right-claw { animation-name: tier3-right; animation-duration: 1.13s; }
+.state-work-tier3 .lane-a { animation-name: tier3-lane-a; }
+.state-work-tier3 .lane-b { animation-name: tier3-lane-b; }
+.state-work-tier3 .lane-c { animation-name: tier3-lane-c; }
+.state-work-tier3 .eyes { animation-name: tier3-eyes; animation-duration: 1.9s; }
+.state-work-tier3 .blink { animation-name: tier3-blink; animation-duration: 4.3s; }
+@keyframes tier3-body { 0%,24%{transform:translate(0,-1px)} 25%,32%{transform:translate(-1px,0)} 33%,49%{transform:translate(-1px,1px)} 50%,74%{transform:translate(0,-1px)} 75%,82%{transform:translate(1px,0)} 83%,100%{transform:translate(1px,1px)} }
+@keyframes tier3-left { 0%,42%{transform:translate(1px,2px)} 43%,70%{transform:translate(1px,0)} 71%,100%{transform:translate(2px,-1px)} }
+@keyframes tier3-right { 0%,28%{transform:translate(-2px,-1px)} 29%,56%{transform:translate(-1px,1px)} 57%,100%{transform:translate(-1px,2px)} }
+@keyframes tier3-lane-a { 0%,9%{opacity:0;transform:translate(0px,8px)} 10%,29%{opacity:1;transform:translate(0px,6px)} 30%,49%{opacity:1;transform:translate(0px,4px)} 50%,69%{opacity:1;transform:translate(0px,2px)} 70%,89%{opacity:1;transform:translate(0px,0)} 90%,100%{opacity:0;transform:translate(0px,-2px)} }
+@keyframes tier3-lane-b { 0%,19%{opacity:1;transform:translate(0px,4px)} 20%,39%{opacity:1;transform:translate(0px,2px)} 40%,59%{opacity:1;transform:translate(0px,0)} 60%,69%{opacity:0;transform:translate(0px,-2px)} 70%,79%{opacity:0;transform:translate(0px,8px)} 80%,100%{opacity:1;transform:translate(0px,6px)} }
+@keyframes tier3-lane-c { 0%,19%{opacity:1;transform:translate(0px,0)} 20%,29%{opacity:0;transform:translate(0px,-2px)} 30%,39%{opacity:0;transform:translate(0px,8px)} 40%,59%{opacity:1;transform:translate(0px,6px)} 60%,79%{opacity:1;transform:translate(0px,4px)} 80%,100%{opacity:1;transform:translate(0px,2px)} }
+@keyframes tier3-eyes { 0%,37%{transform:translate(-1px,1px)} 38%,49%{transform:translate(0,0)} 50%,87%{transform:translate(1px,1px)} 88%,100%{transform:translate(0,1px)} }
+@keyframes tier3-blink { 0%,63%{transform:scaleY(1)} 64%,70%{transform:scaleY(.15)} 71%,100%{transform:scaleY(1)} }
 
 /* === 生成区结束 === */

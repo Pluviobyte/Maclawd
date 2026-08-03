@@ -329,3 +329,55 @@ test('分发包必须是通用二进制——DMG 不允许出单架构', () => {
   assert.match(swift, /#if arch\(arm64\)/, '没有按架构选择随包运行时');
   assert.match(swift, /node\/\\\(slice\)\/bin\/node/, '随包运行时路径没有按架构分目录');
 });
+
+test('外壳必须把共享样式表真正内联，不能靠 xml-stylesheet 指令', () => {
+  // **桌宠一直不动的根因。**
+  // 素材第一行是 `<?xml-stylesheet type="text/css" href="maclawd-actions.css"?>`——
+  // 那是 XML 的处理指令。把 SVG 内联进 HTML 文档后，HTML 解析器会把它
+  // 当成伪注释直接忽略，样式表根本不会加载，于是 animation-name 恒为 none，
+  // 每个动作都只显示静态基准姿势。
+  //
+  // 实测复现：照抄外壳的拼法 → animation-name: none / 样式表数量 1；
+  // 真正内联之后 → animation-name: hover-body / duration 3s / 数量 2。
+  //
+  // 这个坑在 scripts/motion-check.html 里踩过一次并写了注释，
+  // 当时没意识到外壳走的是同一条路。所以这里立一条断言，不靠记性。
+  const swift = read('mac/Sources/Maclawd/PetWindow.swift');
+  assert.match(swift, /maclawd-actions\.css/,
+    '外壳没有读取共享样式表——动画不会生效');
+  assert.match(swift, /<style>\\\(sheet\)<\/style>/,
+    '外壳没有把样式表内容内联进 HTML');
+  // 素材里的处理指令要被剥掉：留着无害，但留着容易让人以为它在起作用
+  assert.match(swift, /replacingOccurrences\([\s\S]{0,120}xml-stylesheet/,
+    '外壳没有剥掉那条不起作用的 xml-stylesheet 指令');
+});
+
+test('契约引用的素材都用同一张共享样式表——内联才拿得到全部规则', () => {
+  // 外壳只内联 maclawd-actions.css 这一张。素材若自带内联 <style> 或引别的表，
+  // 在外壳里就会缺规则——而缺规则的表现同样是「不动」。
+  //
+  // 只查**契约引用到的**素材：那些才会被外壳加载。
+  // src/animations 里还躺着上一代方向的概念资产（inference-dial 等），
+  // 它们不进任何契约、进不了外壳，用同一把尺子量它们只会制造假警报。
+  const contracts = ['design/main-state-actions.json', 'design/activity-modifiers.json',
+    'design/interaction-actions.json', 'design/runtime-lifecycle-actions.json',
+    'design/mini-actions.json'];
+  const sources = new Set();
+  const walk = (node) => {
+    if (Array.isArray(node)) { node.forEach(walk); return; }
+    if (!node || typeof node !== 'object') return;
+    if (typeof node.source === 'string') sources.add(node.source);
+    Object.values(node).forEach(walk);
+  };
+  for (const file of contracts) walk(JSON.parse(read(file)));
+  assert.ok(sources.size >= 30, `只找到 ${sources.size} 个契约素材，遍历可能失配`);
+
+  const offenders = [];
+  for (const rel of sources) {
+    const svg = read(rel);
+    if (!svg.includes('maclawd-actions.css')) offenders.push(`${rel}（没引共享表）`);
+    if (/<style[\s>]/.test(svg)) offenders.push(`${rel}（自带内联 style）`);
+  }
+  assert.deepEqual(offenders, [],
+    `这些素材在外壳里拿不到完整规则：${offenders.join(', ')}`);
+});

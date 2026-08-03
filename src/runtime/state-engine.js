@@ -204,6 +204,20 @@ export function createStateEngine(options = {}) {
     if (eventLog.length > EVENT_LOG_MAX) eventLog.shift();
   }
 
+/**
+ * 参与并发计数的状态。tier 分档要回答的是「同时有几个会话在干活」，
+ * 所以只数真正在产出的那些——idle / away / sleeping 不算。
+ */
+const BUSY_STATES = new Set(['thinking', 'working', 'delegating', 'compacting']);
+
+/**
+ * 合成会话：不是真实的 agent，不该被计入并发。
+ *   `rate`  —— 无 hook 时的速率推断兜底
+ *   `shell` —— 外壳自己的交互事件
+ * 把它们算进去会让「开了几个窗口」这个数凭空多一两个。
+ */
+const SYNTHETIC_SESSIONS = new Set(['rate', 'shell']);
+
   const session = (id) => {
     let s = sessions.get(id);
     if (!s) {
@@ -212,6 +226,17 @@ export function createStateEngine(options = {}) {
     }
     return s;
   };
+
+  /** 同时有几个真实会话在产出。tier 分档据此换素材，状态 id 不变。 */
+  function busyCount() {
+    let n = 0;
+    for (const [id, s] of sessions) {
+      if (SYNTHETIC_SESSIONS.has(id)) continue;
+      const base = String(s.state).split('.')[0];
+      if (BUSY_STATES.has(base)) n += 1;
+    }
+    return n;
+  }
 
   function emit(next, reason, now, priority) {
     if (next.actionId === current.actionId && next.variant === current.variant) return;
@@ -532,7 +557,9 @@ export function createStateEngine(options = {}) {
     setEnergy,
     /** 推进时钟，让静默转场与 idle 轮换生效。 */
     tick: (now) => resolve(now),
-    current: () => ({ ...current }),
+    // busy 实时算，不在 emit 时冻结：emit 只在动作**变化**时触发，
+    // 而多开一个窗口并不改变赢家——冻结下来的并发数会一直是旧的。
+    current: () => ({ ...current, busy: busyCount() }),
     /** 诊断用：当前活跃会话与派生量。 */
     debug: () => ({
       energy,
@@ -540,6 +567,7 @@ export function createStateEngine(options = {}) {
       awayThresholdMs: Math.round(awayThreshold()),
       minDwellMs: config.minDwellMs,
       oneshot: oneshot ? { id: oneshot.id, until: oneshot.until } : null,
+      busy: busyCount(),
       sessions: [...sessions.entries()].map(([id, s]) => ({
         id,
         state: s.state,

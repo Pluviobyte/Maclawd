@@ -155,7 +155,39 @@
       "action": "Receive each arriving tile with one claw and pass it up with the other; never return to a rest pose.",
       "source": "src/animations/token-knitting.svg",
       "exit": "event-driven",
-      "loopContinuity": "持续态：循环内不得出现静止姿态，首尾姿态必须不同。旧版首尾同为原位，跨接缝后是连续 1.5 秒静止，读作「干一下停一下」。"
+      "loopContinuity": "持续态：循环内不得出现静止姿态，首尾姿态必须不同。旧版首尾同为原位，跨接缝后是连续 1.5 秒静止，读作「干一下停一下」。",
+      "tiers": {
+        "_comment": "同一个状态按**并发会话数**换素材。状态 id 始终是 working，状态机与优先级表都不动——tier 是渲染层的事。参考 clawd-on-desk 的机制，但不抄它的映射：它用「戴耳机摇摆」表示 2 个会话，用户读不出这个对应关系，那更像换皮而不是传信息。我们让**数量本身可见**——几条流水线就是几个会话。",
+        "countedStates": [
+          "thinking",
+          "working",
+          "delegating",
+          "compacting"
+        ],
+        "excludes": [
+          "rate（速率推断兜底）",
+          "shell（外壳交互）"
+        ],
+        "levels": [
+          {
+            "minSessions": 3,
+            "source": "src/animations/work-tier3.svg",
+            "name": "Tile Feed ×3",
+            "placeholder": true
+          },
+          {
+            "minSessions": 2,
+            "source": "src/animations/work-tier2.svg",
+            "name": "Tile Feed ×2",
+            "placeholder": true
+          },
+          {
+            "minSessions": 1,
+            "source": "src/animations/token-knitting.svg",
+            "name": "Tile Feed"
+          }
+        ]
+      }
     },
     {
       "id": "delegating",

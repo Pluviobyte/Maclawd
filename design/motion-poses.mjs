@@ -2004,3 +2004,98 @@ ANIMATIONS.push(
     ],
   },
 );
+
+// ============================================================================
+// working 的并发分档（tier）——**占位素材，动作待定**
+//
+// 机制：同一个状态按并发会话数换素材，状态 id 始终是 working。
+// 这里只做到「数量看得见」这一步，用来验证机制通不通；
+// 真正的动作设计另行讨论，所以契约里标了 placeholder，测试会盯着它。
+//
+// 参考 clawd-on-desk 的机制但不抄它的映射：它用「戴耳机摇摆」表示 2 个会话，
+// 用户读不出这个对应关系——那是换皮，不是传信息。
+// 让**数量本身可见**才不需要用户学映射。
+// ============================================================================
+
+/** 占位用：一条流水线的姿态谱，牌从下方流入、在胸口淡出。 */
+const lane = (dx) => [
+  p(`opacity:0;transform:translate(${dx}px,8px)`, 1),
+  p(`opacity:1;transform:translate(${dx}px,6px)`, 2),
+  p(`opacity:1;transform:translate(${dx}px,4px)`, 2),
+  p(`opacity:1;transform:translate(${dx}px,2px)`, 2),
+  p(`opacity:1;transform:translate(${dx}px,0)`, 2),
+  p(`opacity:0;transform:translate(${dx}px,-2px)`, 1),
+];
+
+/** 占位用：身体的通用工作节奏，无静止姿态、首尾不同。 */
+const busyBody = [
+  p('translate(0,-1px)', 3), p('translate(-1px,0)', 1), p('translate(-1px,1px)', 2),
+  p('translate(0,-1px)', 3), p('translate(1px,0)', 1), p('translate(1px,1px)', 2),
+];
+
+ANIMATIONS.push(
+  {
+    state: 'work-tier2',
+    svg: {
+      file: 'work-tier2.svg',
+      title: 'Tile Feed ×2',
+      desc: 'PLACEHOLDER — two parallel tile lanes, one per concurrent session.',
+      propsAfter: '<g class="lane-a motion"><rect x="1" y="11" width="4" height="4" fill="#7BC8C4"/>'
+        + '<rect x="2" y="12" width="2" height="1" fill="#BDE7E4"/></g>'
+        + '<g class="lane-b motion"><rect x="10" y="11" width="4" height="4" fill="#B9A1D9"/>'
+        + '<rect x="11" y="12" width="2" height="1" fill="#E7DCF2"/></g>',
+    },
+    duration: 3400,
+    comment: '**占位**。两个会话 = 两条并行的流水线，数量直接可见。\n'
+      + '   动作本身待定：现在只是把 Tile Feed 的流动复制两份、错开半个周期，\n'
+      + '   够验证「并发数变了画面真的会变」这件事，不是最终设计。',
+    layers: [
+      { sel: '.actor', name: 'tier2-body', poses: busyBody },
+      { sel: '.left-claw', name: 'tier2-left', period: 1700, poses: [
+        p('translate(1px,2px)', 3), p('translate(1px,0)', 2), p('translate(2px,-1px)', 2),
+        p('translate(1px,1px)', 1) ] },
+      { sel: '.right-claw', name: 'tier2-right', period: 1700, poses: [
+        p('translate(-2px,-1px)', 2), p('translate(-1px,1px)', 1), p('translate(-1px,2px)', 3),
+        p('translate(-1px,0)', 2) ] },
+      { sel: '.lane-a', name: 'tier2-lane-a', poses: lane(0) },
+      // 错开半个周期：两条同步会读成「一块大板」，错开才是两条
+      { sel: '.lane-b', name: 'tier2-lane-b', poses: [...lane(0).slice(3), ...lane(0).slice(0, 3)] },
+      { sel: '.eyes', name: 'tier2-eyes', period: 2900, poses: [
+        p('translate(0,1px)', 3), p('translate(-1px,1px)', 2), p('translate(1px,1px)', 2),
+        p('translate(0,0)', 2) ] },
+      { sel: '.blink', name: 'tier2-blink', period: 4700, poses: [
+        p('scaleY(1)', 11), p('scaleY(.15)', 1), p('scaleY(1)', 4) ] },
+    ],
+  },
+
+  {
+    state: 'work-tier3',
+    svg: {
+      file: 'work-tier3.svg',
+      title: 'Tile Feed ×3',
+      desc: 'PLACEHOLDER — three parallel tile lanes for three or more concurrent sessions.',
+      propsAfter: '<g class="lane-a motion"><rect x="0" y="11" width="3" height="4" fill="#7BC8C4"/></g>'
+        + '<g class="lane-b motion"><rect x="6" y="11" width="3" height="4" fill="#F6C85F"/></g>'
+        + '<g class="lane-c motion"><rect x="12" y="11" width="3" height="4" fill="#B9A1D9"/></g>',
+    },
+    duration: 3400,
+    comment: '**占位**。三条及以上并行。三条相位各差三分之一周期，\n'
+      + '   画面上任何时刻都有牌在不同高度——这是「同时在跑好几摊」的读法。\n'
+      + '   动作待定，现在只验证机制。',
+    layers: [
+      { sel: '.actor', name: 'tier3-body', poses: busyBody },
+      { sel: '.left-claw', name: 'tier3-left', period: 1130, poses: [
+        p('translate(1px,2px)', 3), p('translate(1px,0)', 2), p('translate(2px,-1px)', 2) ] },
+      { sel: '.right-claw', name: 'tier3-right', period: 1130, poses: [
+        p('translate(-2px,-1px)', 2), p('translate(-1px,1px)', 2), p('translate(-1px,2px)', 3) ] },
+      { sel: '.lane-a', name: 'tier3-lane-a', poses: lane(0) },
+      { sel: '.lane-b', name: 'tier3-lane-b', poses: [...lane(0).slice(2), ...lane(0).slice(0, 2)] },
+      { sel: '.lane-c', name: 'tier3-lane-c', poses: [...lane(0).slice(4), ...lane(0).slice(0, 4)] },
+      { sel: '.eyes', name: 'tier3-eyes', period: 1900, poses: [
+        p('translate(-1px,1px)', 3), p('translate(0,0)', 1), p('translate(1px,1px)', 3),
+        p('translate(0,1px)', 1) ] },
+      { sel: '.blink', name: 'tier3-blink', period: 4300, poses: [
+        p('scaleY(1)', 9), p('scaleY(.15)', 1), p('scaleY(1)', 4) ] },
+    ],
+  },
+);
