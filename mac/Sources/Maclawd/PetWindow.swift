@@ -8,6 +8,31 @@ import WebKit
  那些动画是 CSS 驱动的，WebKit 原生就能播，零资产转换、零重新导出。
  换成 NSImage 会丢掉全部动画。
  */
+/**
+ 承载 webView 的容器。
+
+ **桌宠一直拖不动的真正原因**：contentView 直接就是 WKWebView，
+ 而 WKWebView 是个正常的响应者，会自己吃掉 mouseDown / mouseDragged
+ 去处理网页内容。事件永远到不了 NSWindow 的 mouseDown——
+ 拖拽代码一直都在，只是从来没被调用过。而且没有任何报错，
+ 表现就是「点它没反应」，最难查的那种。
+
+ 这里把命中权收回来：落在角色身上就返回容器自己（不实现鼠标方法，
+ 事件顺着响应链交给窗口处理），落在空白处返回 nil。
+ 返回 nil 顺带解决了空白区吃掉点击的问题，而且**不需要任何全局监听**——
+ 之前那版用全局监听切 ignoresMouseEvents，把整个输入弄死了。
+ */
+@MainActor
+final class PetContentView: NSView {
+    /// 由窗口注入：这个点（窗口坐标）落在角色身上吗。
+    var hitsCharacter: ((NSPoint) -> Bool)?
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        guard hitsCharacter?(point) ?? true else { return nil }
+        return self
+    }
+}
+
 @MainActor
 final class PetWindow: NSWindow {
     private let webView: WKWebView
@@ -18,7 +43,6 @@ final class PetWindow: NSWindow {
     /// 外壳事件回灌入口，由 AppDelegate 接到 RuntimeClient 上。
     var onShellEvent: ((String) -> Void)?
     private var trackingArea: NSTrackingArea?
-    private var pointerMonitor: Any?
 
     // MARK: - 拖动状态
 
@@ -77,11 +101,18 @@ final class PetWindow: NSWindow {
         collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
         isMovableByWindowBackground = false
         ignoresMouseEvents = false
-        contentView = webView
+
+        // webView 必须套在容器里：直接当 contentView 的话它会吃掉全部鼠标事件。
+        let container = PetContentView(frame: NSRect(x: 0, y: 0, width: size, height: size))
+        container.autoresizingMask = [.width, .height]
+        webView.frame = container.bounds
+        webView.autoresizingMask = [.width, .height]
+        container.addSubview(webView)
+        contentView = container
 
         // 先试着回到上次拖到的地方；没有记录或那块屏幕已经不在了才回默认角落。
         if !restorePosition() { positionAtDefaultCorner() }
-        startPointerTracking()
+        container.hitsCharacter = { [weak self] point in self?.hitsCharacter(point) ?? true }
     }
 
     private func positionAtDefaultCorner() {
@@ -132,36 +163,21 @@ final class PetWindow: NSWindow {
     }
 
     /**
-     让窗口的空白部分对鼠标透明。
+     **不做**动态的点击穿透。
 
-     原本有一个 `clickThrough` 开关声明了这件事，但它默认 `false`、
-     而且**全项目没有任何地方设置过它**——等于承诺了没做。
-     后果是 93% 的透明区域照样吃掉点击：你想点桌宠底下的窗口，
-     点不着；你以为点了空白，其实把桌宠拎了起来。
+     曾经在这里用 NSEvent.addGlobalMonitorForEvents 跟着光标切换
+     ignoresMouseEvents，想让 93% 的透明区域把点击透给下面的窗口。
+     结果是把主功能弄坏了：**全局监听不接收发给自己应用的事件**，
+     一旦 ignoresMouseEvents 被置为 true，恢复它所需要的那个事件
+     可能永远等不到，于是窗口再也收不到任何鼠标输入——桌宠彻底拖不动，
+     而且没有任何报错，只是「点它没反应」。
 
-     这里改成跟着光标实时切换。必须用**全局**监听：
-     `ignoresMouseEvents` 为真时窗口自己收不到 mouseMoved，
-     只用窗口内的追踪区会一进入透明区就再也出不来。
-     （鼠标类的全局监听不需要辅助功能权限，键盘才需要。）
+     命中收窄改由两处**不依赖任何全局状态**的手段完成，各自都能独立验证：
+       - 追踪区收到角色包围盒 → hover 不再在 93px 外误触发
+       - mouseDown 判定命中 → 空白处按下不会把它拎起来
+     代价是空白处的点击仍然被窗口吃掉（透不到下面）。那是个锦上添花，
+     不值得拿主功能去换。真要做，得用能独立验证的机制，而不是全局监听。
      */
-    private func startPointerTracking() {
-        pointerMonitor = NSEvent.addGlobalMonitorForEvents(
-            matching: [.mouseMoved, .leftMouseDragged]
-        ) { [weak self] _ in
-            MainActor.assumeIsolated { self?.updatePassthrough() }
-        }
-    }
-
-    private func updatePassthrough() {
-        // 拖动途中绝不能改：一旦中途置为 true，后续的拖动事件会直接丢失，
-        // 桌宠会停在半路上。
-        guard !isDragging else { return }
-        let cursor = NSEvent.mouseLocation
-        let local = NSPoint(x: cursor.x - frame.minX, y: cursor.y - frame.minY)
-        let onCharacter = frame.contains(cursor) && hitsCharacter(local)
-        if ignoresMouseEvents != !onCharacter { ignoresMouseEvents = !onCharacter }
-    }
-
     // MARK: - 渲染
 
     func show(source: String?, motion: Bool, variant: String? = nil) {
@@ -390,10 +406,6 @@ final class PetWindow: NSWindow {
         }
         if hitEdge { onShellEvent?("shell.screenEdge") }
         onShellEvent?(edge == .none ? "shell.miniExit" : "shell.miniEnter")
-    }
-
-    deinit {
-        if let monitor = pointerMonitor { NSEvent.removeMonitor(monitor) }
     }
 
     override var canBecomeKey: Bool { false }
