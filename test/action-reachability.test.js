@@ -40,7 +40,10 @@ function idleFor(ms, options = {}) {
   const e = engine(options);
   e.observeEvent({ type: 'UserPromptSubmit', sessionId: 's' }, SEC);
   e.observeEvent({ type: 'Stop', sessionId: 's', disposition: 'complete' }, 2 * SEC);
-  return e.tick(2 * SEC + ms);
+  // 必须先 tick 一次**建立静默起点**。静默链的时钟从「仲裁再也选不出赢家」
+  // 那一刻起算，只 tick 一次的话 quietSince 就是当前时刻，silent 恒为 0。
+  e.tick(6 * SEC);           // Stop 的 success 插播 3 秒，这里已经结束
+  return e.tick(6 * SEC + ms);
 }
 
 /**
@@ -75,8 +78,9 @@ const SCENARIOS = {
     const e = engine();
     e.observeEvent({ type: 'UserPromptSubmit', sessionId: 's' }, SEC);
     e.observeEvent({ type: 'Stop', sessionId: 's', disposition: 'complete' }, 2 * SEC);
-    e.tick(9 * 60 * SEC);
-    e.observeEvent({ type: 'UserPromptSubmit', sessionId: 's' }, 9 * 60 * SEC + SEC);
+    e.tick(6 * SEC);                 // 建立静默起点
+    e.tick(12 * 60 * SEC);           // 睡着
+    e.observeEvent({ type: 'UserPromptSubmit', sessionId: 's' }, 12 * 60 * SEC + SEC);
     return e.current().actionId;
   },
 

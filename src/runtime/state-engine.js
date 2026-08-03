@@ -151,9 +151,13 @@ const DEFAULTS = {
   sessionIdleMs: 90_000,
   // 活跃态（working / thinking / needs_owner…）的兜底过期。
   // 这些状态**不该**被 90 秒收掉——长时间跑的工具本来就没有中间事件。
-  // 但也不能永不过期：会话被 kill -9 时 Stop / SessionEnd 都不会来，
-  // 没有兜底的话桌宠会永远卡在「正在工作」，再也不会睡。
-  staleActiveMs: 30 * 60_000,
+  // 但也不能拖太久：这段时间里桌宠会一直「假装在工作」，而这正是
+  // 实测里 idle 一次都没上过屏的原因之一（4 个会话全卡在 working）。
+  //
+  // 10 分钟是个取舍：比任何合理的工具调用都长（大型构建/测试一般 < 10 分钟，
+  // 那期间显示 working.long 是对的），又短到人离开后不至于被骗太久。
+  // 原来是 30 分钟，太偏向前者了。
+  staleActiveMs: 10 * 60_000,
   // 全部会话静默多久后进入 away（energy 低时缩短）
   awayMs: 5 * 60_000,
   // away 之后多久睡着
@@ -186,6 +190,21 @@ export function createStateEngine(options = {}) {
   let idleVariant = 'idle';
   let idleVariantAt = 0;
   let lastActivityAt = 0;
+  /**
+   * 「没东西可显示」是从什么时候开始的。
+   *
+   * 静默链（idle → away → sleeping）此前从 lastActivityAt 起算，但进入这条链的
+   * 闸门是「还有没有活跃会话」——两个时间尺度对不上，后果是两个动作永远看不到：
+   *
+   *   - idle：会话 90 秒过期、away 阈值 105 秒（体力 0 时），
+   *     **显示窗口只有 15 秒**，还要求这 15 秒里恰好没有新事件。实测 0 次。
+   *   - away：活跃态会话要 30 分钟才兜底过期，那一刻 silent 早已越过
+   *     away+sleep 线，直接判成 sleeping。away 那 60 秒被整个跳过。实测 0 次。
+   *
+   * 改成**会话清空的那一刻**起算。长时间跑的工具照常显示 working.long
+   * （它的会话还在），而人真的离开后，完整的 idle → away → sleeping 才走得完。
+   */
+  let quietSince = 0;
   const random = options.random ?? Math.random;
 
   /**
@@ -526,13 +545,16 @@ const SYNTHETIC_SESSIONS = new Set(['rate', 'shell']);
       s.priority = priority;
     }
     if (best) {
+      quietSince = 0;
       emit({ actionId: best.state, variant: best.variant, sessionId: best.id },
         'session', now, best.priority);
       return current;
     }
 
-    // 没有活跃会话：按静默时长走 idle → away → sleeping
-    const silent = now - lastActivityAt;
+    // 没有可显示的会话了。静默链从**这一刻**起算，而不是从最后一次事件——
+    // 见 quietSince 的说明。
+    if (!quietSince) quietSince = now;
+    const silent = now - quietSince;
     if (lastActivityAt > 0 && silent > awayThreshold() + config.sleepMs) {
       emit({ actionId: 'sleeping', variant: null, sessionId: null }, 'silence', now);
       return current;

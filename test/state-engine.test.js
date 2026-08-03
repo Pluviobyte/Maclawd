@@ -181,15 +181,23 @@ test('hook 事件优先于速率推断', () => {
 // ---------- 静默转场 ----------
 
 test('静默足够久依次进入 away 与 sleeping', () => {
-  // 满体力时 away 阈值 = 10s，sleeping 阈值 = 10 + 5 = 15s（相对最后一次活动）
+  // 静默时钟从**没东西可显示的那一刻**起算，不是从最后一次事件。
+  // Stop 让会话回到 idle 级（会被仲裁过滤掉），同时插播 3 秒的 success；
+  // 插播结束、仲裁再也选不出赢家时，才算真正安静下来。
+  //
+  // 旧版按「最后一次事件」起算，与「会话还在不在」这个闸门对不上，
+  // 后果是 away 在真实使用中一次都没上过屏（活跃会话拖过了 away 窗口，
+  // 等它过期时 silent 早已越过 sleeping 线）。
   const e = engine({ awayMs: 10 * SEC, sleepMs: 5 * SEC });
   e.observeEvent({ type: 'Stop', sessionId: 's' }, SEC);
-  e.tick(5 * SEC);
-  assert.notEqual(e.current().actionId, 'away', '静默 4s 还不该离开');
-  e.tick(12 * SEC);
+  e.tick(5 * SEC);   // 插播刚结束，静默时钟从这里起算
+  assert.notEqual(e.current().actionId, 'away', '刚安静下来还不该离开');
+  e.tick(14 * SEC);
+  assert.notEqual(e.current().actionId, 'away', '静默 9s，还不到阈值');
+  e.tick(16 * SEC);
   assert.equal(e.current().actionId, 'away', '静默 11s 进入 away');
-  e.tick(20 * SEC);
-  assert.equal(e.current().actionId, 'sleeping', '静默 19s 已经睡着');
+  e.tick(21 * SEC);
+  assert.equal(e.current().actionId, 'sleeping', '静默 16s 已经睡着');
 });
 
 test('体力越低越早进入 away', () => {
@@ -214,6 +222,7 @@ test('从睡眠中被唤醒会插播 Morning Stretch，闭合睡眠链', () => {
   // 三个动作里有一个永远看不到。
   const e = engine({ awayMs: 10 * SEC, sleepMs: 5 * SEC });
   e.observeEvent({ type: 'Stop', sessionId: 's' }, SEC);
+  e.tick(5 * SEC);   // 插播结束，静默时钟起算
   e.tick(30 * SEC);
   assert.equal(e.current().actionId, 'sleeping');
 
@@ -226,6 +235,7 @@ test('从睡眠中被唤醒会插播 Morning Stretch，闭合睡眠链', () => {
 test('速率推断同样能唤醒', () => {
   const e = engine({ awayMs: 10 * SEC, sleepMs: 5 * SEC });
   e.observeEvent({ type: 'Stop', sessionId: 's' }, SEC);
+  e.tick(5 * SEC);
   e.tick(30 * SEC);
   e.observeRate(90_000, 31 * SEC);
   assert.equal(e.current().actionId, 'waking');
@@ -234,6 +244,7 @@ test('速率推断同样能唤醒', () => {
 test('刚醒来时不叠加 launching，两个开场动作不打架', () => {
   const e = engine({ awayMs: 10 * SEC, sleepMs: 5 * SEC });
   e.observeEvent({ type: 'Stop', sessionId: 's' }, SEC);
+  e.tick(5 * SEC);
   e.tick(30 * SEC);
   e.observeEvent({ type: 'SessionStart', sessionId: 'new' }, 31 * SEC);
   assert.equal(e.current().actionId, 'waking');
@@ -532,9 +543,19 @@ test('会话被强杀后不能永远卡在工作态——否则桌宠再也不�
   assert.equal(e.tick(5 * 60 * SEC).actionId, 'working.testing',
     '长时间跑的工具被误收了——它本来就没有中间事件');
 
-  // 三十分钟没有任何事件：源头几乎肯定已经断了，必须放行到静默链
-  const after = e.tick(40 * 60 * SEC);
+  // 十分钟没有任何事件：源头几乎肯定已经断了，必须放行到静默链。
+  // 这个兜底原来是 30 分钟——太偏向「保护长时间跑的工具」，
+  // 代价是人离开后桌宠还会假装工作半小时。
+  const after = e.tick(20 * 60 * SEC);
   assert.notEqual(after.actionId, 'working.testing', '卡死的会话没有被兜底清掉');
-  assert.ok(['away', 'sleeping'].includes(after.actionId),
-    `清掉之后应进入静默链，实际是 ${after.actionId}`);
+  // 清掉之后进入静默链的**第一站**是 idle（含它的三个变体），不是直接睡着。
+  // 静默时钟从会话清空那一刻起算，所以要再等满 away 阈值才离开。
+  // 旧版从「最后一次事件」起算，这里会直接跳到 sleeping——
+  // 那正是实测中 idle 与 away 一次都没上过屏的原因。
+  assert.ok(after.actionId.startsWith('idle'),
+    `清掉之后应先回到 idle，实际是 ${after.actionId}`);
+
+  // 再等满 away 与 sleeping 的阈值，完整的链才走得完
+  assert.equal(e.tick(20 * 60 * SEC + 6 * 60 * SEC).actionId, 'away', '没有进入 away');
+  assert.equal(e.tick(20 * 60 * SEC + 8 * 60 * SEC).actionId, 'sleeping', '没有睡着');
 });
