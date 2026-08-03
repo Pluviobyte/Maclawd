@@ -44,7 +44,12 @@ export const AXES = [
  */
 function scalePx(decl, factor) {
   return decl.replace(/(-?\d+(?:\.\d+)?)px/g, (_, n) => {
-    const scaled = Math.round(Number(n) * factor);
+    const value = Number(n);
+    let scaled = Math.round(value * factor);
+    // 缩小时**不许把非零抹成零**：本来就只有 1px 的动作（呼吸、眨眼的位移）
+    // 减半会直接归零，整条图层变成静止——那不是「舒缓」是「没了」。
+    // 保留 1px 的方向，幅度已经到底了就到底。
+    if (scaled === 0 && value !== 0) scaled = value > 0 ? 1 : -1;
     return `${scaled}px`;
   });
 }
@@ -98,15 +103,27 @@ function distribute(poses) {
 function emit(anim, axis) {
   const t = transform(anim, axis);
   if (!t) return '';
-  const sel = `.state-${anim.state}[data-variant="${axis}"]`;
-  const lines = [`${sel} { --duration: ${t.duration / 1000}s; }`];
+  /**
+   * **两种形式都要写。**
+   *
+   * `data-variant` 可能落在 svg 根上（内联渲染时），也可能落在外层容器上
+   * （Swift 外壳就是包一层 div）。只写自身形式的话，包在外层的那种用法会
+   * **静默回落到基准**——五个候选渲染成同一个东西，而页面看起来完全正常，
+   * 只会让人以为「变体太微妙」。仓库里已有的 delegating 变体就是两种都写的，
+   * 这里照做。
+   */
+  const selves = [
+    `.state-${anim.state}[data-variant="${axis}"]`,
+    `[data-variant="${axis}"] .state-${anim.state}`,
+  ];
+  const lines = [`${selves.map((x) => x).join(',\n')} { --duration: ${t.duration / 1000}s; }`];
   for (const layer of t.layers) {
     const name = `${layer.name}--${axis}`;
     const period = layer.period && layer.period !== t.duration
       ? ` animation-duration: ${layer.period / 1000}s;`
       : '';
     const origin = layer.origin ? ` transform-origin: ${layer.origin};` : '';
-    lines.push(`${sel} ${layer.sel} {${origin} animation-name: ${name};${period} }`);
+    lines.push(`${selves.map((x) => `${x} ${layer.sel}`).join(',\n')} {${origin} animation-name: ${name};${period} }`);
   }
   for (const layer of t.layers) {
     lines.push(`@keyframes ${layer.name}--${axis} { ${distribute(layer.poses)} }`);

@@ -446,8 +446,14 @@ test('变体：每个契约动作都有完整的五轴', () => {
   assert.ok(states.length >= 40, `变体覆盖的动作只有 ${states.length} 个，太少`);
   for (const state of states) {
     for (const axis of nonBase) {
-      assert.ok(css.includes(`.state-${state}[data-variant="${axis}"] {`),
-        `${state} 缺少 ${axis} 轴`);
+      // 两种选择器形式都要在：属性可能落在 svg 根上（内联渲染），
+      // 也可能落在外层容器上（Swift 外壳包一层 div）。
+      // 只有一种的话，另一种用法会**静默回落到基准**——
+      // 五个候选渲染成同一个东西，而页面看起来完全正常。
+      assert.ok(css.includes(`.state-${state}[data-variant="${axis}"]`),
+        `${state} 缺少 ${axis} 轴（自身形式）`);
+      assert.ok(css.includes(`[data-variant="${axis}"] .state-${state}`),
+        `${state} 缺少 ${axis} 轴（祖先形式）`);
     }
   }
 });
