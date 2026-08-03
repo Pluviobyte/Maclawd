@@ -82,15 +82,25 @@ async function main() {
 </svg>
 `);
 
+    /**
+     * 关键帧名**强制加命名空间**。
+     *
+     * 候选由多个作者并行写，各写各的文件，谁也看不到别人用了什么名字。
+     * 两个人都写 `c1-body` 的话，后加载的会**静默覆盖**先加载的——
+     * 两个候选长得一模一样，而各自的作者都以为自己的生效了。
+     * 加载器只查 id 撞车，查不到图层名撞车，所以这里兜住。
+     */
+    const kf = (name) => (name.startsWith(`${state}-`) ? name : `${state}-${name}`);
+
     const lines = [`.state-${state} { --duration: ${cand.duration / 1000}s; }`];
     for (const layer of cand.layers) {
       const period = layer.period && layer.period !== cand.duration
         ? ` animation-duration: ${layer.period / 1000}s;` : '';
       const origin = layer.origin ? ` transform-origin: ${layer.origin};` : '';
-      lines.push(`.state-${state} ${layer.sel} {${origin} animation-name: ${layer.name};${period} }`);
+      lines.push(`.state-${state} ${layer.sel} {${origin} animation-name: ${kf(layer.name)};${period} }`);
     }
     for (const layer of cand.layers) {
-      lines.push(`@keyframes ${layer.name} { ${distribute(layer.poses)} }`);
+      lines.push(`@keyframes ${kf(layer.name)} { ${distribute(layer.poses)} }`);
     }
     blocks.push(lines.join('\n'));
 

@@ -314,10 +314,48 @@ test('没有契约动作能绕过运动质量门槛', () => {
     const cls = svg.match(/class="(?:[a-z]+ )?state-([a-z0-9_-]+)"/)?.[1];
     // mini 档有自己的一套约束（design/mini-actions.json），不走主形态姿态谱
     if (!cls || cls.startsWith('mini-')) continue;
+    // 手工候选（cand-*.svg）按定义就不在契约里——它们是**待选**的动作，
+    // 选中之前不该被要求进姿态谱。但豁免不能白给：下一条测试对候选跑
+    // 同一套密度门槛，否则这个豁免本身就变成了这条测试要防的那个洞。
+    if (file.startsWith('cand-')) continue;
     if (!inSpec.has(cls)) outside.push(`${file} → .state-${cls}`);
   }
   assert.deepEqual(outside, [],
     `这些动作没走姿态谱管线，整个躲过了密度与缓动门槛：${outside.join(', ')}`);
+});
+
+test('手工候选也要过密度门槛——豁免不等于免检', () => {
+  const list = JSON.parse(
+    read('web/candidate-data.js').match(/=\s*(\[[\s\S]*\]);/)[1],
+  );
+  assert.ok(list.length, 'candidate-data.js 里一个候选都没有');
+
+  const slow = [];
+  for (const c of list) {
+    // 姿态密度 = 所有图层「变化时刻」的**并集** ÷ 时长。
+    // 按图层分别算会高估：三层各 4 拍但拍在一起，观感只有 4 拍不是 12 拍。
+    const moments = new Set();
+    const rules = css.matchAll(
+      new RegExp(`\\.state-${c.id}\\s+\\S+\\s*\\{([^}]*)\\}`, 'g'),
+    );
+    for (const [, body] of rules) {
+      const name = body.match(/animation-name:\s*([a-z0-9-]+)/)?.[1];
+      if (!name || !keyframes[name]) continue;
+      const period = Number(body.match(/animation-duration:\s*([\d.]+)s/)?.[1] ?? 0) * 1000
+        || c.durationMs;
+      // 图层周期可能短于总时长，在一个总时长里重复若干遍
+      for (let rep = 0; rep * period < c.durationMs; rep++) {
+        for (const s of stops(keyframes[name])) {
+          const t = (rep + s / 100) * period;
+          if (t < c.durationMs) moments.add(Math.round(t));
+        }
+      }
+    }
+    const density = moments.size / (c.durationMs / 1000);
+    if (density < 2.8) slow.push(`${c.id}=${density.toFixed(2)}`);
+  }
+  assert.deepEqual(slow, [],
+    `这些候选比像素动画的静息下限还慢，看起来会像卡住：${slow.join(', ')}`);
 });
 
 test('分发包必须是通用二进制——DMG 不允许出单架构', () => {
@@ -349,14 +387,26 @@ test('外壳必须把共享样式表真正内联，不能靠 xml-stylesheet 指�
   //
   // 这个坑在 scripts/motion-check.html 里踩过一次并写了注释，
   // 当时没意识到外壳走的是同一条路。所以这里立一条断言，不靠记性。
-  const swift = read('mac/Sources/Maclawd/PetWindow.swift');
-  assert.match(swift, /maclawd-actions\.css/,
-    '外壳没有读取共享样式表——动画不会生效');
-  assert.match(swift, /<style>\\\(sheet\)<\/style>/,
-    '外壳没有把样式表内容内联进 HTML');
+  //
+  // 渲染现在收敛在 CharacterRenderer 里——桌宠窗口和面板都用它。
+  // 这条断言跟着搬过来，并且额外要求**只有这一份实现**：
+  // 拆成两份的话，漂移的表现会是「桌宠在动、面板里的它不动」。
+  const renderer = read('mac/Sources/Maclawd/CharacterRenderer.swift');
+  assert.match(renderer, /maclawd-actions\.css/,
+    '渲染器没有读取共享样式表——动画不会生效');
+  assert.match(renderer, /<style>\\\(sheet\)<\/style>/,
+    '渲染器没有把样式表内容内联进 HTML');
   // 素材里的处理指令要被剥掉：留着无害，但留着容易让人以为它在起作用
-  assert.match(swift, /replacingOccurrences\([\s\S]{0,120}xml-stylesheet/,
-    '外壳没有剥掉那条不起作用的 xml-stylesheet 指令');
+  assert.match(renderer, /replacingOccurrences\([\s\S]{0,120}xml-stylesheet/,
+    '渲染器没有剥掉那条不起作用的 xml-stylesheet 指令');
+
+  // 只能有一份。任何别的 Swift 文件都不该再自己拼一遍这段 HTML。
+  const swiftDir = join(ROOT, 'mac/Sources/Maclawd');
+  const others = readdirSync(swiftDir)
+    .filter((f) => f.endsWith('.swift') && f !== 'CharacterRenderer.swift')
+    .filter((f) => read(`mac/Sources/Maclawd/${f}`).includes('xml-stylesheet'));
+  assert.deepEqual(others, [],
+    `这些文件自己拼了一遍渲染逻辑：${others.join('、')}。两份实现必然漂移。`);
 });
 
 test('契约引用的素材都用同一张共享样式表——内联才拿得到全部规则', () => {

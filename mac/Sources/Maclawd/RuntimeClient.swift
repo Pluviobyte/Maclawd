@@ -63,6 +63,16 @@ struct UsageSnapshot {
     var activeSeconds: Int = 0
 }
 
+/// 菜单栏要的额度摘要。完整结构在 PanelModel.swift 里，这里只留最紧的那个窗口——
+/// 菜单栏放不下更多，也不该放。
+struct QuotaBrief: Equatable {
+    var usedPercent: Double?
+    var windowLabel: String?
+    var resetAt: Date?
+    /// 通道装没装。菜单栏据此决定「显示 —」还是干脆不显示这一档。
+    var available: Bool = false
+}
+
 /**
  状态引擎的唯一实现留在 Node 侧，Swift 只做渲染。
 
@@ -72,20 +82,38 @@ struct UsageSnapshot {
 
  外壳负责把 Node 运行时作为子进程带起来，用户不需要自己开终端。
  */
-final class RuntimeClient {
+@MainActor
+final class RuntimeClient: ObservableObject {
     /// 运行时**实际**监听的端口。首选端口被占时它会往后找，
     /// 然后把结果写进端点文件——外壳跟着文件走，不自己假设。
     private var port: Int
     private let preferredPort: Int
     private var process: Process?
+    /// 长轮询的游标。服务端只在画面**真的变了**时才把它推进，
+    /// 所以带着它去问等于说「我停在这一帧，变了叫我」。
+    private var stateVersion = 0
+    private var streamTask: URLSessionDataTask?
+    private var streamStopped = true
+    private var streamBackoff: TimeInterval = 0
     private let session: URLSession
     private let repoRoot: URL
 
-    private(set) var state = RuntimeState()
-    private(set) var usage = UsageSnapshot()
-    private(set) var lastError: String?
+    // @Published 让 SwiftUI 面板直接观察同一份状态，不用再复制一套。
+    // 全部赋值都收敛到主线程（见 refresh），此前它们是在 URLSession 的
+    // 回调线程上直接改的——菜单栏读到半个快照不会崩，但 SwiftUI 会。
+    @Published private(set) var state = RuntimeState()
+    @Published private(set) var usage = UsageSnapshot()
+    @Published private(set) var quota = QuotaBrief()
+    @Published private(set) var lastError: String?
+
+    /// 待弹的额度提醒。判定在 Node 侧（按 resetAt 每周期一次），
+    /// 外壳只负责弹和回执——两份去重逻辑必然漂移，漂移的表现是重复打扰用户。
+    @Published private(set) var pendingAlerts: [QuotaAlert] = []
 
     var onUpdate: (() -> Void)?
+
+    /// 面板要用同一个端口。端口会随 endpoint 文件变（4173 被占时会换）。
+    var currentPort: Int { port }
 
     init(repoRoot: URL, port: Int = 4173) {
         self.repoRoot = repoRoot
@@ -212,12 +240,16 @@ final class RuntimeClient {
         do {
             try task.run()
             process = task
+            // 状态流跟着运行时一起起。头一两次必然连不上（node 还在启动），
+            // 退避重连正是为这一段准备的——不需要在外面猜一个"等多久"。
+            startStateStream()
         } catch {
             lastError = "启动运行时失败: \(error.localizedDescription)"
         }
     }
 
     func stopRuntime() {
+        stopStateStream()
         process?.terminate()
         process = nil
     }
@@ -250,8 +282,18 @@ final class RuntimeClient {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "content-type")
         request.httpBody = try? JSONSerialization.data(withJSONObject: ["type": type])
-        // 即发即忘：外壳的交互反馈不该因为运行时慢而卡住 UI
-        session.dataTask(with: request) { _, _, _ in }.resume()
+        // 不阻塞 UI，但**响应不能丢**：它的响应体就是新画面。
+        // 以前这里是 `{ _, _, _ in }`，于是点一下桌宠要等到下一次轮询
+        // （最多 2 秒）才看到 Poke Squish——「点它没反应」就是这么来的。
+        session.dataTask(with: request) { [weak self] data, _, _ in
+            let json = data.flatMap {
+                try? JSONSerialization.jsonObject(with: $0) as? [String: Any]
+            } ?? nil
+            guard let json else { return }
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated { self?.apply(json) }
+            }
+        }.resume()
     }
 
     /// 端点文件（运行时写的）→ 实际端口。
@@ -270,52 +312,136 @@ final class RuntimeClient {
         if discovered != port { port = discovered }
     }
 
-    func refresh() {
-        syncPortFromEndpoint()
-        get("/api/state") { [weak self] json in
-            guard let self, let json else { return }
-            var next = RuntimeState()
-            if let s = json["state"] as? [String: Any] {
-                next.actionId = s["actionId"] as? String ?? "idle"
-                next.variant = s["variant"] as? String
-                next.reason = s["reason"] as? String ?? ""
+    /// `/api/state` 的响应 → RuntimeState。
+    ///
+    /// 抽出来是因为现在有**三个**地方产生这份快照：长轮询、投事件的响应、
+    /// 首次加载。三份解码必然漂移，而漂移的表现是「点一下和自己变化时
+    /// 表现不一样」这种极难复现的 bug。
+    private static func decodeState(_ json: [String: Any]) -> RuntimeState {
+        var next = RuntimeState()
+        if let s = json["state"] as? [String: Any] {
+            next.actionId = s["actionId"] as? String ?? "idle"
+            next.variant = s["variant"] as? String
+            next.reason = s["reason"] as? String ?? ""
+        }
+        if let p = json["plan"] as? [String: Any] {
+            next.name = p["name"] as? String ?? ""
+            next.source = p["source"] as? String
+            next.durationMs = p["durationMs"] as? Int
+            next.mode = p["mode"] as? String ?? "loop"
+            next.next = p["next"] as? String
+            next.motion = p["motion"] as? Bool ?? true
+            if let g = p["geometry"] as? [String: Any] {
+                next.hitBox = NormalizedRect(g["hit"])
+                next.marginBox = NormalizedRect(g["margin"])
             }
-            if let p = json["plan"] as? [String: Any] {
-                next.name = p["name"] as? String ?? ""
-                next.source = p["source"] as? String
-                next.durationMs = p["durationMs"] as? Int
-                next.mode = p["mode"] as? String ?? "loop"
-                next.next = p["next"] as? String
-                next.motion = p["motion"] as? Bool ?? true
-                if let g = p["geometry"] as? [String: Any] {
-                    next.hitBox = NormalizedRect(g["hit"])
-                    next.marginBox = NormalizedRect(g["margin"])
-                }
-            }
-            if let f = json["focus"] as? [String: Any], let pid = f["pid"] as? Int, pid > 1 {
-                next.focusPid = pid_t(pid)
-            }
-            next.mini = json["mini"] as? Bool ?? false
-            if let p = json["plan"] as? [String: Any],
-               let d = p["drift"] as? [String: Any],
+            if let d = p["drift"] as? [String: Any],
                let dx = (d["dx"] as? NSNumber)?.doubleValue,
                let dy = (d["dy"] as? NSNumber)?.doubleValue {
                 next.drift = (CGFloat(dx), CGFloat(dy))
             }
-            if let d = json["debug"] as? [String: Any] {
-                next.energy = d["energy"] as? Double ?? 1
-                next.tokensPerMin = d["rate"] as? Int ?? 0
-            }
-            next.disabled = self.state.disabled
-            self.state = next
-            DispatchQueue.main.async { self.onUpdate?() }
         }
+        if let f = json["focus"] as? [String: Any], let pid = f["pid"] as? Int, pid > 1 {
+            next.focusPid = pid_t(pid)
+        }
+        next.mini = json["mini"] as? Bool ?? false
+        if let d = json["debug"] as? [String: Any] {
+            next.energy = d["energy"] as? Double ?? 1
+            next.tokensPerMin = d["rate"] as? Int ?? 0
+        }
+        return next
+    }
+
+    /// 应用一份新快照。**必须已经在主线程上**——所有可变状态都归主 actor。
+    ///
+    /// 解码可以在后台做（纯函数），但赋值不行：URLSession 的回调在它自己的
+    /// 队列上，直接改 stateVersion / streamBackoff 就是数据竞争。
+    /// 编译器只给了警告，但这类竞争的表现是偶发的错帧，极难复现。
+    @MainActor
+    private func apply(_ json: [String: Any]) {
+        var next = Self.decodeState(json)
+        if let v = json["version"] as? Int { stateVersion = v }
+        next.disabled = state.disabled
+        state = next
+        onUpdate?()
+    }
+
+    /**
+     状态流：长轮询，不是定时拉。
+
+     **原来的问题。** 引擎内部换状态只要 2ms，而这里每 2 秒才拉一次，
+     于是用户看到的延迟是 0～2000ms（平均 1 秒）。那读起来就是「卡」——
+     不是动画慢，是消息根本还没送到。
+
+     长轮询把方向反过来：请求挂在服务端等，状态一变立刻返回。
+     结果**又快又省**——变化时几十毫秒送达，不变时 25 秒才一个请求，
+     比原来每 2 秒一次还少。
+
+     失败时退避重连而不是紧循环：运行时重启的那几秒里，紧循环会打出
+     几百个连不上的请求，还会把端点文件的重新发现挤掉。
+     */
+    private func streamState() {
+        guard !streamStopped else { return }
+        syncPortFromEndpoint()
+        guard let url = URL(string: "http://127.0.0.1:\(port)/api/state?since=\(stateVersion)") else { return }
+        var request = URLRequest(url: url)
+        // 必须长于服务端的 25 秒挂起，否则每次都是客户端先超时，
+        // 长轮询退化成 30 秒一次的慢轮询。
+        request.timeoutInterval = 40
+        streamTask?.cancel()
+        streamTask = session.dataTask(with: request) { [weak self] data, _, error in
+            // 解析在后台做，改状态一律回主线程——见 apply 上方的说明。
+            let json = data.flatMap {
+                try? JSONSerialization.jsonObject(with: $0) as? [String: Any]
+            } ?? nil
+            let failed = error != nil
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    guard let self, !self.streamStopped else { return }
+                    if let json {
+                        self.apply(json)
+                        self.streamBackoff = 0
+                        self.streamState()
+                        return
+                    }
+                    // 连不上（多半是运行时正在重启）：退避，最多 4 秒。
+                    // 紧循环会在重启的那几秒里打出几百个连不上的请求。
+                    if failed { self.streamBackoff = min(self.streamBackoff + 0.5, 4.0) }
+                    let delay = max(self.streamBackoff, 0.2)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                        MainActor.assumeIsolated { self.streamState() }
+                    }
+                }
+            }
+        }
+        streamTask?.resume()
+    }
+
+    func startStateStream() {
+        streamStopped = false
+        streamState()
+    }
+
+    func stopStateStream() {
+        streamStopped = true
+        streamTask?.cancel()
+        streamTask = nil
+    }
+
+    func refresh() {
+        syncPortFromEndpoint()
+        // 画面本身走 streamState()。这里只管面板数字——它们是几秒级的量，
+        // 用不着毫秒级，也不该跟着画面一起被唤醒。
 
         get("/api/live") { [weak self] json in
             guard let self, let json else { return }
-            self.state.tokensPerMin = json["tokensPerMin"] as? Int ?? 0
-            self.state.disabled = json["disabled"] as? Bool ?? false
-            DispatchQueue.main.async { self.onUpdate?() }
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    self.state.tokensPerMin = json["tokensPerMin"] as? Int ?? 0
+                    self.state.disabled = json["disabled"] as? Bool ?? false
+                    self.onUpdate?()
+                }
+            }
         }
 
         get("/api/summary?range=today") { [weak self] json in
@@ -331,8 +457,67 @@ final class RuntimeClient {
             if let sessions = json["sessions"] as? [String: Any] {
                 snapshot.activeSeconds = sessions["activeSeconds"] as? Int ?? 0
             }
-            self.usage = snapshot
-            DispatchQueue.main.async { self.onUpdate?() }
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    self.usage = snapshot
+                    self.onUpdate?()
+                }
+            }
         }
+
+        get("/api/quota") { [weak self] json in
+            guard let self, let json else { return }
+            let snapshot = QuotaSnapshot.decode(json)
+            // 菜单栏只放得下一个数字，取最紧的那个窗口。
+            let tightest = snapshot.sources
+                .flatMap { source in source.windows.map { (source, $0) } }
+                .filter { !$0.1.isReset && $0.1.usedPercent != nil }
+                .max { ($0.1.usedPercent ?? 0) < ($1.1.usedPercent ?? 0) }
+            var brief = QuotaBrief()
+            brief.available = !snapshot.empty
+            brief.usedPercent = tightest?.1.usedPercent
+            brief.windowLabel = tightest?.1.label
+            brief.resetAt = tightest?.1.resetAt
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    self.quota = brief
+                    self.onUpdate?()
+                }
+            }
+        }
+
+        get("/api/quota/alerts") { [weak self] json in
+            guard let self, let json else { return }
+            let alerts = (json["alerts"] as? [[String: Any]] ?? []).compactMap(QuotaAlert.init)
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    self.pendingAlerts = alerts
+                    self.onUpdate?()
+                }
+            }
+        }
+    }
+
+    /// 弹过之后回执，Node 侧才会记下「这个周期提醒过了」。
+    /// 不回执就会每 2 秒重弹一次——这是最容易做错、也最惹人烦的一处。
+    func acknowledge(alerts: [QuotaAlert]) {
+        guard !alerts.isEmpty else { return }
+        pendingAlerts = pendingAlerts.filter { pending in
+            !alerts.contains(where: { $0.key == pending.key })
+        }
+        guard let url = URL(string: "http://127.0.0.1:\(port)/api/quota/alerts") else { return }
+
+        // 拆开写：塞成一整条表达式时编译器要花几十秒去推断嵌套字典的类型。
+        var payload: [[String: Any]] = []
+        for alert in alerts {
+            let resetMs: Double = alert.resetAt.map { $0.timeIntervalSince1970 * 1000 } ?? 0
+            payload.append(["key": alert.key, "resetAt": resetMs])
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "content-type")
+        request.httpBody = try? JSONSerialization.data(withJSONObject: ["acknowledged": payload])
+        session.dataTask(with: request) { _, _, _ in }.resume()
     }
 }

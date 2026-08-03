@@ -353,18 +353,40 @@ Maclawd 现在是 ad-hoc 签名（见 `PROGRESS.md`「Still not done」），没
 
 ## 六、分几步做
 
-| 步 | 做什么 | 做完的效果 |
-| --- | --- | --- |
-| 0 | ~~验证接口真的给额度~~ | ✅ **已完成**（2026-08-03，见 2.1） |
-| 1 | 状态行注册器（六条规则）+ 卸载对称性测试 | 额度数据进得来，且不会弄坏用户配置 |
-| 2 | `account-quota.json` + 两个接口 + 过期判定 | 数据存得住、不显示过期的假值 |
-| 3 | NSPopover 容器 + 左右键分工 + 预热 | 点菜单栏弹面板，不跳浏览器 |
-| 4 | 概览页（桌宠 + 额度 + 今日 + 项目） | **主要场景全覆盖** |
-| 5 | 设置页 + 额度开关 + 提醒开关 | 用户能自己控制 |
-| 6 | 提醒浮窗 + 阈值 + 按周期去重 | 快用完时会知道 |
-| 7 | 统计页（区间、项目、模型、趋势） | 不再需要开浏览器 |
+全部完成（2026-08-03）。
 
-1–6 做完才算一个完整功能。第 7 步之前 `/usage` 网页仍然是细看的出口。
+| 步 | 做什么 | 落在哪 |
+| --- | --- | --- |
+| 0 | ✅ 验证接口真的给额度 | 见 2.1，实测 payload |
+| 1 | ✅ 状态行注册器（六条规则）+ 对称性测试 | `src/runtime/statusline-install.js`、`hooks/maclawd-statusline.js` |
+| 2 | ✅ 账号级存储 + 两个接口 + 过期判定 | `src/runtime/account-quota.js`、`server.js` 的 `/api/quota{,/alerts}`、`/api/statusline` |
+| 3 | ✅ NSPopover 容器 + 左右键分工 + 预热 | `PanelController.swift`、`MenuBarController.swift` |
+| 4 | ✅ 概览页（桌宠 + 额度 + 今日 + 项目） | `PanelView.swift` |
+| 5 | ✅ 设置页 + 额度开关 + 提醒开关 | `PanelSettings.swift` |
+| 6 | ✅ 提醒浮窗 + 阈值 + 按周期去重 | `QuotaAlertHUD.swift` |
+| 7 | ✅ 统计页（区间、项目、模型、趋势） | `PanelView.swift` 的 `StatsPage` |
+
+配套：`CharacterRenderer.swift`（渲染收敛成一份）、`PanelModel.swift`（面板数据层，
+只在面板打开时轮询）、CLI 的 `maclawd-usage quota` 与 `statusline` 子命令。
+测试 363 → 410。
+
+### 实机跑起来才发现的两件事
+
+**1. 菜单栏图标会被系统折叠，popover 会飞到屏幕左边。**
+
+这台机器的菜单栏已经挤满，系统把 Maclawd 的图标收进了溢出区（右侧那个 `‹`）。
+`item.button` 仍然存在、仍然能收到点击，但屏幕位置在可见区域之外，
+于是 `popover.show(relativeTo:of:)` 把面板扔到了屏幕最左边。
+
+菜单栏挤满在真实机器上很常见（还有 Bartender / Ice 这类主动折叠的工具），
+不是边缘情况。现在锚点不可用时退到桌宠身上（`PanelController.usableAnchor`）。
+
+**2. 只有一两天数据时，「每日趋势」是一块色块而不是图表。**
+
+一根柱子铺满整个宽度，读起来完全不像图表。现在少于 3 天不画这一块，
+且柱子宽度上限 10pt。同理，值为 0 的行（`<synthetic>` 这类占位模型）不再显示。
+
+两条都是测试抓不到、跑起来一眼就看见的那类问题。
 
 ---
 
@@ -412,6 +434,19 @@ Maclawd 现在是 ad-hoc 签名（见 `PROGRESS.md`「Still not done」），没
 8. 用户原有的状态行在任何情况下都没被弄坏
 
 第 4、7、8 条必须有测试。装了卸不干净、以及提醒不弹，是这类功能最伤信任的两种失败。
+
+**验收结果（2026-08-03）**
+
+| | 结论 |
+| --- | --- |
+| 1 打开到读懂 | ✅ 概览页首屏就是角色 + 状态名 + 额度 + 今日 |
+| 2 不用开浏览器 | ✅ 三页全在 popover 里；`/usage` 降级成设置页里的一个按钮 |
+| 3 冷启动 | ✅ WKWebView 在应用启动时预热，点开不闪白 |
+| 4 **提醒确实弹出来了** | ✅ 实机验证：注入 94% → 2 秒内弹出「Claude Code 5 小时额度 · 已用 94% · 2h59m 后重置」 |
+| 5 同周期只提醒一次 | ✅ 回执后不再弹；换 `resetAt` 后重新可弹（`test/account-quota.test.js`） |
+| 6 关闭后不显示历史数字 | ✅ `OverviewPage.disabledNotice` |
+| 7 卸载逐字节还原 | ✅ `test/statusline-install.test.js`，含三层引号的真实 claude-hud 命令 |
+| 8 原有状态行不被弄坏 | ✅ 同上；本机实测「开开关 → 被挡下 → 开关自动拨回 false」 |
 
 ---
 

@@ -193,18 +193,6 @@ final class PetWindow: NSWindow {
      */
     // MARK: - 渲染
 
-    /// 共享样式表的内容。读一次就够——它在包内是只读的。
-    private var stylesheetCache: String?
-
-    private func sharedStylesheet(near assetURL: URL) -> String {
-        if let cached = stylesheetCache { return cached }
-        let css = assetURL.deletingLastPathComponent()
-            .appendingPathComponent("maclawd-actions.css")
-        let text = (try? String(contentsOf: css, encoding: .utf8)) ?? ""
-        stylesheetCache = text
-        return text
-    }
-
     func show(source: String?, motion: Bool, variant: String? = nil) {
         // 变体也要参与去重键：同一个 SVG 在不同变体下显示不同数量的助手，
         // 只比对 source 会让变体切换不触发重渲染。
@@ -216,41 +204,20 @@ final class PetWindow: NSWindow {
         }
         currentKey = key
 
-        let url = repoRoot.appendingPathComponent(source)
-        guard let raw = try? String(contentsOf: url, encoding: .utf8) else { return }
-
-        // 素材靠 `<?xml-stylesheet?>` 引共享样式表。那是 **XML 的处理指令**——
-        // 把 SVG 内联进 HTML 文档后，HTML 解析器会把它当成伪注释直接忽略，
-        // **样式表根本不会加载**，于是每个动作都只显示静态基准姿势。
-        // 桌宠一直不动就是这个原因：animation-name 恒为 none。
-        // 所以这里必须把样式表内容真正内联进来，不能指望那条指令。
-        // （同一个坑在 scripts/motion-check.html 里踩过一次并写了注释，
-        //   当时没意识到外壳走的是同一条路。）
-        let svg = raw.replacingOccurrences(
-            of: "<?xml-stylesheet type=\"text/css\" href=\"maclawd-actions.css\"?>",
-            with: ""
-        )
-        let sheet = sharedStylesheet(near: url)
-        let reduced = motion ? "" : """
-        <style>*{animation:none !important;transition:none !important}</style>
-        """
-        // 变体通过祖先元素的 data-variant 驱动共享样式表里的规则
-        let variantAttr = variant.map { " data-variant=\"\($0)\"" } ?? ""
-        // 贴左边时整体水平镜像。mini 的贴边位是按右边缘设计的（角色右半边
-        // 被 viewBox 右界裁掉），镜像后左边缘得到完全对称的表现。
-        let mirror = dockEdge == .left ? "transform:scaleX(-1);" : ""
-        let html = """
-        <!doctype html><meta charset="utf-8">
-        <style>
-          html,body{margin:0;height:100%;background:transparent;overflow:hidden}
-          body{display:grid;place-items:center}
-          svg{width:100%;height:100%;image-rendering:pixelated}
-        </style>
-        <style>\(sheet)</style>
-        \(reduced)
-        <div\(variantAttr) style="width:100%;height:100%;display:grid;place-items:center;\(mirror)">\(svg)</div>
-        """
-        webView.loadHTMLString(html, baseURL: url.deletingLastPathComponent())
+        // 渲染细节（尤其是共享样式表必须真正内联）统一由 CharacterRenderer 负责。
+        // 面板里也要渲染同一只角色，两份实现必然漂移——而这里漂移的表现是
+        // 「桌宠在动、面板里的它不动」，比原来那个更难联想到原因。
+        //
+        // mini 的贴边位是按右边缘设计的（角色右半边被 viewBox 右界裁掉），
+        // 贴左边时整体镜像，左边缘得到完全对称的表现。
+        guard let rendered = CharacterRenderer.html(
+            repoRoot: repoRoot,
+            source: source,
+            motion: motion,
+            variant: variant,
+            mirrored: dockEdge == .left
+        ) else { return }
+        webView.loadHTMLString(rendered.html, baseURL: rendered.baseURL)
     }
 
     // MARK: - 交互

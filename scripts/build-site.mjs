@@ -125,6 +125,7 @@ async function main() {
     + `这 ${loadActions().length} 个动作由运行时按状态调度。`
     + '<a href="/actions">动作状态总表</a> · '
     + '<a href="/working-candidates">工作状态候选</a> · '
+    + '<a href="/candidates">手工设计候选</a> · '
     + '<a href="/pet">宠物管理面板</a> · <a href="/usage">用量统计面板</a>'
     + '（演示数据，桌宠状态跑的是真引擎）</p>\n      <div id="lab"></div>',
   ));

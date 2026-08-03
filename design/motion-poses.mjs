@@ -542,10 +542,19 @@ ANIMATIONS.push(
         p('translate(-1px,1px)', 3), p('translate(1px,0)', 1), p('translate(-1px,-1px)', 1),
         p('translate(1px,0)', 1), p('translate(0,-1px)', 1), p('translate(0,0)', 3),
         p('translate(-1px,0)', 1), p('translate(-1px,1px)', 3) ] },
+      /**
+       * 挣扎的最高点必须把**篮底抬过眼睛**，否则整个 4800ms 一次露不出脸。
+       *
+       * 篮子是实心的、画在眼睛之后，抬起来只是整块上移——原本 -6px 时
+       * 篮底停在 y10，眼睛是 y8–10，正好压住；一个循环里 0% 的时间能看见脸。
+       * 桌宠靠脸传达状态，全程盖住等于这个状态没有表情。
+       * 抬到 -10px 篮底到 y8，脸在篮口下方的空档里露出来——读感也更对：
+       * 不是「一个盒子在抖」，是「它把盒子顶起来了，你看见它在里面」。
+       */
       { sel: '.basket', name: 'fail-basket', origin: '8px 18px', poses: [
         p('translate(0,0) rotate(0)', 3), p('rotate(-4deg)', 1), p('rotate(4deg)', 1),
-        p('rotate(-4deg)', 1), p('translate(0,-3px) rotate(8deg)', 1),
-        p('translate(1px,-6px) rotate(14deg)', 3), p('translate(1px,-4px) rotate(10deg)', 1),
+        p('rotate(-4deg)', 1), p('translate(0,-4px) rotate(8deg)', 1),
+        p('translate(1px,-10px) rotate(14deg)', 3), p('translate(1px,-6px) rotate(10deg)', 1),
         p('translate(0,-1px) rotate(4deg)', 1), p('translate(0,0) rotate(0)', 2) ] },
       { sel: '.eyes', name: 'fail-eyes', period: 3100, poses: [
         p('translate(0,1px)', 3), p('translate(-1px,1px)', 2), p('translate(1px,1px)', 2),
@@ -1441,6 +1450,14 @@ ANIMATIONS.push(
       + '   八个候选全是正面站着，这个换的是**朝向**——背对本身就是「别打扰我」。',
     layers: [
       { sel: '.actor', name: 'hunch-body', poses: [
+        p('translate(0,2px) scaleY(.88)', 4), p('translate(0,1px) scaleY(.92)', 1),
+        p('translate(0,1px) scaleY(.96)', 2), p('translate(0,2px) scaleY(.9)', 1),
+        p('translate(0,3px) scaleY(.84)', 3), p('translate(0,2px) scaleY(.9)', 1),
+        p('translate(0,2px) scaleY(.86)', 2) ] },
+      // 壳纹必须**显式复制身体位移**：道具组是 .actor 的兄弟节点，
+      // 不继承身体的 transform。不复制的话身体一沉，壳纹就留在原地
+      // ——看起来像从背上滑下来了。
+      { sel: '.shell', name: 'hunch-shell', poses: [
         p('translate(0,2px) scaleY(.88)', 4), p('translate(0,1px) scaleY(.92)', 1),
         p('translate(0,1px) scaleY(.96)', 2), p('translate(0,2px) scaleY(.9)', 1),
         p('translate(0,3px) scaleY(.84)', 3), p('translate(0,2px) scaleY(.9)', 1),

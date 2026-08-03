@@ -19,6 +19,12 @@ import {
   installHooks, uninstallHooks, hookStatus,
   installPermissionHook, uninstallPermissionHook, permissionHookStatus,
 } from './hook-install.js';
+import {
+  installStatusline, uninstallStatusline, statuslineStatus,
+} from './statusline-install.js';
+import {
+  readQuota, recordQuota, clearQuota, pendingAlerts, markAlerted, QUOTA_FILE,
+} from './account-quota.js';
 import { createPermissionBroker, decisionResponse } from './permissions.js';
 import { authorize, currentToken, pairingUrls, resetToken, rotateToken } from './lan.js';
 import { createOrchestrator } from './orchestrator.js';
@@ -415,20 +421,100 @@ export function createUsageServer({ collector = null } = {}) {
   // 配对链接要带端口，服务启动后回填。
   let currentPort = 4173;
 
+  /**
+   * 画面版本 + 长轮询。
+   *
+   * **为什么要改。** 引擎内部换状态只要 2ms，而外壳每 2 秒才拉一次，
+   * 于是用户看到的延迟是 0～2000ms（平均 1 秒）。点一下桌宠要等一秒才
+   * 有反应，那读起来就是「卡」——不是动画慢，是消息根本还没送到。
+   *
+   * 拉模式下这个数字只能靠加密轮询来降，代价是空闲时也在空转。
+   * 长轮询把方向反过来：请求挂在服务端等，状态一变立刻返回。
+   * 结果是**又快又省**——变化时 ~1ms 送达，不变时 25 秒才一个请求，
+   * 比原来的每 2 秒一次还少。
+   */
+  let planVersion = 0;
+  let planSignature = null;
+  const waiters = new Set();
+
+  /** 画面上真正能看出区别的东西。只有它变了才叫「变了」。 */
+  function signatureOf(snapshot) {
+    const p = snapshot.plan;
+    return [
+      snapshot.state?.actionId, snapshot.state?.variant, snapshot.mini,
+      p?.source, p?.name, p?.mode, p?.motion,
+      // 几何随动作走，但 mini 档下为 null，单独带上免得漏掉切档
+      p?.geometry?.hit?.x0, snapshot.focus?.pid,
+    ].join('|');
+  }
+
+  function publish(snapshot) {
+    const signature = signatureOf(snapshot);
+    if (signature === planSignature) return snapshot;
+    planSignature = signature;
+    planVersion += 1;
+    for (const resolve of waiters) resolve();
+    waiters.clear();
+    return snapshot;
+  }
+
+  /**
+   * 服务端自己推进时钟。
+   *
+   * 以前引擎只在**有人来问**的时候才 tick，所以静默链、一次性动作到期
+   * 这些「没有外部事件也该发生」的转场，全都被外壳的轮询节奏卡着。
+   * 现在服务端自己走，外壳只负责取。
+   */
+  const TICK_MS = 100;
+  const ticker = setInterval(() => {
+    try {
+      publish(currentPlan());
+    } catch {
+      // 单次失败不该把定时器带走
+    }
+  }, TICK_MS);
+  ticker.unref?.();
+
+  /** 等到画面版本超过 since，或者超时。 */
+  function waitForChange(since, timeoutMs) {
+    if (planVersion > since) return Promise.resolve();
+    return new Promise((resolve) => {
+      const done = () => { clearTimeout(timer); waiters.delete(done); resolve(); };
+      const timer = setTimeout(done, timeoutMs);
+      timer.unref?.();
+      waiters.add(done);
+    });
+  }
+
+  /**
+   * 体力重算的节流窗口。
+   *
+   * 体力是从**当天累计**推出来的，几秒之内不可能有肉眼可见的变化；
+   * 而算它要解析 168KB 的 rollup.json（实测每次 0.6ms）。
+   * 状态推进以前和它绑在一起，所以 currentPlan 的调用频率被这笔开销
+   * 压在 2 秒——那 2 秒正是「状态切换延迟很严重」的全部来源。
+   * 拆开之后，推进可以跑到 100ms 级，而这笔账还是几秒一次。
+   */
+  const ENERGY_REFRESH_MS = 5_000;
+  let energyAt = 0;
+
   function currentPlan() {
     const settings = loadSettings();
     const live = worker.live();
     const now = Date.now();
 
     // 体力：与面板显示的公式一致；关掉 petEnergy 时恒为 1。
-    if (settings.petEnergy) {
-      const rollup = loadRollup();
-      if (rollup && !rollup.stale) {
-        const today = summarize(rollup, 'today', {});
-        engine.setEnergy(energyFrom(today.throughput, baseline(rollup)));
+    if (now - energyAt >= ENERGY_REFRESH_MS) {
+      energyAt = now;
+      if (settings.petEnergy) {
+        const rollup = loadRollup();
+        if (rollup && !rollup.stale) {
+          const today = summarize(rollup, 'today', {});
+          engine.setEnergy(energyFrom(today.throughput, baseline(rollup)));
+        }
+      } else {
+        engine.setEnergy(1);
       }
-    } else {
-      engine.setEnergy(1);
     }
 
     engine.observeRate(live.disabled ? 0 : live.tokensPerMin, now);
@@ -515,7 +601,15 @@ export function createUsageServer({ collector = null } = {}) {
       }
 
       if (pathname === '/api/state') {
-        sendJson(res, 200, currentPlan());
+        // `?since=N` 进长轮询：挂在这里等画面真的变了再返回。
+        // 不带 since 的老行为原样保留——面板、测试、curl 都还是立刻拿到快照。
+        const since = Number(url.searchParams.get('since'));
+        if (Number.isFinite(since) && since >= 0) {
+          // 25 秒是取舍：长到空闲时几乎不产生请求，又短到能穿过
+          // 大多数中间层的空闲超时（我们只走回环，但 URLSession 自己也有超时）。
+          await waitForChange(since, 25_000);
+        }
+        sendJson(res, 200, { ...publish(currentPlan()), version: planVersion });
         return;
       }
 
@@ -528,7 +622,9 @@ export function createUsageServer({ collector = null } = {}) {
         } else {
           engine.observeEvent(event, Date.now());
         }
-        sendJson(res, 200, currentPlan());
+        // 响应体就是新画面。外壳直接用它渲染，交互反馈是**当场**的，
+        // 不用再等下一次轮询——「点一下要等一秒才动」就是这么来的。
+        sendJson(res, 200, { ...publish(currentPlan()), version: planVersion });
         return;
       }
 
@@ -596,6 +692,63 @@ export function createUsageServer({ collector = null } = {}) {
           // 自愈的最近一次结论。面板要能看见「修过一次」与「修不好了」——
           // 静默自愈和静默失效一样难查。
           health: hookHealth,
+        });
+        return;
+      }
+
+      /**
+       * 订阅额度。
+       *
+       * POST 来自 hooks/maclawd-statusline.js（只可能是本机——lan.js 的
+       * authorize 把局域网的一切非 GET 请求都挡在外面了）。
+       * GET 给面板、菜单栏和手机镜像读。
+       */
+      if (pathname === '/api/quota') {
+        if (req.method === 'POST') {
+          // 主开关关掉时连收都不收。用户关的是「记录这件事」，
+          // 那就不该有新数据继续落盘。
+          if (!usageEnabled()) { sendJson(res, 200, { ignored: true }); return; }
+          const report = JSON.parse((await readBody(req)) || '{}');
+          const snapshot = recordQuota(report);
+          sendJson(res, 200, snapshot ?? readQuota());
+          return;
+        }
+        const settings = loadSettings();
+        const snapshot = readQuota();
+        sendJson(res, 200, {
+          ...snapshot,
+          // 面板要能区分「没装通道」和「装了但还没数据」——
+          // 这两种情况的文案完全不同。
+          statusline: statuslineStatus(),
+          enabled: settings.quotaStatusline === true,
+          alert: {
+            enabled: settings.quotaAlert === true,
+            threshold: settings.quotaAlertThreshold,
+          },
+        });
+        return;
+      }
+
+      /**
+       * 待弹的额度提醒。外壳每次轮询顺带问一次；拿到就弹，弹完回 POST 确认。
+       *
+       * 判定留在 Node 侧而不是 Swift 侧，是为了让「按 resetAt 每周期一次」
+       * 只有一份实现——两份去重逻辑必然漂移，而漂移的表现是重复打扰用户。
+       */
+      if (pathname === '/api/quota/alerts') {
+        const settings = loadSettings();
+        if (req.method === 'POST') {
+          const { acknowledged } = JSON.parse((await readBody(req)) || '{}');
+          markAlerted(Array.isArray(acknowledged) ? acknowledged : []);
+          sendJson(res, 200, { ok: true });
+          return;
+        }
+        if (!settings.quotaAlert || !usageEnabled()) {
+          sendJson(res, 200, { alerts: [] });
+          return;
+        }
+        sendJson(res, 200, {
+          alerts: pendingAlerts({ threshold: Number(settings.quotaAlertThreshold) || 85 }),
         });
         return;
       }
@@ -668,6 +821,30 @@ export function createUsageServer({ collector = null } = {}) {
                 effects.push('已移除权限决策 hook');
               }
             }
+            if (next.quotaStatusline !== before.quotaStatusline) {
+              if (next.quotaStatusline) {
+                // 槽位被别人占着时**默认不接管**。这里必须把开关拨回去，
+                // 否则界面显示「已开启」而实际什么都没装——那是在骗用户。
+                // 想接管要走 /api/statusline 的显式 chain 请求。
+                const r = installStatusline({ chainExisting: patch.chainExisting === true });
+                if (r.blocked) {
+                  saveSettings({ quotaStatusline: false });
+                  sendJson(res, 200, {
+                    settings: { ...next, quotaStatusline: false },
+                    blocked: 'statusline',
+                    foreignCommand: r.foreignCommand,
+                    error: '检测到你已经配置了状态行，Maclawd 没有覆盖它。',
+                  });
+                  return;
+                }
+                effects.push(r.chained ? '已接管状态行并保留原有' : '已注册状态行');
+              } else {
+                const r = uninstallStatusline();
+                effects.push(r.removed
+                  ? (r.restored ? '已移除状态行并还原原有' : '已移除状态行')
+                  : '状态行已被改成别的，未改动');
+              }
+            }
           } catch (err) {
             sendJson(res, 200, { settings: next, error: err.message });
             return;
@@ -699,8 +876,41 @@ export function createUsageServer({ collector = null } = {}) {
 
       if (pathname === '/api/reset' && req.method === 'POST') {
         // 只删派生数据。本机日志不属于 Maclawd，永不触碰；重新扫描即可全量重建。
-        for (const name of [ROLLUP_FILE, SCAN_CACHE_FILE, TAIL_STATE_FILE]) removeJson(name);
+        // 额度也一起删——「删除全部用量记录」如果留下额度记录，
+        // 用户会以为没删干净。它同样是派生数据，下次刷新就回来。
+        for (const name of [ROLLUP_FILE, SCAN_CACHE_FILE, TAIL_STATE_FILE, QUOTA_FILE]) {
+          removeJson(name);
+        }
         sendJson(res, 200, { ok: true });
+        return;
+      }
+
+      /**
+       * 状态行通道的独立管理入口。
+       *
+       * 和开关分开是因为「接管别人的状态行」必须是一次**显式**操作：
+       * 设置里那个开关只负责「装到空槽位」，撞上别人的就退回来并如实报告，
+       * 由用户看到对方的命令之后再决定要不要接管。
+       */
+      if (pathname === '/api/statusline') {
+        if (req.method === 'POST') {
+          const { action } = JSON.parse((await readBody(req)) || '{}');
+          if (action === 'install' || action === 'chain') {
+            const r = installStatusline({ chainExisting: action === 'chain' });
+            if (r.ok) saveSettings({ quotaStatusline: true });
+            sendJson(res, 200, { ...r, status: statuslineStatus() });
+            return;
+          }
+          if (action === 'uninstall') {
+            const r = uninstallStatusline();
+            saveSettings({ quotaStatusline: false });
+            sendJson(res, 200, { ...r, status: statuslineStatus() });
+            return;
+          }
+          sendJson(res, 400, { error: '未知操作' });
+          return;
+        }
+        sendJson(res, 200, statuslineStatus());
         return;
       }
 
@@ -735,9 +945,15 @@ export function createUsageServer({ collector = null } = {}) {
     const address = server.address();
     if (address && typeof address === 'object') currentPort = address.port;
   });
-  // 看门狗挂在文件上，服务关掉就得撤——测试里一个进程会起关好几次服务，
-  // 留着的话文件监听会越堆越多。
-  server.on('close', stopHookWatch);
+  // 看门狗与推进定时器都要随服务一起撤——测试里一个进程会起关好几次服务，
+  // 留着的话文件监听和定时器会越堆越多。挂着的长轮询也要放掉，
+  // 否则 server.close() 会一直等这些请求，测试卡在关闭那一步。
+  server.on('close', () => {
+    stopHookWatch();
+    clearInterval(ticker);
+    for (const resolve of waiters) resolve();
+    waiters.clear();
+  });
 
   return { server, worker };
 }

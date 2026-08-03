@@ -1,5 +1,10 @@
 import AppKit
 
+extension Notification.Name {
+    /// 设置页与右键菜单都能改菜单栏密度，改完互相同步。
+    static let maclawdDensityChanged = Notification.Name("maclawd.densityChanged")
+}
+
 /// 角色几何与配色合同。数值来自 design/main-state-actions.json 的 characterContract，
 /// 与 SVG 资产是同一套真值——菜单栏标记必须和桌宠本体是同一只生物。
 enum Design {

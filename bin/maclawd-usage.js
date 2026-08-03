@@ -13,6 +13,10 @@ import { loadActions, serve } from '../src/runtime/server.js';
 import { clearEndpoint } from '../src/runtime/endpoint.js';
 import { createCollector } from '../src/runtime/daemon.js';
 import { installHooks, uninstallHooks, hookStatus } from '../src/runtime/hook-install.js';
+import {
+  installStatusline, uninstallStatusline, statuslineStatus,
+} from '../src/runtime/statusline-install.js';
+import { readQuota } from '../src/runtime/account-quota.js';
 import { probe, diffProbe } from '../src/runtime/probe.js';
 import { rangeBounds } from '../src/runtime/rollup.js';
 import {
@@ -463,6 +467,129 @@ async function runServe(args) {
   process.on('SIGTERM', () => { cleanup(); process.exit(0); });
 }
 
+// ---------- statusline（订阅额度通道） ----------
+
+/** 把重置时刻说成人话。距离越远给的精度越粗。 */
+function untilText(resetAt) {
+  if (!Number.isFinite(resetAt)) return '重置时间未知';
+  const secs = Math.round((resetAt - Date.now()) / 1000);
+  if (secs <= 0) return '即将重置';
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  if (h >= 24) return `${Math.floor(h / 24)} 天 ${h % 24} 小时后重置`;
+  return h > 0 ? `${h}h${String(m).padStart(2, '0')}m 后重置` : `${m} 分钟后重置`;
+}
+
+function printStatuslineStatus() {
+  const s = statuslineStatus();
+  console.log(bold('Claude Code 状态行通道'));
+  console.log(dim(`  ${s.path}`));
+  console.log();
+  switch (s.state) {
+    case 'none':
+      console.log('  未安装。状态行槽位是空的，可以直接装。');
+      console.log(dim('  `maclawd-usage statusline install`'));
+      break;
+    case 'ours':
+      console.log(success('已安装'));
+      break;
+    case 'chained':
+      console.log(success('已安装（接管模式）'));
+      console.log(dim('  你原来的状态行仍然在渲染，Maclawd 只取额度：'));
+      console.log(dim(`    ${(s.foreignCommand ?? '（sidecar 丢失）').slice(0, 120)}`));
+      break;
+    case 'foreign':
+      console.log('  槽位被别的状态行占着，Maclawd 没有覆盖它：');
+      console.log(dim(`    ${s.command.slice(0, 120)}`));
+      console.log();
+      console.log(dim('  想同时保留它并取额度：`maclawd-usage statusline chain`'));
+      break;
+    default:
+      console.log(`  无法读取：${s.error}`);
+  }
+}
+
+function runStatusline(args) {
+  const action = args[0] ?? 'status';
+  if (action === 'status') { printStatuslineStatus(); return; }
+
+  if (action === 'install' || action === 'chain') {
+    const r = installStatusline({ chainExisting: action === 'chain' });
+    if (r.blocked) {
+      console.log('检测到你已经配置了状态行，Maclawd **没有**覆盖它：');
+      console.log(dim(`  ${r.foreignCommand.slice(0, 160)}`));
+      console.log();
+      console.log('要同时保留它并取额度，运行：');
+      console.log(dim('  maclawd-usage statusline chain'));
+      process.exitCode = 1;
+      return;
+    }
+    console.log(success(r.chained ? '已接管状态行，原有的仍在渲染' : '已注册状态行'));
+    console.log(dim(`  ${r.path}`));
+    console.log(dim('  额度要等下一次交互式会话产生第一次 API 响应之后才会出现。'));
+    return;
+  }
+
+  if (action === 'uninstall') {
+    const r = uninstallStatusline();
+    if (!r.removed) {
+      console.log(r.foreign
+        ? '状态行已经被改成别的了，未做改动。'
+        : '本来就没装。');
+      return;
+    }
+    console.log(success(r.restored ? '已移除并还原你原来的状态行' : '已移除'));
+    return;
+  }
+
+  console.log('用法: maclawd-usage statusline [status|install|chain|uninstall]');
+  process.exitCode = 1;
+}
+
+// ---------- quota ----------
+
+function runQuota() {
+  const snap = readQuota();
+  const s = statuslineStatus();
+  console.log(bold('订阅额度'));
+  console.log();
+
+  if (snap.empty) {
+    console.log('  还没有额度数据。');
+    console.log();
+    if (s.state === 'none' || s.state === 'foreign') {
+      console.log(dim('  通道没装。`maclawd-usage statusline status` 看怎么装。'));
+    } else {
+      console.log(dim('  通道已装。额度要等交互式会话的第一次 API 响应之后才出现——'));
+      console.log(dim('  `claude -p` 与 CI 里的无界面运行不会触发状态行，因此不更新额度。'));
+    }
+    return;
+  }
+
+  for (const source of snap.sources) {
+    console.log(`  ${bold(source.label)}`);
+    for (const w of source.windows) {
+      if (w.state === 'reset') {
+        console.log(`    ${w.label.padEnd(8)} ${dim('已重置')}`);
+        continue;
+      }
+      const filled = Math.round((w.usedPercent / 100) * 20);
+      const bar = '█'.repeat(filled) + '·'.repeat(20 - filled);
+      const stale = w.state === 'quiet'
+        ? dim(`  ${Math.round(w.staleSeconds / 60)} 分钟前的数据`)
+        : '';
+      console.log(`    ${w.label.padEnd(8)} ${bar} 已用 ${String(w.usedPercent).padStart(3)}%  ${dim(untilText(w.resetAt))}${stale}`);
+    }
+    if (source.context) {
+      const size = source.context.windowSize
+        ? `${Math.round(source.context.windowSize / 1000)}K`
+        : '未知';
+      console.log(dim(`    上下文     已用 ${source.context.usedPercent}%（窗口 ${size}）`));
+    }
+    console.log();
+  }
+}
+
 // ---------- main ----------
 
 const [command, ...rest] = process.argv.slice(2);
@@ -478,6 +605,8 @@ try {
     case 'update-prices': await runUpdatePrices(); break;
     case 'daemon': await runDaemon(rest); break;
     case 'hook': runHook(rest); break;
+    case 'statusline': runStatusline(rest); break;
+    case 'quota': runQuota(); break;
     case 'probe': await runProbe(rest); break;
     case 'coverage': runCoverage(); break;
     default:
@@ -498,6 +627,11 @@ try {
   hook status         查看 Claude Code 事件通道状态
   hook install        安装（只订阅状态事件，async 注册，不拦截权限）
   hook uninstall      卸载（只移除自己写入的条目）
+  quota               订阅额度：5 小时 / 本周窗口用了多少、何时重置
+  statusline status   查看订阅额度通道（Claude Code 状态行）
+  statusline install  安装到空槽位（槽位被占则拒绝并提示）
+  statusline chain    接管已有状态行，原有的继续渲染
+  statusline uninstall 卸载并还原
   daemon [分钟]        后台采集循环（默认 30 分钟全量扫描一次）
   serve [端口]         启动本地面板（默认 4173，自带后台采集）
   update-prices       联网更新模型价格表（唯一的对外请求）`);

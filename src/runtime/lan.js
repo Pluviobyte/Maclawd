@@ -26,6 +26,9 @@ const GRACE_MS = 10 * 60 * 1000;
 const READ_ONLY_PATHS = new Set([
   '/', '/mobile', '/mobile.html',
   '/api/state', '/api/live', '/api/summary', '/api/actions',
+  // 额度只读。写入（statusline 的上报）走 POST，authorize 里的 method 检查
+  // 已经把局域网的一切非 GET 请求挡掉了，这里不需要额外防护。
+  '/api/quota',
 ]);
 
 function newToken() {

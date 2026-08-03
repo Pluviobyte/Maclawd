@@ -204,9 +204,18 @@ const DEFAULTS = {
   // 两次自发行为之间的最小间隔。太密会显得多动，太疏又等于没有——
   // 两分钟左右是「偶尔动一下」的量。
   selfActGapMs: 120_000,
-  // 每次 tick 触发自发行为的概率。配合 gap 决定实际频率；
-  // 单独调大概率没用，gap 才是硬约束。
-  selfActChance: 0.06,
+  // 冷却结束之后，平均还要等多久才真的做一件自发的事。
+  //
+  // **这个量必须与 tick 频率无关。** 原来这里是「每次 tick 有 6% 概率」，
+  // 那在 2 秒一拍时等价于平均再等 33 秒；后来服务端改成自己 100ms 推进一拍，
+  // 同一个 6% 立刻变成平均再等 1.7 秒——自发行为从「大约每 2.5 分钟、
+  // 时机随机」变成「每 2 分零 2 秒、像钟表一样准」。随机性正是它不显得
+  // 机械的全部原因，按 tick 计概率等于把这个性质交给了一个实现细节。
+  //
+  // 33 秒是从原来那套参数换算过来的，保持手感不变。
+  selfActMeanWaitMs: 33_000,
+  // 单次 tick 最多折算多少时间的概率。见 selfActChance 的算式。
+  selfActMaxAccrualMs: 2_000,
   // 同一个工作态持续多久算「久战」。三分钟是个分界：
   // 短于它多半是一次普通的工具调用，长于它用户会开始想「它是不是卡了」。
   longWorkMs: 3 * 60_000,
@@ -235,6 +244,8 @@ export function createStateEngine(options = {}) {
   let idleVariant = 'idle';
   let idleVariantAt = 0;
   let lastSelfActAt = 0;
+  /** 上一次走到自发行为判定的时刻。用来把概率换算成「单位时间」的。 */
+  let lastTickAt = 0;
   let lastActivityAt = 0;
   /**
    * 「没东西可显示」是从什么时候开始的。
@@ -760,9 +771,28 @@ const SYNTHETIC_SESSIONS = new Set(['rate', 'shell']);
     // 宠物自己决定做点什么。只在**真正空闲**时发生（走到这里就说明
     // 没有任何会话可显示、也还没到犯困），而且要隔够久。
     // energy 低时不做——累了就不折腾了。
+    //
+    // 概率按**过去了多少时间**算，不按「又 tick 了一次」算：
+    // 指数分布下，dt 时间内至少发生一次的概率是 1 - e^(-dt/平均等待)。
+    // 这样 100ms 一拍和 2s 一拍得到同样的手感，调 tick 频率不会顺手
+    // 把宠物的性格也改掉（见 selfActMeanWaitMs 的说明）。
+    // 累积窗口要封顶。不封的话，一次长时间不 tick（机器睡了一觉、
+    // 外壳被暂停、或者测试里直接跳到 5 分钟后）会让概率逼近 1，
+    // 下一拍必然做一件自发的事——可那段时间宠物根本没在被看着，
+    // 那些"没观察到的时间"不该折算成概率。
+    // 上限取 2 秒（原来外壳的轮询周期），任何比它快的 tick 都保持等价。
+    const sinceTick = lastTickAt
+      ? Math.min(Math.max(0, now - lastTickAt), config.selfActMaxAccrualMs)
+      : 0;
+    lastTickAt = now;
+    const selfActChance = 1 - Math.exp(-sinceTick / config.selfActMeanWaitMs);
+    // `selfActChance > 0` 要排在 random() 前面：第一次 tick 的 sinceTick 是 0，
+    // 概率也是 0，这时候没有必要——也不应该——去消耗一次随机数。
+    // 消耗了的话，任何按调用序列钉死随机源的测试都会被这一次空转打乱奇偶。
     if (energy > 0.35
+      && selfActChance > 0
       && now - lastSelfActAt > config.selfActGapMs
-      && random() < config.selfActChance) {
+      && random() < selfActChance) {
       lastSelfActAt = now;
       const act = pickWeighted(SELF_ACTS, random);
       // 自发行为按各自的契约时长播完，不套用 oneshot 的 3 秒默认值——

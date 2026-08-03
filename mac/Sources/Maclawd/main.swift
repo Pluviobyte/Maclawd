@@ -17,6 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var client: RuntimeClient!
     private var menuBar: MenuBarController!
     private var pet: PetWindow!
+    private var panel: PanelController!
     private var timer: Timer?
     private var petVisible = true
     private var monitor: NWPathMonitor?
@@ -61,9 +62,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         client.startRuntime()
 
         pet = PetWindow(repoRoot: root)
+        panel = PanelController(client: client, repoRoot: root)
+        panel.onOpenBrowser = { [weak self] path in
+            guard let self, let url = URL(string: "http://127.0.0.1:\(self.client.currentPort)\(path)")
+            else { return }
+            NSWorkspace.shared.open(url)
+        }
+        panel.onQuit = { NSApp.terminate(nil) }
+        // 菜单栏被折叠时退到桌宠身上（见 PanelController.usableAnchor）。
+        panel.fallbackAnchor = { [weak self] in self?.pet.contentView }
+
+        // 双击桌宠开面板。此前这里是 `NSWorkspace.shared.open(usageURL)`——
+        // 弹一个 Safari 窗口出来，会切走焦点，和「瞥一眼」完全不是一回事。
         pet.onDoubleClick = { [weak self] in
-            guard let self else { return }
-            NSWorkspace.shared.open(self.client.usageURL)
+            guard let self, let anchor = self.menuBar.anchorView else { return }
+            self.panel.toggle(relativeTo: anchor)
         }
         // 缺失已久的回路：外壳的交互事件回灌状态引擎。
         // 单击：桌宠在**等你**的时候，点它就跳回那个终端窗口。
@@ -91,10 +104,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.pet.orderFront(nil)
         }
         menuBar.onQuit = { NSApp.terminate(nil) }
+        menuBar.onTogglePanel = { [weak self] anchor in
+            self?.panel.toggle(relativeTo: anchor)
+        }
 
         client.onUpdate = { [weak self] in
             guard let self else { return }
             self.menuBar.render()
+            self.fireQuotaAlertsIfNeeded()
             // 尺寸档要先切：窗口还是 128 却在播 mini 资产，角色会缩在角落里。
             self.pet.setMini(self.client.state.mini)
             // 几何随动作变（sleeping 的命中框比站立扁），所以每次刷新都要跟上。
@@ -125,6 +142,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         startNetworkMonitor()
+
+        // 调试用：直接把面板弹出来。面板是 popover，没有这个开关就只能靠
+        // 手点菜单栏，跑不了任何自动化验证。等运行时起来再弹，否则拍到的
+        // 是一屏「连接中…」。
+        if CommandLine.arguments.contains(where: { $0.hasPrefix("--show-panel") }) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in
+                MainActor.assumeIsolated {
+                    guard let self, let anchor = self.menuBar.anchorView else { return }
+                    self.panel.show(relativeTo: anchor)
+                }
+            }
+        }
+    }
+
+    /**
+     额度提醒。
+
+     判定（阈值、按 resetAt 每周期一次）全在 Node 侧，这里只负责弹和回执。
+     两份去重逻辑必然漂移，而漂移的表现是重复打扰用户——桌宠打断人
+     是最容易讨人嫌的行为，宁可少做。
+
+     **不在桌宠正演 error / needs_owner 时插入**：那时用户已经有事要处理了，
+     再叠一个浮窗是添乱。等它回到别的状态再说，提醒不会丢——
+     Node 侧没收到回执就一直算「待弹」。
+     */
+    private func fireQuotaAlertsIfNeeded() {
+        let alerts = client.pendingAlerts
+        guard !alerts.isEmpty else { return }
+        let action = client.state.actionId
+        guard !action.hasPrefix("error"), !action.hasPrefix("needs_owner") else { return }
+
+        QuotaAlertHUD.show(alerts)
+        client.acknowledge(alerts: alerts)
     }
 
     /// 低电量 → Low Battery Droop；接上电源 → Morning Stretch。

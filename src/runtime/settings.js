@@ -17,6 +17,15 @@ export const DEFAULTS = {
   petEnergy: true,
   // A 层：Claude Code hooks。要写 ~/.claude/settings.json，默认关。
   hookEnhancement: false,
+  // A 层，但**必须与 hookEnhancement 分开**：hooks 是按事件分组的数组，
+  // 往里加一条谁也不影响；statusLine 是**单槽位**，占了就把用户原来的挤掉。
+  // 用户完全可能愿意加 hooks 却不愿意让出状态行，那是两个独立的信任决定。
+  quotaStatusline: false,
+  // 额度快用完时弹一次自绘浮窗。默认开——这是用户主动要的功能，
+  // 而且有实际决策价值（决定现在敢不敢开大活），不是骚扰。
+  quotaAlert: true,
+  // 已用达到多少百分比时提醒。
+  quotaAlertThreshold: 85,
   // 价格表有缺口时成本会偏低，默认不展示，见待决事项 2。
   showCost: false,
   // 与系统「减弱动效」独立的应用内开关。
