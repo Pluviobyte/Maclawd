@@ -294,3 +294,22 @@ test('外壳的角色命中区与角色几何契约一致', () => {
   assert.ok(close(sy0, want.y0), `y0 应为 ${want.y0.toFixed(4)}，外壳写的是 ${sy0}`);
   assert.ok(close(sy1, want.y1), `y1 应为 ${want.y1.toFixed(4)}，外壳写的是 ${sy1}`);
 });
+
+test('没有契约动作能绕过运动质量门槛', () => {
+  // 上面那几条（密度、缓动、接缝、无静止姿态）都只遍历 ANIMATIONS——
+  // 也就是**走姿态谱管线**的动作。如果有人绕开管线、直接手写 CSS 加一个动作，
+  // 它会完整地躲过所有质量门槛，而且不会有任何东西报错。
+  //
+  // 这条把两边接上：契约里的每个动作，其 state class 都必须在姿态谱里。
+  const inSpec = new Set(ANIMATIONS.map((a) => a.state));
+  const outside = [];
+  for (const file of readdirSync(join(ROOT, 'src/animations')).filter((f) => f.endsWith('.svg'))) {
+    const svg = readFileSync(join(ROOT, 'src/animations', file), 'utf8');
+    const cls = svg.match(/class="(?:[a-z]+ )?state-([a-z0-9_-]+)"/)?.[1];
+    // mini 档有自己的一套约束（design/mini-actions.json），不走主形态姿态谱
+    if (!cls || cls.startsWith('mini-')) continue;
+    if (!inSpec.has(cls)) outside.push(`${file} → .state-${cls}`);
+  }
+  assert.deepEqual(outside, [],
+    `这些动作没走姿态谱管线，整个躲过了密度与缓动门槛：${outside.join(', ')}`);
+});
