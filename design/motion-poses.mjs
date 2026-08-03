@@ -2499,3 +2499,121 @@ ANIMATIONS.push(
     ],
   },
 );
+
+// ============================================================================
+// 8 个 mini 动作：由 scripts/port-css-to-poses.mjs 从手写 CSS 反解。
+//
+// 反解的目的是让它们能进变体生成器——只有在姿态谱里的动作才能被
+// 程序化地改幅度、改节奏、改缓动。手写 CSS 留在样式表里的话，
+// 就只能手工给这 8 个各写 5 个变体，既慢又必然与主形态的轴不一致。
+//
+// 反解是**有损**的：权重信息只存在于保持时长里，这里按最大公约数约成
+// 整数比例，比例与原来一致但数值不同。视觉输出等价。
+// ============================================================================
+
+ANIMATIONS.push(
+  {
+    state: 'mini-idle',
+    duration: 5200,
+    comment: '（由 port-css-to-poses.mjs 从手写 CSS 反解，权重是比例还原）',
+    layers: [
+      { sel: '.actor', name: 'mini-idle-body', poses: [
+        p("translateY(0)", 45), p("translateY(-1px)", 44), p("translateY(0)", 11) ] },
+      { sel: '.eyes', name: 'mini-idle-eyes', poses: [
+        p("scaleY(.5)", 31), p("scaleY(1)", 28), p("scaleY(.15)", 16), p("scaleY(.5)", 25) ] },
+      { sel: '.left-claw', name: 'mini-idle-claw', poses: [
+        p("translateY(0)", 53), p("translateY(-1px)", 40), p("translateY(0)", 7) ] },
+    ],
+  },
+  {
+    state: 'mini-busy',
+    duration: 3200,
+    comment: '（由 port-css-to-poses.mjs 从手写 CSS 反解，权重是比例还原）',
+    layers: [
+      { sel: '.actor', name: 'mini-busy-body', poses: [
+        p("translate(0,0)", 12), p("translate(-1px,-1px)", 19), p("translate(0,-2px)", 19), p("translate(-1px,-1px)", 19), p("translate(0,-2px)", 19), p("translate(0,0)", 12) ] },
+      { sel: '.eyes', name: 'mini-busy-eyes', period: 2700, poses: [
+        p("translateY(1px)", 69), p("translateY(0)", 11), p("scaleY(.15)", 8), p("translateY(1px)", 12) ] },
+      { sel: '.left-claw', name: 'mini-busy-claw', period: 2100, poses: [
+        p("translate(0,0)", 12), p("translate(1px,-2px)", 19), p("translate(0,1px)", 19), p("translate(1px,-2px)", 19), p("translate(0,1px)", 19), p("translate(0,0)", 12) ] },
+    ],
+  },
+  {
+    state: 'mini-peek',
+    duration: 3600,
+    comment: '（由 port-css-to-poses.mjs 从手写 CSS 反解，权重是比例还原）',
+    layers: [
+      { sel: '.actor', name: 'mini-peek-body', poses: [
+        p("translate(0,0)", 11), p("translate(-3px,0)", 16), p("translate(-5px,-1px)", 38), p("translate(-4px,0)", 16), p("translate(-1px,0)", 19) ] },
+      { sel: '.eyes', name: 'mini-peek-eyes', period: 2900, poses: [
+        p("scaleY(.5)", 11), p("scaleY(1)", 54), p("scaleY(.15)", 8), p("scaleY(1)", 16), p("scaleY(.5)", 11) ] },
+      { sel: '.left-claw', name: 'mini-peek-claw', period: 2300, poses: [
+        p("translate(0,0)", 11), p("translate(1px,1px)", 16), p("translate(2px,0)", 38), p("translate(1px,1px)", 16), p("translate(0,0)", 19) ] },
+    ],
+  },
+  {
+    state: 'mini-alert',
+    duration: 2400,
+    comment: '（由 port-css-to-poses.mjs 从手写 CSS 反解，权重是比例还原）',
+    layers: [
+      { sel: '.actor', name: 'mini-alert-body', poses: [
+        p("translate(-2px,0)", 3), p("translate(-2px,-1px)", 3), p("translate(-2px,0)", 3), p("translate(-2px,-1px)", 3), p("translate(-2px,0)", 8) ] },
+      { sel: '.eyes', name: 'mini-alert-eyes', period: 1900, poses: [
+        p("scaleY(1)", 60), p("scaleY(.15)", 9), p("scaleY(1)", 31) ] },
+      { sel: '.left-claw', name: 'mini-alert-claw', period: 1200, poses: [
+        p("translateY(0)", 3), p("translateY(2px)", 3), p("translateY(0)", 3), p("translateY(2px)", 3), p("translateY(0)", 8) ] },
+    ],
+  },
+  {
+    state: 'mini-error',
+    duration: 4400,
+    comment: '（由 port-css-to-poses.mjs 从手写 CSS 反解，权重是比例还原）',
+    layers: [
+      { sel: '.actor', name: 'mini-error-body', poses: [
+        p("translate(0,2px) scaleY(.88)", 23), p("translate(-1px,3px) scaleY(.84)", 26), p("translate(0,2px) scaleY(.88)", 26), p("translate(1px,3px) scaleY(.84)", 25) ] },
+      { sel: '.eyes', name: 'mini-error-eyes', poses: [
+        p("translateY(1px) scaleY(.4)", 49), p("translateY(1px) scaleY(.15)", 26), p("translateY(1px) scaleY(.4)", 25) ] },
+      { sel: '.left-claw', name: 'mini-error-claw', poses: [
+        p("translateY(2px)", 23), p("translateY(3px)", 52), p("translateY(2px)", 25) ] },
+    ],
+  },
+  {
+    state: 'mini-happy',
+    duration: 2400,
+    comment: '（由 port-css-to-poses.mjs 从手写 CSS 反解，权重是比例还原）',
+    layers: [
+      { sel: '.actor', name: 'mini-happy-body', poses: [
+        p("translate(0,0)", 13), p("translate(-3px,-3px)", 18), p("translate(-4px,-1px)", 18), p("translate(-4px,-3px)", 16), p("translate(-3px,0)", 18), p("translate(-1px,0)", 17) ] },
+      { sel: '.eyes', name: 'mini-happy-eyes', poses: [
+        p("scaleY(.5)", 13), p("scaleY(1)", 70), p("scaleY(.15)", 8), p("scaleY(1)", 9) ] },
+      { sel: '.left-claw', name: 'mini-happy-claw', poses: [
+        p("translate(0,0)", 13), p("translate(1px,-2px)", 18), p("translate(2px,-1px)", 18), p("translate(1px,-3px)", 16), p("translate(0,0)", 35) ] },
+    ],
+  },
+  {
+    state: 'mini-enter',
+    duration: 1600,
+    comment: '（由 port-css-to-poses.mjs 从手写 CSS 反解，权重是比例还原）',
+    layers: [
+      { sel: '.actor', name: 'mini-enter-body', poses: [
+        p("translate(-7px,0)", 19), p("translate(-5px,-1px)", 22), p("translate(-2px,0)", 24), p("translate(1px,0)", 18), p("translate(0,0)", 17) ] },
+      { sel: '.eyes', name: 'mini-enter-eyes', poses: [
+        p("scaleY(1)", 65), p("scaleY(.15)", 14), p("scaleY(.5)", 21) ] },
+      { sel: '.left-claw', name: 'mini-enter-claw', poses: [
+        p("translate(0,0)", 19), p("translate(2px,0)", 22), p("translate(1px,1px)", 24), p("translate(0,0)", 35) ] },
+    ],
+  },
+  {
+    state: 'mini-exit',
+    duration: 1600,
+    comment: '（由 port-css-to-poses.mjs 从手写 CSS 反解，权重是比例还原）',
+    layers: [
+      { sel: '.actor', name: 'mini-exit-body', poses: [
+        p("translate(0,0)", 19), p("translate(1px,-1px)", 22), p("translate(-2px,-1px)", 24), p("translate(-5px,0)", 18), p("translate(-7px,0)", 17) ] },
+      { sel: '.eyes', name: 'mini-exit-eyes', poses: [
+        p("scaleY(.5)", 19), p("scaleY(.15)", 14), p("scaleY(1)", 67) ] },
+      { sel: '.left-claw', name: 'mini-exit-claw', poses: [
+        p("translate(0,0)", 19), p("translate(0,1px)", 22), p("translate(1px,0)", 42), p("translate(0,0)", 17) ] },
+    ],
+  },
+);

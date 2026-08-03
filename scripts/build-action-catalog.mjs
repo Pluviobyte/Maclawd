@@ -77,6 +77,17 @@ async function hookTriggers() {
     }
   }
 
+  // **全文件**扫一遍 pushOneshot，不再只扫 switch 块内。
+  //
+  // 这个解析器已经在同类问题上失配五次：静默转场改写、working.long 的时长派生、
+  // 静默链改三元、SELF_ACTS 表驱动，以及 Stop 门重构把 pushOneshot 移出了 switch。
+  // 前四次都是「再补一条规则」，第五次说明补规则的方向本身不对——
+  // 调用点会随重构移动，而**调用本身**不会。所以改成不关心它在哪。
+  // 具体是哪个事件触发的仍由下面的 switch 扫描补全，扫不到就退回泛化描述。
+  for (const m of src.matchAll(/pushOneshot\('([a-z_.]+)'/g)) {
+    if (!out[m[1]]) (out[m[1]] ??= new Set()).add('一次性插播');
+  }
+
   const body = src.slice(src.indexOf('switch (type)'));
   let event = null;
   for (const line of body.split('\n')) {

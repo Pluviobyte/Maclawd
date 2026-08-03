@@ -105,7 +105,12 @@ test('密度：姿态谱里的动作都达到最低变化频率', () => {
   // sleeping 与 low-battery 是刻意的慢，登记在案
   // 睡着的东西**应该**慢。对它们套密度门槛是反的——
   // mini-sleep 每秒变 4 次会读成「在抽搐」而不是「睡熟了」。
-  const allowed = new Set(['sleeping', 'low-battery', 'recovering', 'mini-sleep']);
+  // 睡着 / 垮塌 / 打盹**应该**慢，对它们套密度门槛是反的。
+  // mini-idle 是「贴边打盹」、mini-error 是「垮在边上」——每秒变 4 次
+  // 会读成抽搐而不是安静。其余 mini 已经靠错拍抬到门槛之上。
+  const allowed = new Set([
+    'sleeping', 'low-battery', 'recovering', 'mini-sleep', 'mini-idle', 'mini-error',
+  ]);
   const unexpected = slow.filter((s) => !allowed.has(s.split('=')[0]));
   assert.deepEqual(unexpected, [], `这些动作慢到接近静止图：${unexpected.join(', ')}`);
 });
@@ -422,4 +427,53 @@ test('样式表没有语法损坏的规则', () => {
   }
   assert.equal(depth, 0, '花括号不配对');
   assert.deepEqual(broken, [], `样式表里有语法损坏的规则：\n  ${broken.join('\n  ')}`);
+});
+
+test('变体：每个契约动作都有完整的五轴', () => {
+  // 变体不产生新素材，只靠 data-variant 换 keyframes。所以「少了一个轴」
+  // 的表现是**静默回落到基准**——画面照样能看，只是那个候选根本不存在。
+  // 解析 JSON 而不是抓正则：轴和动作都有 `id` 字段，正则分不开它们。
+  const raw = read('web/variant-data.js');
+  const json = raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1);
+  const data = JSON.parse(json);
+
+  const axes = data.axes.map((a) => a.id);
+  assert.ok(axes.includes('base'), '变体数据里没有基准轴');
+  const nonBase = axes.filter((a) => a !== 'base');
+  assert.equal(nonBase.length, 4, `非基准轴应有 4 条，实际 ${nonBase.length}`);
+
+  const states = data.actions.map((a) => a.state);
+  assert.ok(states.length >= 40, `变体覆盖的动作只有 ${states.length} 个，太少`);
+  for (const state of states) {
+    for (const axis of nonBase) {
+      assert.ok(css.includes(`.state-${state}[data-variant="${axis}"] {`),
+        `${state} 缺少 ${axis} 轴`);
+    }
+  }
+});
+
+test('变体：幅度轴只缩放 px，不碰比例与角度', () => {
+  // scaleY(1.08) 翻倍会变成 2.16——那不是「幅度加倍」是「身体变两倍高」。
+  // 旋转同理，角度翻倍常常直接翻车。所以缩放只能作用于 px 位移。
+  for (const m of css.matchAll(/@keyframes ([a-z0-9-]+)--(bold|languid) \{(.*)\}$/gm)) {
+    const [, name, axis, body] = m;
+    const baseBody = keyframes[name];
+    if (!baseBody) continue;
+    const grab = (t, re) => [...t.matchAll(re)].map((x) => x[1]).join(',');
+    // 比例与角度必须原样保留
+    assert.equal(grab(body, /scaleY\(([\d.]+)\)/g), grab(baseBody, /scaleY\(([\d.]+)\)/g),
+      `${name}--${axis} 改动了 scaleY`);
+    assert.equal(grab(body, /rotate\((-?[\d.]+)deg\)/g), grab(baseBody, /rotate\((-?[\d.]+)deg\)/g),
+      `${name}--${axis} 改动了 rotate`);
+  }
+});
+
+test('变体：位移必须是整数 px', () => {
+  // 主形态 3px/单位，非整数位移会让矩形边缘落在设备像素中间。
+  // 幅度轴做的是乘法，不取整的话 languid（×0.5）必然产出 .5px。
+  const bad = [];
+  for (const m of css.matchAll(/@keyframes [a-z0-9-]+--[a-z]+ \{(.*)\}$/gm)) {
+    for (const px of m[1].matchAll(/(-?\d+\.\d+)px/g)) bad.push(px[1]);
+  }
+  assert.deepEqual(bad, [], `变体里出现了非整数位移：${bad.slice(0, 5).join(', ')}`);
 });
