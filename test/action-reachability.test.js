@@ -77,6 +77,24 @@ const SCENARIOS = {
   collapsing: () => idleFor(5 * 60 * SEC + 40 * SEC).actionId,
   sleeping: () => idleFor(7 * 60 * SEC).actionId,
 
+  // 自发行为：宠物自己决定做的事，走 oneshot 插播而不是占仲裁档位。
+  // 调度带概率，所以场景要把随机源钉死——不钉死的话这几条会偶发失败，
+  // 而偶发失败的测试比没有测试更糟：它会训练人忽略红色。
+  ...Object.fromEntries(['self.stretch', 'self.peek', 'self.roam'].map((id) => [id, () => {
+    // 权重 40 / 35 / 25，累计边界 40 / 75 / 100
+    const roll = { 'self.stretch': 0.1, 'self.peek': 0.5, 'self.roam': 0.9 }[id];
+    let call = 0;
+    // 第一次 random 决定「要不要做」（要小于 selfActChance），第二次决定「做哪个」
+    const e = createStateEngine({
+      minDwellMs: 0, selfActGapMs: 0,
+      random: () => (call++ % 2 === 0 ? 0.001 : roll),
+    });
+    e.observeEvent({ type: 'UserPromptSubmit', sessionId: 's' }, SEC);
+    e.observeEvent({ type: 'Stop', sessionId: 's', disposition: 'complete' }, 2 * SEC);
+    e.tick(6 * SEC);
+    return e.tick(30 * SEC).actionId;
+  }])),
+
   // 睡着之后来任何事件都要先伸个懒腰。这条曾经完全断掉。
   waking: () => {
     const e = engine();

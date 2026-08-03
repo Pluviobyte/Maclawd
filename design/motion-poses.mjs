@@ -2250,3 +2250,252 @@ ANIMATIONS.push(
     ],
   },
 );
+
+// ============================================================================
+// 自发行为：宠物自己决定去做的事
+//
+// 与 idle 变体的区别在**有没有目的**。所以三个都要有明确的「起意 → 执行 →
+// 收尾」，而不是无目的的抽动——那正是 idle 变体在做的事。
+// ============================================================================
+
+ANIMATIONS.push(
+  {
+    state: 'self-stretch',
+    svg: {
+      file: 'self-stretch.svg',
+      title: 'Long Stretch',
+      desc: 'Rises onto the back legs, pulls the whole body long, then settles.',
+      splitLegs: true,
+    },
+    duration: 3200,
+    comment: '伸懒腰。**顶点必须停住**——没有滞留的伸展读不出「舒服」，\n'
+      + '   只会读成抽了一下。前腿先离地、身体拉长、停住、再落回。\n'
+      + '   落回要比拉长慢，那是「意犹未尽」。',
+    layers: [
+      {
+        sel: '.actor',
+        name: 'stretch-body',
+        poses: [
+          p('translate(0,0)', 2), p('translateY(-1px) scaleY(1.08)', 1),
+          p('translateY(-3px) scaleY(1.22)', 2), p('translateY(-4px) scaleY(1.3)', 5),
+          p('translateY(-2px) scaleY(1.14)', 2), p('translateY(0) scaleY(1.02)', 2),
+          p('translateY(1px) scaleY(.96)', 2), p('translateY(0) scaleY(1)', 2),
+        ],
+      },
+      { sel: '.left-claw', name: 'stretch-left', poses: [
+        p('translate(0,0)', 2), p('translate(-1px,-2px)', 1), p('translate(-3px,-4px)', 2),
+        p('translate(-4px,-5px)', 5), p('translate(-2px,-3px)', 2), p('translate(0,-1px)', 2),
+        p('translate(0,1px)', 2), p('translate(0,0)', 2) ] },
+      { sel: '.right-claw', name: 'stretch-right', poses: [
+        p('translate(0,0)', 2), p('translate(1px,-2px)', 1), p('translate(3px,-4px)', 2),
+        p('translate(4px,-5px)', 5), p('translate(2px,-3px)', 2), p('translate(0,-1px)', 2),
+        p('translate(0,1px)', 2), p('translate(0,0)', 2) ] },
+      // 前两条腿离地，后两条撑着——这是「立起来伸」而不是「整体变高」
+      { sel: '.leg-a', name: 'stretch-leg-a', poses: [
+        p('translateY(0)', 2), p('translateY(-2px)', 1), p('translateY(-4px)', 7),
+        p('translateY(-1px)', 2), p('translateY(0)', 6) ] },
+      { sel: '.leg-b', name: 'stretch-leg-b', poses: [
+        p('translateY(0)', 2), p('translateY(-1px)', 1), p('translateY(-3px)', 7),
+        p('translateY(-1px)', 2), p('translateY(0)', 6) ] },
+      { sel: '.leg-c', name: 'stretch-leg-c', poses: [
+        p('translateY(0)', 3), p('translateY(1px)', 8), p('translateY(0)', 7) ] },
+      { sel: '.leg-d', name: 'stretch-leg-d', poses: [
+        p('translateY(0)', 3), p('translateY(1px)', 8), p('translateY(0)', 7) ] },
+      { sel: '.eyes', name: 'stretch-eyes', poses: [
+        p('translate(0,0)', 2), p('translate(0,-1px)', 3), p('translate(0,-1px)', 5),
+        p('translate(0,0)', 8) ] },
+      { sel: '.blink', name: 'stretch-blink', poses: [
+        p('scaleY(1)', 3), p('scaleY(.15)', 5), p('scaleY(1)', 10) ] },
+    ],
+  },
+
+  {
+    state: 'self-peek',
+    svg: {
+      file: 'self-peek.svg',
+      title: 'Upward Peek',
+      desc: 'Tips its head back to look at something above the screen, then loses interest.',
+    },
+    duration: 2800,
+    comment: '抬头看。与 interaction.hover 的区别是**谁发起的**：\n'
+      + '   那个是你把光标移过去它才看，这个是它自己抬头。\n'
+      + '   所以视线朝**上**——不追光标，看的是别处。\n'
+      + '   看完要有一个「算了」的收尾，否则读成呆住。',
+    layers: [
+      {
+        sel: '.actor',
+        name: 'peek-up-body',
+        poses: [
+          p('translate(0,0)', 3), p('translate(0,-1px)', 1), p('translate(0,-2px)', 2),
+          p('translate(0,-2px)', 5), p('translate(0,-1px)', 1), p('translate(0,1px)', 2),
+          p('translate(0,0)', 2),
+        ],
+      },
+      { sel: '.left-claw', name: 'peek-up-left', poses: [
+        p('translate(0,0)', 3), p('translate(0,-1px)', 1), p('translate(1px,-2px)', 7),
+        p('translate(0,0)', 5) ] },
+      { sel: '.right-claw', name: 'peek-up-right', poses: [
+        p('translate(0,0)', 3), p('translate(0,-1px)', 1), p('translate(-1px,-2px)', 7),
+        p('translate(0,0)', 5) ] },
+      {
+        sel: '.eyes',
+        name: 'peek-up-eyes',
+        // 眼睛上移到躯干顶——「仰头」在这套几何里只能靠视线位置表达
+        poses: [
+          p('translate(0,0)', 3), p('translate(0,-1px)', 1), p('translate(0,-2px)', 2),
+          p('translate(1px,-2px)', 3), p('translate(-1px,-2px)', 2), p('translate(0,-1px)', 1),
+          p('translate(0,0)', 4),
+        ],
+      },
+      { sel: '.blink', name: 'peek-up-blink', poses: [
+        p('scaleY(1)', 9), p('scaleY(.15)', 1), p('scaleY(1)', 2), p('scaleY(.15)', 1),
+        p('scaleY(1)', 3) ] },
+    ],
+  },
+
+  {
+    state: 'self-roam',
+    svg: {
+      file: 'self-roam.svg',
+      title: 'Little Wander',
+      desc: 'Ambles a short distance sideways, four legs alternating, then stops.',
+      splitLegs: true,
+    },
+    duration: 4600,
+    comment: '溜达。**外壳会真的把窗口平移过去**（计划里带 drift）——\n'
+      + '   原地走路是假的：退役掉的 Sideways Scuttle 就是因为外壳从不发\n'
+      + '   shell.move，那个动作从没在屏幕上出现过。\n'
+      + '   四条腿两两交替，身体随步伐轻微起伏；起步和收尾各留一拍，\n'
+      + '   否则会读成「凭空开始走、凭空停下」。',
+    layers: [
+      {
+        sel: '.actor',
+        name: 'roam-body',
+        poses: [
+          p('translate(0,0)', 3), p('translate(0,-1px)', 1), p('translate(0,0)', 1),
+          p('translate(0,-1px)', 1), p('translate(0,0)', 1), p('translate(0,-1px)', 1),
+          p('translate(0,0)', 1), p('translate(0,-1px)', 1), p('translate(0,0)', 3),
+        ],
+      },
+      // 对角腿同步、两组交替——四条一起动会读成跳
+      { sel: '.leg-a', name: 'roam-leg-a', period: 1150, poses: [
+        p('translateY(0)', 3), p('translateY(-2px)', 1), p('translateY(-1px)', 1),
+        p('translateY(0)', 3) ] },
+      { sel: '.leg-d', name: 'roam-leg-d', period: 1150, poses: [
+        p('translateY(0)', 3), p('translateY(-2px)', 1), p('translateY(-1px)', 1),
+        p('translateY(0)', 3) ] },
+      { sel: '.leg-b', name: 'roam-leg-b', period: 1150, poses: [
+        p('translateY(-1px)', 1), p('translateY(0)', 3), p('translateY(-2px)', 1),
+        p('translateY(0)', 3) ] },
+      { sel: '.leg-c', name: 'roam-leg-c', period: 1150, poses: [
+        p('translateY(-1px)', 1), p('translateY(0)', 3), p('translateY(-2px)', 1),
+        p('translateY(0)', 3) ] },
+      { sel: '.left-claw', name: 'roam-left', period: 1150, poses: [
+        p('translate(1px,0)', 3), p('translate(1px,-1px)', 2), p('translate(0,0)', 3) ] },
+      { sel: '.right-claw', name: 'roam-right', period: 1150, poses: [
+        p('translate(-1px,-1px)', 2), p('translate(0,0)', 3), p('translate(-1px,0)', 3) ] },
+      {
+        sel: '.eyes',
+        name: 'roam-eyes',
+        // 眼睛先看向要去的方向，身体才跟上——这是「有目的」的标志
+        poses: [
+          p('translate(1px,0)', 4), p('translate(1px,-1px)', 3), p('translate(1px,0)', 5),
+          p('translate(0,0)', 2),
+        ],
+      },
+      { sel: '.blink', name: 'roam-blink', period: 3900, poses: [
+        p('scaleY(1)', 8), p('scaleY(.15)', 1), p('scaleY(1)', 3) ] },
+    ],
+  },
+);
+
+// ============================================================================
+// mini 档补充：横行与入睡
+//
+// mini 的表意手段只有姿态与露出多少，没有道具。所以这两个动作能用的
+// 只有：贴边位的偏移、身体形变、眼睛开合。
+// ============================================================================
+
+ANIMATIONS.push(
+  {
+    state: 'mini-walk',
+    svg: {
+      file: 'mini-walk.svg',
+      title: 'Edge Shuffle',
+      desc: 'Shuffles a short distance along the screen edge, then settles back to dozing.',
+    },
+    duration: 3800,
+    comment: '沿边缘挪。贴的是左右边缘，所以位移是**纵向**的——\n'
+      + '   外壳按计划里的 drift 把窗口上下移，与主形态 self.roam 的横向溜达互补。\n'
+      + '   动作本身要读出「在使劲挪」：身体一顿一顿，不是匀速滑行。',
+    layers: [
+      {
+        sel: '.actor',
+        name: 'mwalk-body',
+        // 一顿一顿：匀速会读成「被拖着走」，顿挫才是自己在挪
+        poses: [
+          p('translate(0,0)', 3), p('translate(0,-1px)', 1), p('translate(-1px,-1px)', 2),
+          p('translate(0,0)', 1), p('translate(0,-1px)', 1), p('translate(-1px,-1px)', 2),
+          p('translate(0,0)', 1), p('translate(0,-1px)', 1), p('translate(0,0)', 3),
+        ],
+      },
+      {
+        sel: '.left-claw',
+        name: 'mwalk-claw',
+        period: 950,
+        poses: [
+          p('translate(0,0)', 2), p('translate(0,-2px)', 1), p('translate(1px,-1px)', 1),
+          p('translate(0,1px)', 2),
+        ],
+      },
+      {
+        sel: '.eyes',
+        name: 'mwalk-eyes',
+        // 看向要去的方向：贴边时只露一只眼，那只眼先动
+        poses: [
+          p('translate(0,-1px)', 3), p('translate(0,-2px)', 4), p('translate(0,-1px)', 4),
+          p('translate(0,0)', 2),
+        ],
+      },
+      { sel: '.blink', name: 'mwalk-blink', period: 3100, poses: [
+        p('scaleY(1)', 7), p('scaleY(.15)', 1), p('scaleY(1)', 3) ] },
+    ],
+  },
+
+  {
+    state: 'mini-sleep',
+    svg: {
+      file: 'mini-sleep.svg',
+      title: 'Edge Sleep',
+      desc: 'Curls tight against the edge, breathing slowly with both eyes shut.',
+    },
+    duration: 6000,
+    comment: '贴边睡着。与 Edge Doze（打盹但还醒着）的区别必须做足，\n'
+      + '   否则贴边之后真睡着和打盹长得一样——此前 sleeping 就是收敛到 Doze 的。\n'
+      + '   两条区别：眼睛**全程闭死**（Doze 是半闭会睁），身体缩得更紧、\n'
+      + '   呼吸更慢更深（Doze 是 5.2s 一格，这里 6s 两格）。',
+    layers: [
+      {
+        sel: '.actor',
+        name: 'msleep-body',
+        // 缩得比 Doze 更紧：多往边上贴 1 格，整体压扁
+        poses: [
+          p('translate(1px,1px) scaleY(.9)', 5), p('translate(1px,0) scaleY(.94)', 2),
+          p('translate(1px,0) scaleY(.96)', 3), p('translate(1px,1px) scaleY(.92)', 2),
+          p('translate(1px,1px) scaleY(.88)', 4),
+        ],
+      },
+      {
+        sel: '.left-claw',
+        name: 'msleep-claw',
+        poses: [
+          p('translate(1px,2px)', 5), p('translate(1px,1px)', 3), p('translate(1px,2px)', 4),
+          p('translate(1px,3px)', 3),
+        ],
+      },
+      // 全程闭死。这一条是它与 Edge Doze 最主要的区别。
+      { sel: '.eyes', name: 'msleep-eyes', poses: [p('translateY(2px)', 1)] },
+      { sel: '.blink', name: 'msleep-blink', poses: [p('scaleY(.12)', 1)] },
+    ],
+  },
+);

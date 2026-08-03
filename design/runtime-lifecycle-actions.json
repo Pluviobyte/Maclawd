@@ -120,5 +120,47 @@
       "source": "src/animations/blanket-pop.svg",
       "reason": "Morning Stretch already communicates energy returning without adding a charger prop."
     }
-  ]
+  ],
+  "selfDirected": {
+    "_policy": "宠物**自己**决定去做的事。与 idle 变体的区别不在观感，在**有没有目的**：擦爪是无聊时的抽动，溜达是它决定去别处看看。这些不声称任何 Agent 状态，所以不违反上面的 truthPolicy——它们根本不是状态，是宠物的行为。但正因如此，必须能被任何真实状态立刻打断：宠物的自娱自乐不能盖住「Claude 卡住了」。所以走 oneshot 插播，不占仲裁档位。",
+    "scheduling": "空闲且 energy > 0.35 时按概率触发，两次之间至少隔 selfActGapMs。累了就不折腾。",
+    "acts": [
+      {
+        "id": "self.stretch",
+        "name": "Long Stretch",
+        "mode": "oneshot",
+        "durationMs": 3200,
+        "accessory": "none",
+        "action": "Rises onto the back legs, pulls the whole body long, then settles.",
+        "source": "src/animations/self-stretch.svg",
+        "weight": 40
+      },
+      {
+        "id": "self.peek",
+        "name": "Upward Peek",
+        "mode": "oneshot",
+        "durationMs": 2800,
+        "accessory": "none",
+        "action": "Tips its head back to look at something above the screen, then loses interest.",
+        "source": "src/animations/self-peek.svg",
+        "weight": 35,
+        "designNote": "与 interaction.hover（Cursor Gaze）的区别是**谁发起的**：那个是你把光标移过去它才看，这个是它自己抬头。所以视线方向刻意朝**上**——不追光标，看的是别处。"
+      },
+      {
+        "id": "self.roam",
+        "name": "Little Wander",
+        "mode": "oneshot",
+        "durationMs": 4600,
+        "accessory": "none",
+        "action": "Ambles a short distance sideways, four legs alternating, then stops.",
+        "source": "src/animations/self-roam.svg",
+        "weight": 25,
+        "drift": {
+          "dx": 64,
+          "dy": 0
+        },
+        "designNote": "**必须真的位移**。原地走路是假的——退役掉的 moving（Sideways Scuttle）就是因为外壳从不发 shell.move，那个动作从没在屏幕上出现过。所以这里由计划带一个 drift，外壳在动作时长内把窗口平移过去。位移量取 64pt（约半个身位），够看出来又不会把桌宠甩到别处。"
+      }
+    ]
+  }
 }

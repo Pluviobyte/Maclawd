@@ -1,5 +1,7 @@
 # 形态盘点与缺口
 
+> **状态：三个缺口已全部补齐**（41 → 48 个动作）。补齐后的实现见文末。
+
 对照 [clawd-on-desk](https://github.com/rullerzhou-afk/clawd-on-desk) 做的一次全量清点，
 以及由此定下的三个补齐方向。
 
@@ -159,3 +161,60 @@ ambient.offline / low_battery——**全是 Agent 状态的细分**。
   我们已经有 `needs_owner`，那是**有实际理由**的求关注。
 - **它的 tier 映射**——机制已搬（见 `working.tiers`），但「戴耳机 = 2 个会话」
   这种对应关系用户读不出来，那是换皮不是传信息。
+
+
+---
+
+## 六、补齐结果
+
+三个缺口全部实现，动作数 41 → 48。
+
+### A. 睡眠链 3 → 5 段 ✅
+
+`idle` → **`drowsing`**(Fading Watch) → `away` → **`collapsing`**(Blanket Fold)
+→ `sleeping` → `waking`
+
+时序用**比例**而不是绝对值（`drowsyRatio 0.7 × away`），这样 energy 低时
+整条链一起缩短，「累的时候睡得早」才成立。
+
+`collapsing` 承担的是构图过渡：此前 away（站着、毯子在身侧）到
+sleeping（俯视平躺、盖着被）是硬切，毯子会瞬间从身侧跳到身上。
+
+### B. 自发行为 ✅
+
+| 动作 | 时长 | 特点 |
+| --- | --- | --- |
+| `self.stretch`（Long Stretch） | 3.2s | 顶点停住，落回比拉长慢 |
+| `self.peek`（Upward Peek） | 2.8s | 视线朝**上**——不追光标，与 hover 相反 |
+| `self.roam`（Little Wander） | 4.6s | **外壳真的把窗口平移 64pt** |
+
+走 oneshot 插播而不是占仲裁档位——宠物的自娱自乐必须能被任何真实状态
+立刻打断。energy > 0.35 才做，累了就不折腾。
+
+`self.roam` 的位移是硬要求：原地走路是假的。退役掉的 `moving`
+（Sideways Scuttle）就是因为外壳从不发 `shell.move`，那个动作一次都没上过屏。
+所以计划里带 `drift`，外壳在动作时长内分帧平移，撞到屏幕边自然停下。
+
+### C. mini 档 8 → 10 ✅
+
+| 动作 | 说明 |
+| --- | --- |
+| `mini.walk`（Edge Shuffle） | 沿边缘**纵向**挪（贴的是左右边，所以沿边走是上下） |
+| `mini.sleep`（Edge Sleep） | 眼睛全程闭死、缩得更紧——此前 sleeping 收敛到 Edge Doze，「真睡着」和「打盹」长得一样 |
+
+### 过程中修的四处
+
+1. **总表解析器第三、四次同类失配**。静默链改成三元表达式后 actionId
+   不再是字面量，四个睡眠态一起被标成「没有触发源」；自发行为由 `SELF_ACTS`
+   表驱动，是第四条不走 `s.state` 赋值的路径。靠的是总表测试当场炸掉。
+
+2. **自发行为只 push 不 emit**。`pushOneshot` 后直接 `return current`，
+   新动作要等下一次 resolve 才上屏，中间显示的还是上一个动作。
+
+3. **生成器分工没划清**。`make-action-svgs.mjs` 用主形态取景把 mini 素材
+   覆盖了，而覆盖后画面**看起来仍然正常**——只是角色缩在角落里。
+   现在主形态生成器显式跳过 mini。
+
+4. **mini 生成器没同步眼睛拆分**。`.eyes` / `.blink` 当初是用一次性脚本
+   拆开的，生成器还是合并写法，重新生成时又被覆盖回去。
+   同源的东西必须同源修——一次性脚本改过的地方，生成器也要改。

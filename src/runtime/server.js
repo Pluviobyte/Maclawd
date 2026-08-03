@@ -272,6 +272,8 @@ export function loadActions() {
           // 漏了这一行的表现是「契约里配了 tier，运行时永远只播第一档」，
           // 而且没有任何东西会报错。
           tiers: node.tiers ?? null,
+          // 位移意图（自发溜达）。白名单漏了它的表现是「宠物走路但不动」。
+          drift: node.drift ?? null,
         });
       }
     }

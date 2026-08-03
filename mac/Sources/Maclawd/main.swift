@@ -76,6 +76,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.pet.show(source: self.client.state.source,
                           motion: self.client.state.motion,
                           variant: self.client.state.variant)
+            // 位移要在 show 之后：先换上走路的画面，再开始挪窗口。
+            // 反过来的话会先看到「静止的宠物在滑动」。
+            self.pet.applyDrift(self.client.state.drift,
+                                key: self.client.state.source ?? "",
+                                durationMs: self.client.state.durationMs ?? 3000)
         }
 
         pet.orderFront(nil)

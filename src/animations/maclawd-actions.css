@@ -941,5 +941,91 @@
 @keyframes fold-collapse-blanket { 0%,13%{transform:translate(0,0)} 14%,20%{transform:translate(1px,-1px) rotate(-4deg)} 21%,35%{transform:translate(3px,-1px) rotate(-9deg)} 36%,42%{transform:translate(5px,-1px) rotate(-12deg)} 43%,56%{transform:translate(6px,0) rotate(-9deg)} 57%,63%{transform:translate(7px,0) rotate(-6deg)} 64%,85%{transform:translate(8px,1px) rotate(-3deg)} 86%,100%{transform:translate(8px,2px) rotate(0)} }
 @keyframes fold-collapse-eyes { 0%,17%{transform:translateY(1px)} 18%,34%{transform:translateY(2px)} 35%,58%{transform:translateY(3px)} 59%,100%{transform:translateY(4px)} }
 @keyframes fold-collapse-blink { 0%,17%{transform:scaleY(.4)} 18%,34%{transform:scaleY(.2)} 35%,100%{transform:scaleY(.15)} }
+/* self-stretch：伸懒腰。**顶点必须停住**——没有滞留的伸展读不出「舒服」，
+   只会读成抽了一下。前腿先离地、身体拉长、停住、再落回。
+   落回要比拉长慢，那是「意犹未尽」。 */
+.state-self-stretch { --duration: 3.2s; }
+.state-self-stretch .actor { animation-name: stretch-body; }
+.state-self-stretch .left-claw { animation-name: stretch-left; }
+.state-self-stretch .right-claw { animation-name: stretch-right; }
+.state-self-stretch .leg-a { animation-name: stretch-leg-a; }
+.state-self-stretch .leg-b { animation-name: stretch-leg-b; }
+.state-self-stretch .leg-c { animation-name: stretch-leg-c; }
+.state-self-stretch .leg-d { animation-name: stretch-leg-d; }
+.state-self-stretch .eyes { animation-name: stretch-eyes; }
+.state-self-stretch .blink { animation-name: stretch-blink; }
+@keyframes stretch-body { 0%,10%{transform:translate(0,0)} 11%,16%{transform:translateY(-1px) scaleY(1.08)} 17%,27%{transform:translateY(-3px) scaleY(1.22)} 28%,55%{transform:translateY(-4px) scaleY(1.3)} 56%,66%{transform:translateY(-2px) scaleY(1.14)} 67%,77%{transform:translateY(0) scaleY(1.02)} 78%,88%{transform:translateY(1px) scaleY(.96)} 89%,100%{transform:translateY(0) scaleY(1)} }
+@keyframes stretch-left { 0%,10%{transform:translate(0,0)} 11%,16%{transform:translate(-1px,-2px)} 17%,27%{transform:translate(-3px,-4px)} 28%,55%{transform:translate(-4px,-5px)} 56%,66%{transform:translate(-2px,-3px)} 67%,77%{transform:translate(0,-1px)} 78%,88%{transform:translate(0,1px)} 89%,100%{transform:translate(0,0)} }
+@keyframes stretch-right { 0%,10%{transform:translate(0,0)} 11%,16%{transform:translate(1px,-2px)} 17%,27%{transform:translate(3px,-4px)} 28%,55%{transform:translate(4px,-5px)} 56%,66%{transform:translate(2px,-3px)} 67%,77%{transform:translate(0,-1px)} 78%,88%{transform:translate(0,1px)} 89%,100%{transform:translate(0,0)} }
+@keyframes stretch-leg-a { 0%,10%{transform:translateY(0)} 11%,16%{transform:translateY(-2px)} 17%,55%{transform:translateY(-4px)} 56%,66%{transform:translateY(-1px)} 67%,100%{transform:translateY(0)} }
+@keyframes stretch-leg-b { 0%,10%{transform:translateY(0)} 11%,16%{transform:translateY(-1px)} 17%,55%{transform:translateY(-3px)} 56%,66%{transform:translateY(-1px)} 67%,100%{transform:translateY(0)} }
+@keyframes stretch-leg-c { 0%,16%{transform:translateY(0)} 17%,60%{transform:translateY(1px)} 61%,100%{transform:translateY(0)} }
+@keyframes stretch-leg-d { 0%,16%{transform:translateY(0)} 17%,60%{transform:translateY(1px)} 61%,100%{transform:translateY(0)} }
+@keyframes stretch-eyes { 0%,10%{transform:translate(0,0)} 11%,27%{transform:translate(0,-1px)} 28%,55%{transform:translate(0,-1px)} 56%,100%{transform:translate(0,0)} }
+@keyframes stretch-blink { 0%,16%{transform:scaleY(1)} 17%,43%{transform:scaleY(.15)} 44%,100%{transform:scaleY(1)} }
+/* self-peek：抬头看。与 interaction.hover 的区别是**谁发起的**：
+   那个是你把光标移过去它才看，这个是它自己抬头。
+   所以视线朝**上**——不追光标，看的是别处。
+   看完要有一个「算了」的收尾，否则读成呆住。 */
+.state-self-peek { --duration: 2.8s; }
+.state-self-peek .actor { animation-name: peek-up-body; }
+.state-self-peek .left-claw { animation-name: peek-up-left; }
+.state-self-peek .right-claw { animation-name: peek-up-right; }
+.state-self-peek .eyes { animation-name: peek-up-eyes; }
+.state-self-peek .blink { animation-name: peek-up-blink; }
+@keyframes peek-up-body { 0%,18%{transform:translate(0,0)} 19%,24%{transform:translate(0,-1px)} 25%,37%{transform:translate(0,-2px)} 38%,68%{transform:translate(0,-2px)} 69%,74%{transform:translate(0,-1px)} 75%,87%{transform:translate(0,1px)} 88%,100%{transform:translate(0,0)} }
+@keyframes peek-up-left { 0%,18%{transform:translate(0,0)} 19%,24%{transform:translate(0,-1px)} 25%,68%{transform:translate(1px,-2px)} 69%,100%{transform:translate(0,0)} }
+@keyframes peek-up-right { 0%,18%{transform:translate(0,0)} 19%,24%{transform:translate(0,-1px)} 25%,68%{transform:translate(-1px,-2px)} 69%,100%{transform:translate(0,0)} }
+@keyframes peek-up-eyes { 0%,18%{transform:translate(0,0)} 19%,24%{transform:translate(0,-1px)} 25%,37%{transform:translate(0,-2px)} 38%,55%{transform:translate(1px,-2px)} 56%,68%{transform:translate(-1px,-2px)} 69%,74%{transform:translate(0,-1px)} 75%,100%{transform:translate(0,0)} }
+@keyframes peek-up-blink { 0%,55%{transform:scaleY(1)} 56%,62%{transform:scaleY(.15)} 63%,74%{transform:scaleY(1)} 75%,80%{transform:scaleY(.15)} 81%,100%{transform:scaleY(1)} }
+/* self-roam：溜达。**外壳会真的把窗口平移过去**（计划里带 drift）——
+   原地走路是假的：退役掉的 Sideways Scuttle 就是因为外壳从不发
+   shell.move，那个动作从没在屏幕上出现过。
+   四条腿两两交替，身体随步伐轻微起伏；起步和收尾各留一拍，
+   否则会读成「凭空开始走、凭空停下」。 */
+.state-self-roam { --duration: 4.6s; }
+.state-self-roam .actor { animation-name: roam-body; }
+.state-self-roam .leg-a { animation-name: roam-leg-a; animation-duration: 1.15s; }
+.state-self-roam .leg-d { animation-name: roam-leg-d; animation-duration: 1.15s; }
+.state-self-roam .leg-b { animation-name: roam-leg-b; animation-duration: 1.15s; }
+.state-self-roam .leg-c { animation-name: roam-leg-c; animation-duration: 1.15s; }
+.state-self-roam .left-claw { animation-name: roam-left; animation-duration: 1.15s; }
+.state-self-roam .right-claw { animation-name: roam-right; animation-duration: 1.15s; }
+.state-self-roam .eyes { animation-name: roam-eyes; }
+.state-self-roam .blink { animation-name: roam-blink; animation-duration: 3.9s; }
+@keyframes roam-body { 0%,22%{transform:translate(0,0)} 23%,30%{transform:translate(0,-1px)} 31%,37%{transform:translate(0,0)} 38%,45%{transform:translate(0,-1px)} 46%,53%{transform:translate(0,0)} 54%,61%{transform:translate(0,-1px)} 62%,68%{transform:translate(0,0)} 69%,76%{transform:translate(0,-1px)} 77%,100%{transform:translate(0,0)} }
+@keyframes roam-leg-a { 0%,37%{transform:translateY(0)} 38%,49%{transform:translateY(-2px)} 50%,62%{transform:translateY(-1px)} 63%,100%{transform:translateY(0)} }
+@keyframes roam-leg-d { 0%,37%{transform:translateY(0)} 38%,49%{transform:translateY(-2px)} 50%,62%{transform:translateY(-1px)} 63%,100%{transform:translateY(0)} }
+@keyframes roam-leg-b { 0%,12%{transform:translateY(-1px)} 13%,49%{transform:translateY(0)} 50%,62%{transform:translateY(-2px)} 63%,100%{transform:translateY(0)} }
+@keyframes roam-leg-c { 0%,12%{transform:translateY(-1px)} 13%,49%{transform:translateY(0)} 50%,62%{transform:translateY(-2px)} 63%,100%{transform:translateY(0)} }
+@keyframes roam-left { 0%,37%{transform:translate(1px,0)} 38%,62%{transform:translate(1px,-1px)} 63%,100%{transform:translate(0,0)} }
+@keyframes roam-right { 0%,24%{transform:translate(-1px,-1px)} 25%,62%{transform:translate(0,0)} 63%,100%{transform:translate(-1px,0)} }
+@keyframes roam-eyes { 0%,28%{transform:translate(1px,0)} 29%,49%{transform:translate(1px,-1px)} 50%,85%{transform:translate(1px,0)} 86%,100%{transform:translate(0,0)} }
+@keyframes roam-blink { 0%,66%{transform:scaleY(1)} 67%,74%{transform:scaleY(.15)} 75%,100%{transform:scaleY(1)} }
+/* mini-walk：沿边缘挪。贴的是左右边缘，所以位移是**纵向**的——
+   外壳按计划里的 drift 把窗口上下移，与主形态 self.roam 的横向溜达互补。
+   动作本身要读出「在使劲挪」：身体一顿一顿，不是匀速滑行。 */
+.state-mini-walk { --duration: 3.8s; }
+.state-mini-walk .actor { animation-name: mwalk-body; }
+.state-mini-walk .left-claw { animation-name: mwalk-claw; animation-duration: 0.95s; }
+.state-mini-walk .eyes { animation-name: mwalk-eyes; }
+.state-mini-walk .blink { animation-name: mwalk-blink; animation-duration: 3.1s; }
+@keyframes mwalk-body { 0%,19%{transform:translate(0,0)} 20%,26%{transform:translate(0,-1px)} 27%,39%{transform:translate(-1px,-1px)} 40%,46%{transform:translate(0,0)} 47%,52%{transform:translate(0,-1px)} 53%,66%{transform:translate(-1px,-1px)} 67%,72%{transform:translate(0,0)} 73%,79%{transform:translate(0,-1px)} 80%,100%{transform:translate(0,0)} }
+@keyframes mwalk-claw { 0%,32%{transform:translate(0,0)} 33%,49%{transform:translate(0,-2px)} 50%,66%{transform:translate(1px,-1px)} 67%,100%{transform:translate(0,1px)} }
+@keyframes mwalk-eyes { 0%,22%{transform:translate(0,-1px)} 23%,53%{transform:translate(0,-2px)} 54%,84%{transform:translate(0,-1px)} 85%,100%{transform:translate(0,0)} }
+@keyframes mwalk-blink { 0%,63%{transform:scaleY(1)} 64%,72%{transform:scaleY(.15)} 73%,100%{transform:scaleY(1)} }
+/* mini-sleep：贴边睡着。与 Edge Doze（打盹但还醒着）的区别必须做足，
+   否则贴边之后真睡着和打盹长得一样——此前 sleeping 就是收敛到 Doze 的。
+   两条区别：眼睛**全程闭死**（Doze 是半闭会睁），身体缩得更紧、
+   呼吸更慢更深（Doze 是 5.2s 一格，这里 6s 两格）。 */
+.state-mini-sleep { --duration: 6s; }
+.state-mini-sleep .actor { animation-name: msleep-body; }
+.state-mini-sleep .left-claw { animation-name: msleep-claw; }
+.state-mini-sleep .eyes { animation-name: msleep-eyes; }
+.state-mini-sleep .blink { animation-name: msleep-blink; }
+@keyframes msleep-body { 0%,30%{transform:translate(1px,1px) scaleY(.9)} 31%,43%{transform:translate(1px,0) scaleY(.94)} 44%,62%{transform:translate(1px,0) scaleY(.96)} 63%,74%{transform:translate(1px,1px) scaleY(.92)} 75%,100%{transform:translate(1px,1px) scaleY(.88)} }
+@keyframes msleep-claw { 0%,32%{transform:translate(1px,2px)} 33%,52%{transform:translate(1px,1px)} 53%,79%{transform:translate(1px,2px)} 80%,100%{transform:translate(1px,3px)} }
+@keyframes msleep-eyes { 0%,100%{transform:translateY(2px)} }
+@keyframes msleep-blink { 0%,100%{transform:scaleY(.12)} }
 
 /* === 生成区结束 === */

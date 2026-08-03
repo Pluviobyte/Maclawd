@@ -65,6 +65,18 @@ async function hookTriggers() {
     (out[m[1]] ??= new Set()).add('通用 working 持续超过 longWorkMs');
   }
 
+  // 自发行为：由 SELF_ACTS 表驱动，既不走 s.state 赋值也不走静默三元。
+  // 第四条不走赋值的产出路径——每次新增这类路径都要在这里补一条，
+  // 靠的是总表测试当场炸掉，不是靠记得。
+  // 非贪婪要匹配到 `];` 而不是第一个 `]`——数组里每一项本身就带方括号，
+  // 停在第一个 `]` 只会拿到第一条。这个错今天已经犯过一次（mini 关键帧解析）。
+  const selfActs = src.match(/const SELF_ACTS = \[([\s\S]*?)\];/);
+  if (selfActs) {
+    for (const m of selfActs[1].matchAll(/'([a-z_.]+)'/g)) {
+      (out[m[1]] ??= new Set()).add('宠物自发（空闲时按概率）');
+    }
+  }
+
   const body = src.slice(src.indexOf('switch (type)'));
   let event = null;
   for (const line of body.split('\n')) {

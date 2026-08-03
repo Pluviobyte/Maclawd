@@ -55,6 +55,11 @@ final class PetWindow: NSWindow {
     private var isDragging = false
     /// 低于这个位移不算拖动。手抖几个点不该把「戳一下」变成「拎起来」。
     private let dragThreshold: CGFloat = 4
+
+    /// 自发溜达的位移动画。同一个动作只走一次——运行时每 2 秒轮询一次，
+    /// 不去重的话同一次溜达会被重复触发，宠物会一路滑出屏幕。
+    private var driftTimer: Timer?
+    private var driftKey: String?
     private static let originKey = "petWindowOrigin"
 
     /// 贴住哪一边。mini 的动作是按**右边缘**画的，左边缘靠整体镜像复用，
@@ -405,6 +410,57 @@ final class PetWindow: NSWindow {
         guard matchingScreen(saved) != nil else { return false }
         setFrameOrigin(NSPoint(x: x, y: y))
         return true
+    }
+
+    /**
+     让窗口跟着动作位移（自发溜达）。
+
+     **不做这件事的话「走路」就是假的**：退役掉的 Sideways Scuttle
+     就是因为外壳从不发 shell.move，那个动作一次都没在屏幕上出现过。
+
+     - 同一个动作只触发一次（用 key 去重）。运行时每 2 秒轮询，
+       不去重的话一次溜达会被重复触发，宠物一路滑出屏幕。
+     - 拖动中不接受：用户正拎着它，程序再去移动会打架。
+     - 目标位置先夹回屏幕内再走，走到边上就自然停下，不会走出去。
+     */
+    func applyDrift(_ drift: (dx: CGFloat, dy: CGFloat)?, key: String, durationMs: Int) {
+        guard let drift, !isDragging, key != driftKey else {
+            if drift == nil { driftKey = nil }
+            return
+        }
+        driftKey = key
+        driftTimer?.invalidate()
+
+        guard let screen = hostScreen else { return }
+        let visible = screen.visibleFrame
+        let start = frame.origin
+        // 朝屏幕内侧走：贴右边就往左溜达，否则往右。撞墙掉头比走出屏幕自然。
+        let towardLeft = start.x + frame.width / 2 > visible.midX
+        let target = NSPoint(
+            x: min(max(start.x + (towardLeft ? -drift.dx : drift.dx), visible.minX),
+                   visible.maxX - frame.width),
+            y: min(max(start.y + drift.dy, visible.minY), visible.maxY - frame.height)
+        )
+        guard abs(target.x - start.x) > 1 || abs(target.y - start.y) > 1 else { return }
+
+        // 分帧推进而不是一步到位——一步到位是「瞬移」，和走路动画对不上。
+        let steps = max(1, durationMs / 40)
+        var step = 0
+        driftTimer = Timer.scheduledTimer(withTimeInterval: 0.04, repeats: true) { [weak self] timer in
+            MainActor.assumeIsolated {
+                guard let self, !self.isDragging else { timer.invalidate(); return }
+                step += 1
+                let t = min(1, Double(step) / Double(steps))
+                self.setFrameOrigin(NSPoint(
+                    x: start.x + (target.x - start.x) * t,
+                    y: start.y + (target.y - start.y) * t
+                ))
+                if t >= 1 {
+                    timer.invalidate()
+                    self.savePosition()
+                }
+            }
+        }
     }
 
     /// 把桌宠移回默认角落。拖丢了、或者拖到已拔掉的屏幕上时的救命入口。

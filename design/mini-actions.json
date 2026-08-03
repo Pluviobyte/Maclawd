@@ -110,6 +110,33 @@
       "source": "src/animations/mini-exit.svg",
       "exit": "timeout",
       "next": null
+    },
+    {
+      "id": "mini.walk",
+      "name": "Edge Shuffle",
+      "mode": "oneshot",
+      "durationMs": 3800,
+      "accessory": "none",
+      "action": "Shuffles a short distance along the screen edge, then settles back to dozing.",
+      "source": "src/animations/mini-walk.svg",
+      "exit": "timeout",
+      "next": "mini.idle",
+      "drift": {
+        "dx": 0,
+        "dy": 72
+      },
+      "designNote": "mini 档此前贴边之后只能原地待着。位移方向是**纵向**——贴的是左右边缘，沿边缘走就是上下移动。这和主形态 self.roam 的横向溜达正好互补，两者共用同一条 drift 通道。"
+    },
+    {
+      "id": "mini.sleep",
+      "name": "Edge Sleep",
+      "mode": "loop",
+      "durationMs": 6000,
+      "accessory": "none",
+      "action": "Curls tight against the edge, breathing slowly with both eyes shut.",
+      "source": "src/animations/mini-sleep.svg",
+      "exit": "event-driven",
+      "designNote": "此前睡眠链在 mini 档不成立：sleeping 收敛到 mini.idle（Edge Doze），而 Edge Doze 是「打盹但还醒着」——贴边之后真睡着和打盹长得一样。补上这一档后，睡眠链的后三段在 mini 里也有区分。"
     }
   ],
   "convergence": {
@@ -118,10 +145,13 @@
     "idle.grooming": "mini.idle",
     "idle.leg_shuffle": "mini.idle",
     "idle.drowsy": "mini.idle",
+    "self.stretch": "mini.peek",
+    "self.peek": "mini.peek",
+    "self.roam": "mini.walk",
     "away": "mini.idle",
-    "sleeping": "mini.idle",
+    "sleeping": "mini.sleep",
     "drowsing": "mini.idle",
-    "collapsing": "mini.idle",
+    "collapsing": "mini.sleep",
     "paused": "mini.idle",
     "ambient.edge": "mini.idle",
     "thinking": "mini.busy",

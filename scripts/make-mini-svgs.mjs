@@ -23,24 +23,20 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 /** mini 取景：方形，与 48×48 的窗口同比，避免拉伸。 */
 const MINI_VIEWBOX = '0 3 16 16';
 
-const ACTIONS = [
-  ['mini.idle', 'mini-idle', 'Edge Doze',
-    'Tucked against the edge, breathing slowly with one drowsy eye showing.'],
-  ['mini.busy', 'mini-busy', 'Edge Bob',
-    'Tucked against the edge, bobbing with a working rhythm.'],
-  ['mini.peek', 'mini-peek', 'Edge Peek',
-    'Leans out from the edge until both eyes clear the frame, then eases back.'],
-  ['mini.alert', 'mini-alert', 'Edge Tap',
-    'Leans out and taps the edge twice, asking for a decision.'],
-  ['mini.error', 'mini-error', 'Edge Slump',
-    'Slumps against the edge and rocks slowly, eyes half shut.'],
-  ['mini.happy', 'mini-happy', 'Edge Bounce',
-    'Springs out from the edge once and settles back.'],
-  ['mini.enter', 'mini-enter', 'Tuck In',
-    'Slides from the main-form centre into the tucked edge position.'],
-  ['mini.exit', 'mini-exit', 'Pop Out',
-    'Slides out of the tucked edge position toward the main form.'],
-];
+/**
+ * 从契约读，不写死清单。
+ *
+ * 原来这里手写了 8 条，新增 mini 动作时必须记得同步——而漏掉的表现是
+ * 「契约里有、素材没有」，编排器会回落到别的动作，画面看起来仍然正常。
+ */
+function actionsFromContract(states) {
+  return states.map((s) => [
+    s.id,
+    s.id.replace('.', '-'),
+    s.name,
+    s.action,
+  ]);
+}
 
 function actorMarkup(c) {
   const rect = (id, x, y, w, h) => `<rect id="${id}" x="${x}" y="${y}" width="${w}" height="${h}"/>`;
@@ -60,7 +56,11 @@ function actorMarkup(c) {
   return `<g class="actor motion"><g fill="${c.bodyColor}">${legs}${torso}`
     + `<g class="left-claw motion">${leftArm}</g>`
     + `<g class="right-claw">${rightArm}</g></g>`
-    + `<g class="eyes motion blink" fill="${c.eyeColor}">${eyes}</g></g>`;
+    // 视线与眨眼必须**嵌套两层**。两个类挂在同一元素上时
+    // animation-name 会互相覆盖，只有后者生效——眨眼就没法有自己的周期。
+    // 这里曾经是合并写法，靠一次性脚本拆开过；生成器没同步，
+    // 于是重新生成时又被覆盖回去。同源的东西必须同源修。
+    + `<g class="eyes motion" fill="${c.eyeColor}"><g class="blink motion">${eyes}</g></g></g>`;
 }
 
 function svg(stateClass, title, desc, actor) {
@@ -77,6 +77,9 @@ async function main() {
   const { characterContract } = JSON.parse(await readFile(contractFile, 'utf8'));
   if (!characterContract) throw new Error('main-state-actions.json 里没有 characterContract');
   const actor = actorMarkup(characterContract);
+
+  const miniDoc = JSON.parse(await readFile(join(ROOT, 'design/mini-actions.json'), 'utf8'));
+  const ACTIONS = actionsFromContract(miniDoc.states);
 
   for (const [, stateClass, title, desc] of ACTIONS) {
     const file = join(ROOT, `src/animations/${stateClass}.svg`);

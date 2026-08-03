@@ -55,6 +55,10 @@ async function main() {
   let count = 0;
   for (const anim of ANIMATIONS) {
     if (!anim.svg) continue;
+    // mini 档的取景与分组都不同（0 3 16 16 + .tuck），由 make-mini-svgs.mjs 负责。
+    // 不挡的话这里会用主形态取景把它们覆盖掉，而覆盖后画面**看起来仍然正常**——
+    // 只是角色缩在角落里，很难联想到是生成器用错了。
+    if (anim.state.startsWith('mini-')) continue;
     const { file, title, desc, props = '', propsAfter = '', splitLegs } = anim.svg;
     // props 画在角色**之前**（在身后），propsAfter 画在**之后**（在身前）。
     // 「拿在手里」的道具必须在身前，画在身后会被躯干挡掉一半。

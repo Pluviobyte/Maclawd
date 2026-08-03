@@ -120,6 +120,32 @@ export function classifyBash(command) {
   return 'working';
 }
 
+/**
+ * 宠物**自己**决定去做的事。
+ *
+ * 与 idle 变体的区别不在观感，在**有没有目的**：擦爪是无聊时的抽动，
+ * 溜达是它决定去别处看看。这条线是「桌宠」与「状态指示器」的分界——
+ * 此前 41 个动作全部由 Agent 状态或用户操作驱动，宠物自己什么都不做。
+ *
+ * 这些**不声称任何 Agent 状态**，所以不违反契约的 truthPolicy
+ * （「只从可靠信号选状态」）——它们根本不是状态，是宠物的行为。
+ * 但正因为如此，它们必须能被任何真实状态**立刻**打断：
+ * 宠物的自娱自乐不能盖住「Claude 卡住了」。所以走 oneshot 插播，
+ * 而不是占住一个仲裁档位。
+ */
+const SELF_ACTS = [
+  ['self.stretch', 40],
+  ['self.peek', 35],
+  ['self.roam', 25],
+];
+
+/** 各自的契约时长。与 design/runtime-lifecycle-actions.json 必须一致，测试会比对。 */
+const SELF_ACT_MS = {
+  'self.stretch': 3200,
+  'self.peek': 2800,
+  'self.roam': 4600,
+};
+
 /** idle 变体的基础权重。energy 低时把权重推向 drowsy。 */
 const IDLE_VARIANTS = [
   ['idle', 62],
@@ -175,6 +201,12 @@ const DEFAULTS = {
   workingRateThreshold: 200,
   // idle 变体轮换间隔
   idleVariantMs: 45_000,
+  // 两次自发行为之间的最小间隔。太密会显得多动，太疏又等于没有——
+  // 两分钟左右是「偶尔动一下」的量。
+  selfActGapMs: 120_000,
+  // 每次 tick 触发自发行为的概率。配合 gap 决定实际频率；
+  // 单独调大概率没用，gap 才是硬约束。
+  selfActChance: 0.06,
   // 同一个工作态持续多久算「久战」。三分钟是个分界：
   // 短于它多半是一次普通的工具调用，长于它用户会开始想「它是不是卡了」。
   longWorkMs: 3 * 60_000,
@@ -198,6 +230,7 @@ export function createStateEngine(options = {}) {
   let current = { actionId: 'idle', variant: null, sessionId: null, since: 0, reason: 'init' };
   let idleVariant = 'idle';
   let idleVariantAt = 0;
+  let lastSelfActAt = 0;
   let lastActivityAt = 0;
   /**
    * 「没东西可显示」是从什么时候开始的。
@@ -473,8 +506,8 @@ const SYNTHETIC_SESSIONS = new Set(['rate', 'shell']);
     resolve(now);
   }
 
-  function pushOneshot(id, now) {
-    oneshot = { id, until: now + 3000 };
+  function pushOneshot(id, now, durationMs = 3000) {
+    oneshot = { id, until: now + durationMs };
   }
 
   /** 无 hook 时的降级路径：只能从 token 速率区分 working / idle。 */
@@ -576,6 +609,23 @@ const SYNTHETIC_SESSIONS = new Set(['rate', 'shell']);
         emit({ actionId: stage, variant: null, sessionId: null }, 'silence', now);
         return current;
       }
+    }
+
+    // 宠物自己决定做点什么。只在**真正空闲**时发生（走到这里就说明
+    // 没有任何会话可显示、也还没到犯困），而且要隔够久。
+    // energy 低时不做——累了就不折腾了。
+    if (energy > 0.35
+      && now - lastSelfActAt > config.selfActGapMs
+      && random() < config.selfActChance) {
+      lastSelfActAt = now;
+      const act = pickWeighted(SELF_ACTS, random);
+      // 自发行为按各自的契约时长播完，不套用 oneshot 的 3 秒默认值——
+      // 溜达播到一半被切回 idle 会读成「走一半又不走了」。
+      pushOneshot(act, now, SELF_ACT_MS[act] ?? 3000);
+      // 必须**当场发出**。只 push 不 emit 的话要等下一次 resolve 才上屏，
+      // 而 resolve 由外部时钟驱动——中间这段时间显示的还是上一个动作。
+      emit({ actionId: act, variant: null, sessionId: null }, 'oneshot', now);
+      return current;
     }
 
     // idle 变体轮换，权重受 energy 影响

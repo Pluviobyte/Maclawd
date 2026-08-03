@@ -103,7 +103,9 @@ test('密度：姿态谱里的动作都达到最低变化频率', () => {
     if (rate < FLOOR) slow.push(`${anim.state}=${rate.toFixed(2)}`);
   }
   // sleeping 与 low-battery 是刻意的慢，登记在案
-  const allowed = new Set(['sleeping', 'low-battery', 'recovering']);
+  // 睡着的东西**应该**慢。对它们套密度门槛是反的——
+  // mini-sleep 每秒变 4 次会读成「在抽搐」而不是「睡熟了」。
+  const allowed = new Set(['sleeping', 'low-battery', 'recovering', 'mini-sleep']);
   const unexpected = slow.filter((s) => !allowed.has(s.split('=')[0]));
   assert.deepEqual(unexpected, [], `这些动作慢到接近静止图：${unexpected.join(', ')}`);
 });

@@ -158,6 +158,10 @@ export function createOrchestrator({
       // 面板与测试要能看出「现在播的是第几档、是不是占位素材」。
       // 不暴露的话，分档在画面上生效了却无从解释，占位也会悄悄变成成品。
       tier: tier ? { minSessions: tier.minSessions, placeholder: !!tier.placeholder } : null,
+      // 位移意图。外壳在动作时长内把窗口平移过去——
+      // 「原地走路」是假的：退役掉的 Sideways Scuttle 就是因为外壳
+      // 从不发 shell.move，那个动作一次都没在屏幕上出现过。
+      drift: action.drift ?? null,
     };
   }
 

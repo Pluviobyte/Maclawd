@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 
 /// 运行时状态快照，对应 Node 端 `/api/state` 的返回。
@@ -41,6 +42,8 @@ struct RuntimeState {
     /// 可见画面框。夹到屏幕内时用它，**不是窗口框**——
     /// 窗口 135×135 而角色只占 45×27，按窗口夹的话角色永远贴不到屏幕边。
     var marginBox: NormalizedRect?
+    /// 这个动作要不要让窗口跟着位移（自发溜达）。单位是 pt。
+    var drift: (dx: CGFloat, dy: CGFloat)?
     var reason: String = ""
     var tokensPerMin: Int = 0
     var disabled: Bool = false
@@ -230,6 +233,12 @@ final class RuntimeClient {
                 }
             }
             next.mini = json["mini"] as? Bool ?? false
+            if let p = json["plan"] as? [String: Any],
+               let d = p["drift"] as? [String: Any],
+               let dx = (d["dx"] as? NSNumber)?.doubleValue,
+               let dy = (d["dy"] as? NSNumber)?.doubleValue {
+                next.drift = (CGFloat(dx), CGFloat(dy))
+            }
             if let d = json["debug"] as? [String: Any] {
                 next.energy = d["energy"] as? Double ?? 1
                 next.tokensPerMin = d["rate"] as? Int ?? 0
