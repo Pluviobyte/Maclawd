@@ -381,3 +381,43 @@ test('契约引用的素材都用同一张共享样式表——内联才拿得�
   assert.deepEqual(offenders, [],
     `这些素材在外壳里拿不到完整规则：${offenders.join(', ')}`);
 });
+
+test('样式表没有语法损坏的规则', () => {
+  // 我自己用按行过滤的脚本清理样式表时，删掉了一条多行规则的**第二个选择器行**
+  // （它以 .state-delegating 开头，正好落在过滤条件里）。规则变成
+  //   `选择器, \n display: none; }`
+  // 语法非法，浏览器整条丢弃——delegating 的变体机制从此静默失效，
+  // 一个子代理和两个子代理长得一模一样，而且没有任何东西报错。
+  //
+  // 判据不能只看「选择器是不是空的」：那个畸形里多出来的 `}` 会把选择器重置掉，
+  // 畸形被吸收，检查照样是绿的（写第一版时就是这样，重新弄坏它测不出来）。
+  // 真正的信号有两个，都在**顶层**才成立：
+  //   1. 出现了没有对应 `{` 的 `}`
+  //   2. `{` 之前的选择器里含 `;`——选择器里永远不会有分号
+  const stripped = css.replace(/\/\*[\s\S]*?\*\//g, '');
+
+  let depth = 0;
+  let pending = '';
+  const broken = [];
+  for (const ch of stripped) {
+    if (ch === '{') {
+      if (depth === 0) {
+        const sel = pending.trim();
+        if (!sel) broken.push('空选择器');
+        else if (sel.includes(';')) broken.push(`选择器里出现了声明：${sel.replace(/\s+/g, ' ').slice(-70)}`);
+      }
+      depth++;
+      pending = '';
+    } else if (ch === '}') {
+      if (depth === 0) {
+        broken.push(`多出一个右花括号，前面是：${pending.replace(/\s+/g, ' ').trim().slice(-70)}`);
+      }
+      depth = Math.max(0, depth - 1);
+      pending = '';
+    } else {
+      pending += ch;
+    }
+  }
+  assert.equal(depth, 0, '花括号不配对');
+  assert.deepEqual(broken, [], `样式表里有语法损坏的规则：\n  ${broken.join('\n  ')}`);
+});
