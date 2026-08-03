@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Maclawd — 手工设计候选</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+        background: #f4f1ea; color: #1e1e2e;
+        /* 每单位多少像素。取景 45 单位 → 135 / 180 / 270，全是整数倍。 */
+        --scale: 3;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 44px 24px 80px; }
+      main { width: min(1400px, 100%); margin: 0 auto; }
+      h1 { margin: 0 0 12px; font-size: clamp(30px, 4vw, 46px); letter-spacing: -.03em; }
+      .lede { max-width: 800px; margin: 0 0 8px; color: #50505e; line-height: 1.65; }
+      .lede b { color: #1e1e2e; }
+      .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+             margin: 26px 0 30px; }
+      button { font: inherit; font-size: 13px; padding: 7px 13px; border-radius: 999px;
+               border: 1px solid rgba(30,30,46,.14); background: #fbfaf7; color: #3a3a48;
+               cursor: pointer; }
+      button[aria-pressed="true"] { background: #1e1e2e; color: #fbfaf7; border-color: #1e1e2e; }
+      .bar span { font-size: 12.5px; color: #8a8a99; margin-left: 4px; }
+
+      section { margin-bottom: 44px; }
+      .head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+      .head h2 { margin: 0; font-size: 25px; }
+      .head code { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; color: #c67a62; }
+      .head .n { padding: 2px 9px; border-radius: 999px; background: #1e1e2e;
+                 color: #fbfaf7; font-size: 12px; }
+      .head p { margin: 0; color: #50505e; font-size: 13.5px; }
+
+      .strip { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 14px; }
+      figure { margin: 0; width: calc(var(--scale) * 45px); }
+      /* 舞台**不能用 border**：1px 边框会把内容盒从 135 挤成 133，
+         133 ÷ 45 = 2.96 px/单位，正好破坏整数倍规则——而那条规则存在的
+         理由就是防止 1 单位宽的矩形忽宽忽窄。用 box-shadow，不参与布局。 */
+      .stage {
+        width: calc(var(--scale) * 45px); height: calc(var(--scale) * 45px);
+        border-radius: 14px; background:
+          linear-gradient(rgba(30,30,46,.035) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(30,30,46,.035) 1px, transparent 1px), #fff;
+        background-size: calc(var(--scale) * 6px) calc(var(--scale) * 6px);
+        box-shadow: 0 0 0 1px rgba(30,30,46,.1), 0 8px 22px rgba(30,30,46,.06);
+      }
+      .stage.base { box-shadow: 0 0 0 2px #c67a62, 0 8px 22px rgba(198,122,98,.18); }
+      figcaption { margin-top: 8px; }
+      .axis { display: block; font-size: 12px; font-weight: 750; color: #c67a62;
+              line-height: 1.4; }
+      .title { display: block; font-size: 13px; margin-top: 2px; }
+      .note { display: block; font-size: 11.5px; color: #70707e; line-height: 1.5;
+              margin-top: 4px; }
+      .empty { padding: 30px; border-radius: 16px; background: #fbfaf7;
+               border: 1px dashed rgba(30,30,46,.2); color: #626271; font-size: 14px;
+               line-height: 1.7; }
+      code.k { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+               background: rgba(30,30,46,.06); padding: 1px 5px; border-radius: 5px; }
+      a { color: #a55f4c; }
+      @media (max-width: 560px) { body { padding: 28px 14px 60px; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>手工设计候选</h1>
+      <p class="lede">每个候选**换掉一条不同的轴**——姿态、构图、朝向、循环结构、
+        对称性、场景——而不是只换道具。只换道具的那一批被判为「太类似」，
+        四个看起来像一个东西的四种皮肤。</p>
+      <p class="lede">这里和 <a href="variants.html">参数化变体</a> 不是一回事：
+        变体是<b>同一个设计的五种调法</b>（更夸张 / 更快 / 更慢 / 更顿挫），
+        候选是<b>换一个设计</b>。带橙框的是当前实现，作对照。</p>
+
+      <div class="bar" id="bar"></div>
+      <div id="out"></div>
+    </main>
+
+    <script src="/candidate-data.js"></script>
+    <script>
+      const DATA = window.MaclawdCandidates ?? null;
+      const out = document.getElementById('out');
+      const bar = document.getElementById('bar');
+
+      if (!DATA || !DATA.length) {
+        out.innerHTML = `<div class="empty">还没有手工候选。<br><br>
+          在 <code class="k">design/candidates/</code> 下按
+          <code class="k">README.md</code> 的格式写一个动作的候选文件，
+          然后跑 <code class="k">node scripts/build-candidates.mjs</code>。</div>`;
+      } else {
+        render();
+      }
+
+      async function render() {
+        // 共享样式表只取一次，由所有 shadow root 共用。
+        // 每个 root 内联一份的话，几十个样本就是几 MB 文本和几十次解析。
+        let sheet = null;
+        let cssText = '';
+        try {
+          cssText = await (await fetch('/src/animations/maclawd-actions.css')).text();
+          if (typeof CSSStyleSheet !== 'undefined' && CSSStyleSheet.prototype.replaceSync) {
+            sheet = new CSSStyleSheet();
+            sheet.replaceSync(cssText);
+          }
+        } catch (e) {
+          out.innerHTML = `<div class="empty">样式表没取到，动画无法播放——
+            <b>这不是动画坏了</b>，是资源没加载。<br>${e.message}</div>`;
+          return;
+        }
+
+        const byAction = {};
+        for (const c of DATA) (byAction[c.action] ??= []).push(c);
+
+        // 尺寸档：全是 45 的整数倍
+        for (const [scale, label] of [[3, '135px 真实尺寸'], [4, '180px'], [6, '270px']]) {
+          const b = document.createElement('button');
+          b.textContent = label;
+          b.setAttribute('aria-pressed', String(scale === 3));
+          b.onclick = () => {
+            document.documentElement.style.setProperty('--scale', scale);
+            [...bar.querySelectorAll('button[data-size]')]
+              .forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+          };
+          b.dataset.size = scale;
+          bar.append(b);
+        }
+        const total = document.createElement('span');
+        total.textContent = `${DATA.length} 个候选 · ${Object.keys(byAction).length} 个动作`;
+        bar.append(total);
+
+        const io = new IntersectionObserver((entries) => {
+          for (const e of entries) {
+            if (!e.isIntersecting) continue;
+            io.unobserve(e.target);
+            mount(e.target, sheet, cssText);
+          }
+        }, { rootMargin: '700px' });
+
+        for (const [action, list] of Object.entries(byAction)) {
+          const sec = document.createElement('section');
+          sec.innerHTML = `<div class="head"><h2>${esc(action)}</h2>
+            <span class="n">${list.length}</span></div>`;
+          const strip = document.createElement('div');
+          strip.className = 'strip';
+          for (const c of list) {
+            const fig = document.createElement('figure');
+            const stage = document.createElement('div');
+            stage.className = 'stage' + (/基准|当前实现/.test(c.axis) ? ' base' : '');
+            stage.dataset.src = c.source;
+            fig.append(stage);
+            fig.insertAdjacentHTML('beforeend',
+              `<figcaption><span class="axis">${esc(c.axis)}</span>`
+              + `<span class="title">${esc(c.title)}</span>`
+              + `<span class="note">${esc(c.desc)}</span></figcaption>`);
+            strip.append(fig);
+            io.observe(stage);
+          }
+          sec.append(strip);
+          out.append(sec);
+        }
+      }
+
+      async function mount(stage, sheet, cssText) {
+        try {
+          const svg = await (await fetch('/' + stage.dataset.src)).text();
+          // 每个样本独立 shadow root：SVG 里的 <style> 不作用域隔离，
+          // 直接内联会让页面上所有副本共用最后一个设置。
+          const root = stage.attachShadow({ mode: 'open' });
+          if (sheet) root.adoptedStyleSheets = [sheet];
+          root.innerHTML = (sheet ? '' : `<style>${cssText}</style>`)
+            + '<style>svg{width:100%;height:100%;image-rendering:pixelated;display:block}</style>'
+            + svg;
+        } catch {
+          stage.textContent = '';
+        }
+      }
+
+      function esc(s) {
+        return String(s ?? '').replace(/[&<>"]/g, (c) => (
+          { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      }
+    </script>
+  </body>
+</html>
