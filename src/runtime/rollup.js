@@ -12,7 +12,7 @@ import {
  * 全部历史，不需要 tokei 那样的 _recalc_costs 重算过程。
  */
 
-export const ROLLUP_VERSION = 3;
+export const ROLLUP_VERSION = 4;
 
 export const RANGES = [
   'today', 'yesterday', 'week', 'last_week', 'month', 'year', 'all',
@@ -132,7 +132,7 @@ function addRecordToSource(container, record) {
 }
 
 /** 记录 → 日聚合。records 必须已经去重。 */
-export function buildRollup(records, sessionsBySource = {}, projectPaths = {}) {
+export function buildRollup(records, sessionsBySource = {}, projectPaths = {}, collection = null) {
   const days = {};
   const slots = {};
 
@@ -155,7 +155,19 @@ export function buildRollup(records, sessionsBySource = {}, projectPaths = {}) {
   for (const [source, list] of Object.entries(sessionsBySource)) {
     if (Array.isArray(list) && list.length > 0) sessions[source] = list;
   }
-  return { v: ROLLUP_VERSION, days, slots, sessions, projectPaths };
+  return {
+    v: ROLLUP_VERSION,
+    days,
+    slots,
+    sessions,
+    projectPaths,
+    collection: collection ?? {
+      complete: true,
+      scannedAt: null,
+      deferredFiles: 0,
+      sources: {},
+    },
+  };
 }
 
 function accumulate(map, key, bucket) {

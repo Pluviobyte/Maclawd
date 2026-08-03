@@ -47,9 +47,14 @@
   .spark{font:11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:1px;color:var(--accent);
     white-space:pre;overflow-x:auto;}
   .axis{font-size:10px;color:var(--muted);display:flex;justify-content:space-between;max-width:340px;margin-top:4px;}
+  .barsPlot{position:relative;}
   .bars{display:flex;align-items:flex-end;gap:2px;height:80px;margin-top:6px;}
   .bars i{flex:1;min-width:2px;background:var(--body);border-radius:2px 2px 0 0;opacity:.85;}
   .bars i:hover{opacity:1;outline:1px solid var(--accent);}
+  .chartTooltip{position:absolute;z-index:2;max-width:220px;padding:5px 8px;border-radius:7px;
+    background:var(--ink);color:var(--card);box-shadow:0 4px 12px rgba(30,30,46,.18);
+    font-size:11px;font-weight:600;line-height:1.3;white-space:nowrap;pointer-events:none;
+    transform:translate(-50%,-100%);}
   .heat{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,11px);gap:3px;margin-top:8px;overflow-x:auto;padding-bottom:4px;}
   .heat i{width:11px;height:11px;border-radius:2px;background:rgba(30,30,46,.06);}
   h2{font-size:15px;margin:0 0 12px;}
@@ -119,16 +124,18 @@
   <div class="card">
     <div class="headline">
       <div>
-        <div class="big"><span id="mainNum">–</span><small id="mainUnit">计费 tokens</small></div>
+        <div class="big"><span id="mainNum">–</span><small id="mainUnit">总 Token</small></div>
         <div class="kv" id="compare"></div>
       </div>
       <div class="kv"><b id="costNum">–</b>估算成本</div>
       <div class="kv"><b id="coverage">–</b>计价覆盖率</div>
+      <div class="kv"><b id="collection">–</b>采集完整度</div>
       <div class="kv"><b id="hit">–</b>缓存命中率</div>
       <div class="kv"><b id="active">–</b>活跃时长</div>
     </div>
     <div class="metrics" id="fields"></div>
     <p class="note warn" id="coverageNote" hidden></p>
+    <p class="note warn" id="collectionNote" hidden></p>
   </div>
 
   <div class="grid2">
@@ -140,7 +147,10 @@
     </div>
     <div class="card">
       <h2>每日趋势 <span id="dailyMeta"></span></h2>
-      <div class="bars" id="daily"></div>
+      <div class="barsPlot" id="dailyPlot">
+        <div class="bars" id="daily"></div>
+        <div class="chartTooltip" id="dailyTooltip" role="tooltip" hidden></div>
+      </div>
     </div>
   </div>
 
@@ -204,6 +214,21 @@ const dur = (s) => {
   const h = Math.floor(s/3600), m = Math.round((s%3600)/60);
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 };
+const exactDur = (s) => {
+  s = Math.max(0, Math.round(Number(s)||0));
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), seconds = s%60;
+  return [h ? `${h} 小时` : '', m ? `${m} 分钟` : '', `${seconds} 秒`].filter(Boolean).join(' ');
+};
+const exactTokens = (n) => `${new Intl.NumberFormat('zh-CN', {maximumFractionDigits:0}).format(Number(n)||0)} Token`;
+const exactTrendMetricText = (row) => {
+  if (state.trendMetric === 'cost') {
+    return row.estimatedCost === null
+      ? '未计价'
+      : `估算 $${Number(row.estimatedCost||0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:4})}`;
+  }
+  if (state.trendMetric === 'active') return exactDur(row.activeSeconds);
+  return exactTokens(row.totalTokens);
+};
 const trendValue = (row) => state.trendMetric === 'cost' ? Number(row.estimatedCost||0)
   : state.trendMetric === 'active' ? Number(row.activeSeconds||0) : Number(row.totalTokens||0);
 const distributionValue = (row) => state.distributionMetric === 'cost'
@@ -244,40 +269,89 @@ function rows(tbody, entries, total, { onClick, extra } = {}){
     tr.querySelector('td').onclick = () => onClick(tr.dataset.key));
 }
 
+function clearUsageData(){
+  el('mainNum').textContent = '–';
+  el('mainNum').title = '';
+  el('mainUnit').textContent = '总 Token';
+  el('compare').textContent = '';
+  el('costNum').textContent = '–';
+  el('coverage').textContent = '–';
+  el('hit').textContent = '–';
+  el('active').textContent = '–';
+  el('fields').innerHTML = '';
+  el('coverageNote').hidden = true;
+  el('coverageNote').textContent = '';
+  el('hours').textContent = '';
+  el('hoursNote').hidden = true;
+  el('dailyMeta').textContent = '';
+  el('dailyTooltip').hidden = true;
+  el('daily').innerHTML = '';
+  el('heat').innerHTML = '';
+  el('tBySource').innerHTML = '<tr><td colspan="3" style="color:var(--muted)">暂无数据</td></tr>';
+  el('tByModel').innerHTML = '<tr><td colspan="3" style="color:var(--muted)">暂无数据</td></tr>';
+  el('tByProject').innerHTML = '<tr><td colspan="4" style="color:var(--muted)">暂无数据</td></tr>';
+  el('projectNote').hidden = true;
+  el('projectNote').textContent = '';
+  el('recordMeta').textContent = '0 / 0';
+  el('tRecords').innerHTML = '<tr><td colspan="5" style="color:var(--muted)">暂无数据</td></tr>';
+  el('moreRecords').hidden = true;
+  el('wrapped').innerHTML = '';
+}
+
 function render(){
   const d = state.data;
   const a = state.analytics;
+  const collection = a?.collection ?? d?.collection ?? { complete:false, sources:{} };
+  const sourceStates = Object.values(collection.sources ?? {}).filter(x => x.discoveredFiles > 0);
+  const discoveredFiles = sourceStates.reduce((sum,x) => sum + Number(x.discoveredFiles||0), 0);
+  const indexedFiles = sourceStates.reduce((sum,x) => sum + Number(x.indexedFiles||0), 0);
+  el('collection').textContent = collection.complete ? '完整'
+    : (discoveredFiles > 0 ? `${indexedFiles}/${discoveredFiles} 文件` : '未完成');
+  el('collectionNote').hidden = collection.complete;
+  if (!collection.complete) {
+    const lagging = Object.entries(collection.sources ?? {})
+      .filter(([,x]) => !x.complete && (x.discoveredFiles > 0 || x.failedFiles > 0))
+      .map(([id,x]) => `${d?.labels?.[id] ?? id} ${x.indexedFiles}/${x.discoveredFiles}`);
+    el('collectionNote').textContent = `采集索引尚未完成，当前 Token 与估算费用会偏低。`
+      + (collection.deferredFiles ? `待处理 ${collection.deferredFiles} 个文件。` : '')
+      + (lagging.length ? ` 未完成：${lagging.slice(0,6).join('、')}。` : '');
+  }
   if (!a || a.empty){
-    el('mainNum').textContent = '–';
+    clearUsageData();
     el('footer').textContent = state.data?.stale
       ? '聚合数据是旧版本结构，需要重新扫描才能读取。点右上角「重新扫描」。'
-      : '还没有用量记录。点右上角「重新扫描」。';
+      : (!collection.complete
+        ? `正在建立用量索引，当前尚无已索引记录${collection.deferredFiles ? `，待处理 ${collection.deferredFiles} 个文件` : ''}。`
+        : '还没有用量记录。点右上角「重新扫描」。');
     return;
   }
   const primary = a.totals.totalTokens;
 
-  el('mainNum').textContent = fmt(primary);
+  el('mainNum').textContent = (collection.complete ? '' : '≥ ') + fmt(primary);
   el('mainUnit').textContent = '总 Token';
   el('mainNum').title = `输入 ${fmt(a.totals.inputTokens)} · 输出 ${fmt(a.totals.outputTokens)} · 推理 ${fmt(a.totals.reasoningTokens)} · 缓存 ${fmt(a.totals.cachedTokens)}`;
 
-  el('costNum').textContent = a.cost.estimated !== null ? '$'+a.cost.estimated.toFixed(2) : '—';
+  el('costNum').textContent = a.cost.estimated !== null
+    ? (collection.complete ? '' : '≥ ')+'$'+a.cost.estimated.toFixed(2) : '—';
   el('coverage').textContent = pct(a.cost.coverage);
   el('hit').textContent = pct(a.totals.cachedTokens / Math.max(1, a.totals.cachedTokens + a.totals.inputTokens));
-  el('active').textContent = a.sessions.available ? dur(a.sessions.totals.activeSeconds) : '筛选后不可用';
+  const lowerBound = collection.complete ? '' : '≥ ';
+  el('active').textContent = a.sessions.available
+    ? lowerBound + dur(a.sessions.totals.activeSeconds) : '筛选后不可用';
 
-  if (a.comparison?.totalTokens !== null && a.comparison?.totalTokens !== undefined){
+  if (collection.complete && a.comparison?.totalTokens !== null && a.comparison?.totalTokens !== undefined){
     const delta = a.comparison.totalTokens;
     el('compare').textContent = `较上个等长区间${delta>=0?'多':'少'} ${pct(Math.abs(delta))}`;
   } else el('compare').textContent = a.sessions.available
-    ? `${a.sessions.totals.sessions} 会话 · ${fmt(a.sessions.totals.messageCount)} 消息`
+    ? `${lowerBound}${a.sessions.totals.sessions} 会话 · ${lowerBound}${fmt(a.sessions.totals.messageCount)} 消息`
     : '按模型筛选时无法归属会话';
 
   el('fields').innerHTML = [
-    ['输入', fmt(a.totals.inputTokens)], ['输出', fmt(a.totals.outputTokens)],
-    ['推理', fmt(a.totals.reasoningTokens)], ['缓存读取', fmt(a.totals.cachedTokens)],
-    ['计费 Token', fmt(a.totals.billableTokens)],
-    ['墙钟时长', a.sessions.available ? dur(a.sessions.totals.durationSeconds) : '—'],
-    ['用户消息', a.sessions.available ? fmt(a.sessions.totals.userMessageCount) : '—'],
+    ['输入', lowerBound+fmt(a.totals.inputTokens)], ['输出', lowerBound+fmt(a.totals.outputTokens)],
+    ['推理', lowerBound+fmt(a.totals.reasoningTokens)], ['缓存读取', lowerBound+fmt(a.totals.cachedTokens)],
+    ['非缓存读取 Token', lowerBound+fmt(a.totals.nonCachedReadTokens)],
+    ['墙钟时长', a.sessions.available ? lowerBound+dur(a.sessions.totals.durationSeconds) : '—'],
+    ['用户消息', a.sessions.available ? lowerBound+fmt(a.sessions.totals.userMessageCount) : '—'],
   ].map(([k,v]) => `<div class="kv"><b>${v}</b>${k}</div>`).join('');
 
   if (a.cost.unpricedModels?.length){
@@ -301,8 +375,11 @@ function render(){
   const daily = a.series.slice(-60);
   const dmax = Math.max(...daily.map(trendValue), 1);
   el('dailyMeta').textContent = `最近 ${daily.length} 天`;
-  el('daily').innerHTML = daily.map(x =>
-    `<i style="height:${Math.max(2, trendValue(x)/dmax*100)}%" title="${x.day} · ${trendMetricText(x)}"></i>`).join('');
+  el('dailyTooltip').hidden = true;
+  el('daily').innerHTML = daily.map(x => {
+    const tooltip = `${x.day} · ${exactTrendMetricText(x)}`;
+    return `<i style="height:${Math.max(2, trendValue(x)/dmax*100)}%" data-tooltip="${esc(tooltip)}" title="${esc(tooltip)}"></i>`;
+  }).join('');
 
   // 24 列 × 7 行，列是小时，纵轴是周一至周日。
   const heatMax = Math.max(...a.heatmap.map(trendValue), 1);
@@ -441,7 +518,8 @@ function render(){
   const pm = d.pricing ?? {};
   el('footer').textContent = `${a.series.length} 天区间 · 价格表 `
     + (pm.fetchedAt ? `${pm.models} 个模型，更新于 ${pm.fetchedAt.slice(0,10)}` : '未拉取')
-    + ` · 主数字为输入、输出、推理与缓存读取之和。成本仅为按 API 单价的估算，与订阅费无关。`;
+    + ` · 采集${collection.complete ? '完整' : '尚未完成'}。主数字为输入、输出、推理与缓存读取之和。`
+    + `成本仅为按 API 单价的估算，与订阅费无关。`;
 }
 
 function analyticsQuery(cursor = ''){
@@ -520,6 +598,20 @@ el('rescan').onclick = async () => {
   } catch { el('rescan').textContent = '失败'; }
   setTimeout(() => { el('rescan').textContent = '重新扫描'; }, 1600);
 };
+
+el('daily').onpointermove = (event) => {
+  const bar = event.target.closest('i[data-tooltip]');
+  if (!bar) return;
+  const plot = el('dailyPlot'), tooltip = el('dailyTooltip');
+  const plotRect = plot.getBoundingClientRect(), barRect = bar.getBoundingClientRect();
+  tooltip.textContent = bar.dataset.tooltip;
+  tooltip.hidden = false;
+  const halfWidth = tooltip.offsetWidth / 2;
+  const center = barRect.left + barRect.width / 2 - plotRect.left;
+  tooltip.style.left = `${Math.min(plotRect.width - halfWidth, Math.max(halfWidth, center))}px`;
+  tooltip.style.top = `${barRect.top - plotRect.top - 5}px`;
+};
+el('daily').onpointerleave = () => { el('dailyTooltip').hidden = true; };
 
 const today = new Date(), monthAgo = new Date(); monthAgo.setDate(today.getDate()-29);
 const inputDate = (date) => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;

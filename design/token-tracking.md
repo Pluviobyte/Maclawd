@@ -168,7 +168,7 @@ Claude Code 的三类输入 token 互斥，不存在包含关系。
 ### 3. 两个总量口径，都要存
 
 ```
-billable   = input + cache_write + output          # 近似计费量
+billable   = input + cache_write + output          # 非缓存读取量（缓存读仍收费）
 throughput = input + cache_write + output + cache_read   # 上下文吞吐量
 ```
 
@@ -183,12 +183,15 @@ hit% = cache_read / (cache_read + cache_write + input) × 100
 
 ### 4. 去重合同
 
-取 tokei 的两层结构——它防的是 API 流式重试，比 vibe-usage 的单层 uuid 去重更强。
+非 Claude 来源取 tokei 的两层结构；Claude Code 采用 Vibe Usage 在真实日志上验证过的
+UUID 语义。Claude 的同一 `(message.id, requestId)` 可能包含多个不同 UUID 的合法用量
+片段，按 message/request 合并会造成大幅少计。
 
 ```
-主键：(message.id, requestId)
-次键：uuid                    # 仅当 message.id 缺失
-特例：同 message.id、不同 requestId，且任一方 isSidechain → 视为重复合并
+Claude Code 主键：uuid        # UUID 缺失时保留，不猜成重复
+其他来源主键：(message.id, requestId)
+其他来源次键：uuid            # 仅当 message.id 缺失
+其他来源特例：同 message.id、不同 requestId，且任一方 isSidechain → 视为重复合并
 ```
 
 冲突时保留优先级（依次比较）：
@@ -249,7 +252,7 @@ tokei 预存 7 个区间，但 days 最多 365 条，读时算的开销可以忽
 
 ```json
 {
-  "v": 3,
+  "v": 4,
   "days": {
     "2026-07-30": {
       "hours": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -271,6 +274,12 @@ tokei 预存 7 个区间，但 days 最多 365 条，读时算的开销可以忽
       { "firstTs": 0, "lastTs": 0, "activeSeconds": 0, "durationSeconds": 0,
         "messageCount": 0, "userMessageCount": 0, "userPromptHours": [], "project": "" }
     ]
+  },
+  "collection": {
+    "complete": true,
+    "scannedAt": "2026-08-03T00:00:00.000Z",
+    "deferredFiles": 0,
+    "sources": {}
   }
 }
 ```
@@ -283,6 +292,9 @@ tokei 预存 7 个区间，但 days 最多 365 条，读时算的开销可以忽
 
 **会话指标与日聚合分开存。** 一个会话可能跨天，按日切分会把 `activeSeconds` 算错；
 区间过滤在读取时按 `firstTs` / `lastTs` 做。
+
+**采集完整度与价格覆盖率分开存。** `collection.complete=false` 表示扫描预算耗尽或来源
+读取失败；此时 UI 必须把 Token 与估算费用显示为下限，不能把部分索引伪装成完整总数。
 
 ---
 
@@ -525,7 +537,7 @@ tokei 有一次 6.5s → 0.6s、CPU 22% → 1% 的优化，主要来自 `mtime:s
 
 **两者报出的「总 token」不是同一个数**，差的就是 `cache_read`。长会话里
 `cache_read` 常占 80% 以上，所以同一份日志两个工具可能差好几倍。两个都没错：
-vibe-usage 报的接近真实计费量，tokei 报的是上下文吞吐量。
+vibe-usage 报的是非缓存读取量，tokei 报的是上下文吞吐量。
 
 本方案两个都存、都标注口径，就是为了避免这个混淆。
 

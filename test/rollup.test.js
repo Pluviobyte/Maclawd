@@ -153,3 +153,9 @@ test('baseline 没有历史时返回 null 而不是 0', () => {
   const rollup = buildRollup([record(at(2026, 7, 30, 10))]);
   assert.equal(baseline(rollup, { now: new Date(2026, 6, 30, 12) }), null);
 });
+
+test('buildRollup 持久化采集完整度，不能把未完成索引伪装成完整统计', () => {
+  const collection = { complete: false, deferredFiles: 2, sources: { codex: { complete: false } } };
+  const rollup = buildRollup([], {}, {}, collection);
+  assert.deepEqual(rollup.collection, collection);
+});

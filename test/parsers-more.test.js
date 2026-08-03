@@ -9,7 +9,10 @@ import { billable, throughput } from '../src/runtime/usage-record.js';
 
 function runParser(parser, objects, candidate = { path: '/tmp/x.jsonl' }) {
   const fp = parser.createFileParser({ state: null, candidate });
-  for (const obj of objects) fp.onObject(obj);
+  for (const obj of objects) {
+    fp.onRawLine?.(JSON.stringify(obj));
+    fp.onObject(obj);
+  }
   return fp.finish();
 }
 
@@ -90,6 +93,20 @@ test('Codex：模型名来自 turn_context，项目来自 session_meta', () => {
   assert.equal(records[0].cwd, '/Users/rain/Desktop/内容创作');
 });
 
+test('Codex：会话活跃时长从首个回复算到下一次提问前的最后事件', () => {
+  const { session } = runParser(codex, [
+    { timestamp: '2026-07-18T16:00:00Z', type: 'session_meta', payload: { id: 's1' } },
+    { timestamp: '2026-07-18T16:00:01Z', type: 'turn_context', payload: { model: 'gpt' } },
+    codexTokenCount(CODEX_USAGE, CODEX_USAGE, '2026-07-18T16:00:10Z'),
+    { timestamp: '2026-07-18T16:01:10Z', type: 'event_msg',
+      payload: { type: 'agent_message', message: 'done' } },
+  ]);
+  assert.equal(session.activeSeconds, 60);
+  assert.equal(session.durationSeconds, 70);
+  assert.equal(session.userMessageCount, 2);
+  assert.equal(session.messageCount, 4);
+});
+
 test('Codex：只有第一个 session_meta 是本文件正身', () => {
   const { state } = runParser(codex, [
     { timestamp: '2026-07-18T16:00:00Z', type: 'session_meta', payload: { id: 'canonical' } },
@@ -98,12 +115,49 @@ test('Codex：只有第一个 session_meta 是本文件正身', () => {
   assert.equal(state.canonicalSessionId, 'canonical');
 });
 
+test('Codex：fork 重放结束后只统计本会话消息', () => {
+  const { session, state } = runParser(codex, [
+    { timestamp: '2026-07-18T16:00:00Z', type: 'session_meta', payload: { id: 'child' } },
+    { timestamp: '2026-07-18T15:00:00Z', type: 'session_meta', payload: { id: 'parent' } },
+    { timestamp: '2026-07-18T15:00:01Z', type: 'turn_context', payload: { model: 'gpt' } },
+    { timestamp: '2026-07-18T15:00:02Z', type: 'event_msg',
+      payload: { type: 'agent_message', message: 'replayed' } },
+    { timestamp: '2026-07-18T16:00:01Z', type: 'session_meta', payload: { id: 'child' } },
+    { timestamp: '2026-07-18T16:00:02Z', type: 'turn_context', payload: { model: 'gpt' } },
+    { timestamp: '2026-07-18T16:00:03Z', type: 'event_msg',
+      payload: { type: 'agent_message', message: 'own' } },
+  ]);
+  assert.equal(session.messageCount, 3, '父会话重放不应进入 child 消息数');
+  assert.equal(session.userMessageCount, 2);
+  assert.equal(state.ownSessionBoundaryReached, true);
+});
+
 test('Codex：快照键让跨文件的 fork 重放前缀自然折叠', () => {
   // fork 的 rollout 会逐条复制父会话的 token_count，两份快照完全相同。
   const parent = runParser(codex, [codexTokenCount(CODEX_USAGE, CODEX_USAGE)], { path: '/tmp/parent.jsonl' });
   const child = runParser(codex, [codexTokenCount(CODEX_USAGE, CODEX_USAGE)], { path: '/tmp/child.jsonl' });
   const merged = dedupe([...parent.records, ...child.records]);
   assert.equal(merged.length, 1, '重放件必须折叠掉，否则整段父会话被重复计');
+});
+
+test('Codex：subagent 自己的 task_started 之前是父会话重放，不能计入', () => {
+  const parentUsage = { input_tokens: 1000, cached_input_tokens: 800,
+    output_tokens: 100, reasoning_output_tokens: 20, total_tokens: 1100 };
+  const ownUsage = { input_tokens: 200, cached_input_tokens: 100,
+    output_tokens: 40, reasoning_output_tokens: 10, total_tokens: 1340 };
+  const { records, state } = runParser(codex, [
+    { timestamp: '2026-07-18T16:00:00.250Z', type: 'session_meta', payload: {
+      id: 'child', timestamp: '2026-07-18T16:00:00.250Z',
+      source: { subagent: { thread_spawn: { parent_thread_id: 'parent' } } },
+    } },
+    codexTokenCount(parentUsage, parentUsage, '2026-07-18T15:59:00Z'),
+    { timestamp: '2026-07-18T16:00:01Z', type: 'event_msg',
+      payload: { type: 'task_started', started_at: 1784390401 } },
+    codexTokenCount(ownUsage, ownUsage, '2026-07-18T16:00:02Z'),
+  ]);
+  assert.equal(records.length, 1);
+  assert.equal(records[0].input, 100, '只保留 child 自己的非缓存输入');
+  assert.equal(state.ownTaskBoundaryReached, true);
 });
 
 test('Codex：续读状态可以序列化并接着算', () => {
@@ -124,6 +178,7 @@ test('Codex：续读状态可以序列化并接着算', () => {
 test('Codex：lineFilter 不误命中工具输出里的 original_token_count', () => {
   assert.equal(codex.lineFilter('{"output":"original_token_count: 11"}'), false);
   assert.equal(codex.lineFilter('{"payload":{"info":{"total_token_usage":{}}}}'), true);
+  assert.equal(codex.lineFilter('{"payload":{"type":"task_started"}}'), true);
 });
 
 // ---------- Kimi Code ----------

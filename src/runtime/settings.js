@@ -35,7 +35,7 @@ export const DEFAULTS = {
   // 那段时间的事件全丢，而这正是桌宠该出场的时候。只在 hook 装在 .app
   // 里时才有效果（源码目录里没有可拉起的东西），且永远后台启动不抢焦点。
   autoStart: true,
-  // 面板默认口径：billable（近似计费量）或 throughput（上下文吞吐）。
+  // 面板默认口径：billable（非缓存读取量）或 throughput（上下文吞吐）。
   primaryMetric: 'billable',
   // 在桌宠上批准权限。拦截别人的权限流程是很重的行为，默认关闭；
   // 关闭时 /api/permission 一律「不表态」，决策原样留在 Claude Code 自己的流程里。

@@ -157,8 +157,11 @@ private struct OverviewPage: View {
     private var emptyNotice: some View {
         SectionCard(title: "今日") {
             VStack(alignment: .leading, spacing: 4) {
-                Text("还没有找到用量记录").font(.system(size: 12))
-                Text("Maclawd 会在你使用 AI 编程工具后自动开始记录")
+                Text(store.summary.collectionComplete ? "还没有找到用量记录" : "正在建立用量索引")
+                    .font(.system(size: 12))
+                Text(store.summary.collectionComplete
+                     ? "Maclawd 会在你使用 AI 编程工具后自动开始记录"
+                     : "当前尚无已索引记录 · 待处理 \(store.summary.deferredFiles) 个文件")
                     .font(.system(size: 11)).foregroundStyle(.secondary)
             }
         }
@@ -168,22 +171,26 @@ private struct OverviewPage: View {
         SectionCard(title: "今日") {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text(Fmt.tokens(store.summary.primary))
+                    Text((store.summary.collectionComplete ? "" : "≥ ") + Fmt.tokens(store.summary.primary))
                         .font(.system(size: 30, weight: .bold, design: .rounded))
-                    Text(store.summary.primaryMetric == "throughput" ? "吞吐 tokens" : "计费 tokens")
+                    Text(store.summary.primaryMetric == "throughput" ? "吞吐 tokens" : "非缓存读取 tokens")
                         .font(.system(size: 11)).foregroundStyle(.secondary)
                     Spacer()
                     if store.summary.showCost, let cost = store.summary.cost {
-                        Text(String(format: "$%.2f", cost))
+                        Text((store.summary.collectionComplete ? "" : "≥ ") + String(format: "$%.2f", cost))
                             .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(.secondary)
                     }
                 }
                 // 「比平时」用个人 14 天中位数，不是固定阈值——
                 // 固定阈值会让重度用户永远看到红色，那是无意义的噪音。
-                if let delta = store.summary.comparedToUsual {
+                if store.summary.collectionComplete, let delta = store.summary.comparedToUsual {
                     Text("比平时\(delta >= 0 ? "多" : "少") \(Fmt.percent(abs(delta)))")
                         .font(.system(size: 11)).foregroundStyle(.secondary)
+                }
+                if !store.summary.collectionComplete {
+                    Text("采集索引中 · 待处理 \(store.summary.deferredFiles) 个文件，当前为下限")
+                        .font(.system(size: 10)).foregroundStyle(.orange)
                 }
                 if store.summary.hoursAvailable && !store.summary.hours.isEmpty {
                     HourSparkline(values: store.summary.hours)
@@ -202,7 +209,7 @@ private struct OverviewPage: View {
                             HStack {
                                 Text(item.id).font(.system(size: 12)).lineLimit(1)
                                 Spacer()
-                                Text(Fmt.tokens(item.billable))
+                                Text((store.summary.collectionComplete ? "" : "≥ ") + Fmt.tokens(item.billable))
                                     .font(.system(size: 12, design: .rounded))
                                     .foregroundStyle(.secondary)
                             }
@@ -212,8 +219,9 @@ private struct OverviewPage: View {
                                 Text("其他 \(store.summary.byProject.count - 3) 个")
                                     .font(.system(size: 11)).foregroundStyle(.secondary)
                                 Spacer()
-                                Text(Fmt.tokens(store.summary.byProject.dropFirst(3)
-                                    .reduce(0) { $0 + $1.billable }))
+                                Text((store.summary.collectionComplete ? "" : "≥ ")
+                                     + Fmt.tokens(store.summary.byProject.dropFirst(3)
+                                        .reduce(0) { $0 + $1.billable }))
                                     .font(.system(size: 11, design: .rounded))
                                     .foregroundStyle(.secondary)
                             }
@@ -225,11 +233,12 @@ private struct OverviewPage: View {
     }
 
     private var footnote: some View {
-        HStack(spacing: 10) {
+        let lowerBound = store.summary.collectionComplete ? "" : "≥ "
+        return HStack(spacing: 10) {
             Label("缓存 \(Fmt.percent(store.summary.hitRate))", systemImage: "bolt.horizontal")
-            Label(Fmt.duration(store.summary.activeSeconds), systemImage: "clock")
+            Label(lowerBound + Fmt.duration(store.summary.activeSeconds), systemImage: "clock")
             if store.summary.sessions > 0 {
-                Label("\(store.summary.sessions) 会话", systemImage: "bubble.left")
+                Label("\(lowerBound)\(store.summary.sessions) 会话", systemImage: "bubble.left")
             }
         }
         .font(.system(size: 10))

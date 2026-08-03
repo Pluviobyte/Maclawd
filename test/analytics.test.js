@@ -35,6 +35,7 @@ test('30D 分析同时返回完整 Token 口径和上一等长周期同比', () 
     reasoningTokens: 40,
     cachedTokens: 1700,
     totalTokens: 2180,
+    nonCachedReadTokens: 480,
     billableTokens: 480,
   });
   assert.equal(result.previous.totalTokens, 485);
@@ -205,4 +206,25 @@ test('筛选后没有 Token 与会话时返回明确空态', () => {
   const result = queryUsageAnalytics(rollup, { range: '30d', now: new Date(2026, 7, 3, 12) });
   assert.equal(result.empty, true);
   assert.equal(result.totals.totalTokens, 0);
+});
+
+test('分析接口区分价格覆盖率与来源采集完整度', () => {
+  const collection = {
+    complete: false,
+    scannedAt: '2026-08-03T12:00:00.000Z',
+    deferredFiles: 3,
+    sources: {
+      codex: { discoveredFiles: 10, indexedFiles: 7, deferredFiles: 3,
+        failedFiles: 0, complete: false, latestRecordAt: 1234 },
+    },
+  };
+  const rollup = buildRollup([], {}, {}, collection);
+  const result = queryUsageAnalytics(rollup, {
+    range: '30d', now: new Date(2026, 7, 3, 12), priceBucket: () => 0,
+  });
+  assert.deepEqual(result.collection, collection);
+  assert.equal(result.collection.complete, false);
+  assert.equal(result.empty, true, '尚未索引到记录时仍是数据空态，但 UI 必须结合 collection');
+  assert.equal(result.comparison, null, '部分索引不能发布精确同比');
+  assert.equal(result.cost.coverage, 1, '无 Token 时价格覆盖率仍独立为 100%');
 });

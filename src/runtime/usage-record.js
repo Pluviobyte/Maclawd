@@ -86,7 +86,7 @@ export function cacheWrite(record) {
   return toCount(record.write5m) + toCount(record.write1h);
 }
 
-/** 近似计费量：不含缓存读。面板主数字用这个口径。 */
+/** 非缓存读取量：输入、缓存写与输出之和。缓存读也收费，不能称为“计费量”。 */
 export function billable(record) {
   return toCount(record.input) + cacheWrite(record) + toCount(record.output);
 }

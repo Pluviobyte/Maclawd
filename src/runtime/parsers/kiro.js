@@ -15,7 +15,7 @@ export const label = 'Kiro';
  *
  * **有意不实现**：vibe-usage 还有一条从消息正文**估算** token 的路径
  * （模型标记为 `kiro-token-estimate`）。估算值和真实上报值混进同一份统计里，
- * 会让「计费量」这个口径失去意义——用户没法判断哪部分是真的。
+ * 会让「非缓存读取量」这个口径失去意义——用户没法判断哪部分是真的。
  * 若将来要加，必须走独立 source 并在面板上明确区分。
  */
 export function dbPath() {

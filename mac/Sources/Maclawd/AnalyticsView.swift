@@ -49,8 +49,12 @@ struct StatsPage: View {
                 }
             } else if store.analytics.empty {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("这个区间没有数据").font(.system(size: 12, weight: .medium))
-                    Text("使用 AI 编程工具后，统计会随本地扫描自动更新")
+                    Text(store.analytics.collection.complete
+                         ? "这个区间没有数据" : "正在建立用量索引")
+                        .font(.system(size: 12, weight: .medium))
+                    Text(store.analytics.collection.complete
+                         ? "使用 AI 编程工具后，统计会随本地扫描自动更新"
+                         : "当前尚无已索引记录 · 待处理 \(store.analytics.collection.deferredFiles) 个文件")
                         .font(.system(size: 11)).foregroundStyle(.secondary)
                 }
             } else {
@@ -120,13 +124,17 @@ struct StatsPage: View {
             VStack(alignment: .leading, spacing: 9) {
                 HStack(alignment: .firstTextBaseline) {
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(Fmt.tokens(store.analytics.totals.totalTokens))
+                        Text((store.analytics.collection.complete ? "" : "≥ ")
+                             + Fmt.tokens(store.analytics.totals.totalTokens))
                             .font(.system(size: 27, weight: .bold, design: .rounded))
                         comparisonLabel(key: "totalTokens", fallback: "总 Token")
                     }
                     Spacer()
                     VStack(alignment: .trailing, spacing: 1) {
-                        Text(store.analytics.cost.estimated.map { String(format: "$%.2f", $0) } ?? "—")
+                        Text(store.analytics.cost.estimated.map {
+                            (store.analytics.collection.complete ? "" : "≥ ")
+                                + String(format: "$%.2f", $0)
+                        } ?? "—")
                             .font(.system(size: 15, weight: .semibold, design: .rounded))
                         comparisonLabel(key: "estimatedCost", fallback: "估算费用")
                     }
@@ -144,6 +152,10 @@ struct StatsPage: View {
                                  + (store.analytics.cost.unpricedModels.isEmpty ? "" : " · 有未定价模型"))
                                 .font(.system(size: 10)).foregroundStyle(.orange)
                         }
+                        if !store.analytics.collection.complete {
+                            Text("采集索引未完成 · 待处理 \(store.analytics.collection.deferredFiles) 个文件，当前总额会偏低")
+                                .font(.system(size: 10)).foregroundStyle(.orange)
+                        }
                     }.padding(.top, 6)
                 } label: {
                     Text(detailsExpanded ? "收起明细" : "查看 Token 与会话明细")
@@ -155,16 +167,17 @@ struct StatsPage: View {
 
     @ViewBuilder private var sessionSummary: some View {
         if store.analytics.sessions.available {
+            let lowerBound = store.analytics.collection.complete ? "" : "≥ "
             VStack(spacing: 4) {
                 HStack {
-                    Label("活跃 \(Fmt.duration(store.analytics.sessions.totals.activeSeconds))", systemImage: "clock")
+                    Label("活跃 \(lowerBound)\(Fmt.duration(store.analytics.sessions.totals.activeSeconds))", systemImage: "clock")
                     Spacer()
-                    Text("墙钟 \(Fmt.duration(store.analytics.sessions.totals.durationSeconds))")
+                    Text("墙钟 \(lowerBound)\(Fmt.duration(store.analytics.sessions.totals.durationSeconds))")
                 }
                 HStack {
-                    Text("\(store.analytics.sessions.totals.sessions) 会话 · \(store.analytics.sessions.totals.messageCount) 消息")
+                    Text("\(lowerBound)\(store.analytics.sessions.totals.sessions) 会话 · \(lowerBound)\(store.analytics.sessions.totals.messageCount) 消息")
                     Spacer()
-                    Text("\(store.analytics.sessions.totals.userMessageCount) 条用户消息")
+                    Text("\(lowerBound)\(store.analytics.sessions.totals.userMessageCount) 条用户消息")
                 }
             }.font(.system(size: 10.5)).foregroundStyle(.secondary)
         } else {
@@ -175,14 +188,19 @@ struct StatsPage: View {
 
     private func comparisonLabel(key: String, fallback: String) -> some View {
         Group {
-            if let delta = store.analytics.comparison[key] {
+            if store.analytics.collection.complete, let delta = store.analytics.comparison[key] {
                 Text("较上期 \(delta >= 0 ? "+" : "−")\(Fmt.percent(abs(delta)))")
             } else { Text(fallback) }
         }.font(.system(size: 9.5)).foregroundStyle(.secondary)
     }
 
     private func metricRow(_ label: String, _ value: Double) -> some View {
-        HStack { Text(label); Spacer(); Text(Fmt.tokens(value)).fontDesign(.rounded) }
+        HStack {
+            Text(label)
+            Spacer()
+            Text((store.analytics.collection.complete ? "" : "≥ ") + Fmt.tokens(value))
+                .fontDesign(.rounded)
+        }
             .font(.system(size: 10.5))
     }
 
@@ -261,6 +279,7 @@ struct StatsPage: View {
 struct AnalyticsTrendChart: View {
     let points: [AnalyticsSeriesPoint]
     let metric: AnalyticsMetric
+    @State private var hoveredDay: String?
 
     private func value(_ point: AnalyticsSeriesPoint) -> Double {
         switch metric {
@@ -276,23 +295,47 @@ struct AnalyticsTrendChart: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .bottom, spacing: 1.5) {
                 ForEach(shown) { point in
-                    RoundedRectangle(cornerRadius: 1)
-                        .fill(PanelTheme.body.opacity(value(point) > 0 ? 0.82 : 0.12))
-                        .frame(maxWidth: 9).frame(height: max(2, 48 * value(point) / peak))
-                        .help("\(point.day) · \(formatted(point))")
+                    chartBar(point, peak: peak)
                 }
                 Spacer(minLength: 0)
-            }.frame(height: 48)
+            }
+            .frame(height: 48)
             HStack { Text(shown.first?.day ?? ""); Spacer(); Text(shown.last?.day ?? "") }
                 .font(.system(size: 8.5)).foregroundStyle(.tertiary)
         }
     }
 
-    private func formatted(_ point: AnalyticsSeriesPoint) -> String {
+    private func chartBar(_ point: AnalyticsSeriesPoint, peak: Double) -> some View {
+        RoundedRectangle(cornerRadius: 1)
+            .fill(PanelTheme.body.opacity(value(point) > 0 ? 0.82 : 0.12))
+            .frame(maxWidth: 9)
+            .frame(height: max(2, 48 * value(point) / peak))
+            .overlay(alignment: .top) {
+                if hoveredDay == point.day {
+                    Text("\(point.day) · \(formattedExact(point))")
+                        .font(.system(size: 9.5, weight: .semibold))
+                        .foregroundStyle(Color(nsColor: .windowBackgroundColor))
+                        .fixedSize()
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 4)
+                        .background(Color(nsColor: .labelColor), in: RoundedRectangle(cornerRadius: 6))
+                        .offset(y: -27)
+                        .allowsHitTesting(false)
+                }
+            }
+            .zIndex(hoveredDay == point.day ? 1 : 0)
+            .onHover { hovering in
+                if hovering { hoveredDay = point.day }
+                else if hoveredDay == point.day { hoveredDay = nil }
+            }
+            .help("\(point.day) · \(formattedExact(point))")
+    }
+
+    private func formattedExact(_ point: AnalyticsSeriesPoint) -> String {
         switch metric {
-        case .tokens: Fmt.tokens(point.totalTokens)
-        case .cost: point.estimatedCost.map { String(format: "估算 $%.2f", $0) } ?? "未计价"
-        case .active: Fmt.duration(point.activeSeconds)
+        case .tokens: Fmt.exactTokens(point.totalTokens)
+        case .cost: point.estimatedCost.map { String(format: "估算 $%.4f", $0) } ?? "未计价"
+        case .active: Fmt.exactDuration(point.activeSeconds)
         }
     }
 }

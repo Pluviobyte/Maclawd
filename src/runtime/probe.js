@@ -180,7 +180,7 @@ export function runChecks({ parser, records, files, now = Date.now(), scanComple
   // ---- 不变量 1：三类输入互斥 ----
   if (tput < bill) {
     add(LEVEL.fail, 'throughput-lt-billable',
-      `吞吐量(${tput}) 小于计费量(${bill})，数学上不可能，缓存字段被算成了负数。`);
+      `吞吐量(${tput}) 小于非缓存读取量(${bill})，数学上不可能，缓存字段被算成了负数。`);
   }
   const rate = hitRate(total);
   if (rate < 0 || rate > 1) {

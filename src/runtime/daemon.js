@@ -21,6 +21,18 @@ import { usageEnabled } from './settings.js';
 const DEFAULT_TAIL_MS = 1_000;
 const DEFAULT_SCAN_MS = 30 * 60 * 1000;
 
+/** scan、daemon 与 CLI 必须用同一份采集完整度语义。 */
+export function collectionFromScan(result, scannedAt = new Date().toISOString()) {
+  const sourceIncomplete = Object.values(result.sourceStatus ?? {})
+    .some((source) => !source.complete);
+  return {
+    complete: !result.indexing && !sourceIncomplete,
+    scannedAt,
+    deferredFiles: result.stats?.deferred ?? 0,
+    sources: result.sourceStatus ?? {},
+  };
+}
+
 export function createCollector({
   tailIntervalMs = DEFAULT_TAIL_MS,
   scanIntervalMs = DEFAULT_SCAN_MS,
@@ -54,7 +66,10 @@ export function createCollector({
     try {
       const result = await scanAll({ ignoreSettings: force });
       if (!result.disabled) {
-        const rollup = buildRollup(result.records, result.sessionsBySource, result.projectPaths);
+        const collection = collectionFromScan(result);
+        const rollup = buildRollup(
+          result.records, result.sessionsBySource, result.projectPaths, collection,
+        );
         writeJson(ROLLUP_FILE, rollup);
       }
       lastScan = {

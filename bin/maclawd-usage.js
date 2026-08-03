@@ -4,14 +4,14 @@ import { scanAll } from '../src/runtime/scan.js';
 import { parsers } from '../src/runtime/parsers/index.js';
 import { dedupe } from '../src/runtime/dedupe.js';
 import {
-  buildRollup, summarize, baseline, RANGES,
+  buildRollup, summarize, baseline, RANGES, ROLLUP_VERSION,
 } from '../src/runtime/rollup.js';
 import { costOf, updatePrices, pricingMeta } from '../src/runtime/pricing.js';
 import { summarizeSessions } from '../src/runtime/sessions.js';
 import { createTailer, intensityFromRate } from '../src/runtime/tail.js';
 import { loadActions, serve } from '../src/runtime/server.js';
 import { clearEndpoint } from '../src/runtime/endpoint.js';
-import { createCollector } from '../src/runtime/daemon.js';
+import { collectionFromScan, createCollector } from '../src/runtime/daemon.js';
 import { installHooks, uninstallHooks, hookStatus } from '../src/runtime/hook-install.js';
 import {
   installStatusline, uninstallStatusline, statuslineStatus,
@@ -113,7 +113,17 @@ async function scan() {
   const result = await scanAll();
   const elapsed = Date.now() - started;
 
-  const rollup = buildRollup(result.records, result.sessionsBySource, result.projectPaths);
+  if (result.disabled) {
+    console.log('用量记录已关闭，未改写现有统计。');
+    return;
+  }
+
+  const rollup = buildRollup(
+    result.records,
+    result.sessionsBySource,
+    result.projectPaths,
+    collectionFromScan(result),
+  );
   writeJson(ROLLUP_FILE, rollup);
 
   const dayCount = Object.keys(rollup.days).length;
@@ -141,6 +151,15 @@ function stats(args) {
     console.log('还没有用量记录。先运行 `maclawd-usage scan`。');
     return;
   }
+  if (rollup.v !== ROLLUP_VERSION) {
+    console.log('统计结构已升级，需要重新扫描。运行 `maclawd-usage scan`。');
+    return;
+  }
+
+  const collection = rollup.collection ?? {
+    complete: false, deferredFiles: null, sources: {}, scannedAt: null,
+  };
+  const lowerBound = collection.complete ? '' : '≥ ';
 
   const summary = summarize(rollup, rangeArg, {
     source: sourceArg,
@@ -149,8 +168,16 @@ function stats(args) {
 
   console.log(bold(`${rangeArg}${sourceArg ? ` · ${sourceArg}` : ''}`));
   console.log();
-  const costText = summary.cost !== null ? `  $${summary.cost.toFixed(2)}` : '';
-  console.log(`  ${bold(fmt(summary.billable))} 计费 tokens${costText}`);
+  const costText = summary.cost !== null
+    ? ` · 估算 ${lowerBound}$${summary.cost.toFixed(2)}`
+    : '';
+  console.log(`  ${bold(lowerBound + fmt(summary.billable))} 非缓存读取 tokens${costText}`);
+  if (!collection.complete) {
+    const deferred = collection.deferredFiles == null
+      ? ''
+      : `，待处理 ${collection.deferredFiles} 个文件`;
+    console.log(dim(`  采集索引尚未完成${deferred}，以上 Token、估算费用与会话均为下限`));
+  }
   console.log(dim(`  ${fmt(summary.throughput)} 吞吐 · 缓存命中 ${pct(summary.hitRate)}`));
   const meta = pricingMeta();
   if (summary.unpricedTokens > 0 && !meta.fetchedAt) {
@@ -162,7 +189,7 @@ function stats(args) {
   }
 
   const base = baseline(rollup);
-  if (base && rangeArg === 'today' && summary.throughput > 0) {
+  if (collection.complete && base && rangeArg === 'today' && summary.throughput > 0) {
     const delta = (summary.throughput - base) / base;
     const word = delta >= 0 ? '多' : '少';
     console.log(dim(`  比平时${word} ${pct(Math.abs(delta))}（14 天中位数 ${fmt(base)}）`));

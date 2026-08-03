@@ -5,7 +5,7 @@ import { throughput } from '../src/runtime/usage-record.js';
 
 function record(overrides = {}) {
   return {
-    source: 'claude-code',
+    source: 'generic',
     input: 100, output: 10, cacheRead: 0, write5m: 0, write1h: 0, reasoning: 0,
     model: 'test', ts: 1_700_000_000_000,
     messageId: null, requestId: null, uuid: null, sidechain: false,
@@ -21,6 +21,24 @@ test('同 message.id + 同 requestId 视为同一条', () => {
     record({ messageId: 'm1', requestId: 'r1' }),
   ]);
   assert.equal(out.length, 1);
+});
+
+test('Claude Code：相同 message/request 但 UUID 不同是独立用量', () => {
+  const out = dedupe([
+    record({ source: 'claude-code', messageId: 'm1', requestId: 'r1', uuid: 'u1', input: 100 }),
+    record({ source: 'claude-code', messageId: 'm1', requestId: 'r1', uuid: 'u2', input: 200 }),
+  ]);
+  assert.equal(out.length, 2, 'Vibe Usage 以 UUID 区分 Claude 的合法分片');
+  assert.equal(sum(out), 320);
+});
+
+test('Claude Code：相同 UUID 的复制记录只保留最完整的一条', () => {
+  const out = dedupe([
+    record({ source: 'claude-code', messageId: 'm1', requestId: 'r1', uuid: 'u1', input: 100 }),
+    record({ source: 'claude-code', messageId: 'm2', requestId: 'r2', uuid: 'u1', input: 500 }),
+  ]);
+  assert.equal(out.length, 1);
+  assert.equal(out[0].input, 500);
 });
 
 test('同 message.id、不同 requestId 是合法分片，默认不合并', () => {

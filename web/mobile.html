@@ -66,10 +66,10 @@
   </div>
 
   <div class="card">
-    <div class="big"><span id="today">—</span><small id="unit">计费 tokens</small></div>
+    <div class="big"><span id="today">—</span><small id="unit">非缓存读取 tokens</small></div>
     <div class="kv" id="compare" style="margin-top:6px"></div>
     <div class="grid">
-      <div class="kv"><b id="cost">—</b>成本</div>
+      <div class="kv"><b id="cost">—</b>估算成本</div>
       <div class="kv"><b id="hit">—</b>缓存命中</div>
       <div class="kv"><b id="active">—</b>活跃</div>
     </div>
@@ -137,21 +137,31 @@ async function tick(){
     el('bar').style.width = ((live.intensity||0)*100).toFixed(0)+'%';
     el('rate').textContent = live.disabled ? '记录已关闭' : fmt(live.tokensPerMin)+'/min';
 
+    const collection = summary.collection ?? { complete:false, deferredFiles:null };
     if (summary.empty){
       el('today').textContent = '—';
-      el('footer').textContent = summary.stale ? '数据需要在电脑上重新扫描' : '今日暂无数据';
+      const deferred = collection.deferredFiles == null ? '' : '，待处理 '+collection.deferredFiles+' 个文件';
+      el('footer').textContent = summary.stale ? '数据需要在电脑上重新扫描'
+        : (!collection.complete ? '正在建立用量索引'+deferred+' · 当前尚无已索引记录' : '今日暂无数据');
       return;
     }
     const s = summary.summary;
+    const lowerBound = collection.complete ? '' : '≥ ';
     const useThroughput = summary.settings?.primaryMetric === 'throughput';
-    el('today').textContent = fmt(useThroughput ? s.throughput : s.billable);
-    el('unit').textContent = useThroughput ? '吞吐 tokens' : '计费 tokens';
+    el('today').textContent = lowerBound + fmt(useThroughput ? s.throughput : s.billable);
+    el('unit').textContent = useThroughput ? '吞吐 tokens' : '非缓存读取 tokens';
     el('cost').textContent = (summary.settings?.showCost && s.cost != null)
-      ? '$'+s.cost.toFixed(2) : '—';
+      ? lowerBound+'$'+s.cost.toFixed(2) : '—';
     el('hit').textContent = pct(s.hitRate);
-    el('active').textContent = dur(summary.sessions?.activeSeconds);
+    el('active').textContent = lowerBound + dur(summary.sessions?.activeSeconds);
+    if (!collection.complete) {
+      const deferred = collection.deferredFiles == null ? '' : '，待处理 '+collection.deferredFiles+' 个文件';
+      el('footer').textContent = '采集索引尚未完成'+deferred+' · 当前为下限';
+    } else {
+      el('footer').textContent = '只读镜像 · 局域网内';
+    }
 
-    if (summary.baseline && s.throughput > 0){
+    if (collection.complete && summary.baseline && s.throughput > 0){
       const d = (s.throughput - summary.baseline) / summary.baseline;
       el('compare').textContent = '比平时' + (d>=0?'多':'少') + ' ' + pct(Math.abs(d));
     } else el('compare').textContent = '';
@@ -170,7 +180,7 @@ async function tick(){
     el('projects').innerHTML = rows.length
       ? rows.map(([k,v]) => '<div class="row"><span>'+
           k.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])) +
-          '</span><span>'+fmt(v)+'</span></div>').join('')
+          '</span><span>'+lowerBound+fmt(v)+'</span></div>').join('')
       : '<div class="row"><span style="color:var(--muted)">今天还没有记录</span></div>';
   } catch (err) {
     el('livedot').className = 'dot';

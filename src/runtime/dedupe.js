@@ -3,8 +3,9 @@ import { throughput } from './usage-record.js';
 /**
  * 两级去重。见 design/token-tracking.md「去重合同」。
  *
- *   主键：(message.id, requestId)
- *   次键：uuid                      仅当 message.id 缺失
+ *   Claude Code：uuid（不同 uuid 即使 message/request 相同也是合法分片）
+ *   其余来源主键：(message.id, requestId)
+ *   其余来源次键：uuid              仅当 message.id 缺失
  *   特例：同 message.id、不同 requestId，且任一方 isSidechain → 视为重复合并
  *
  * 主键防的是 API 流式重试——同一次响应会写出多行不同 uuid、相同 message.id 的记录。
@@ -35,7 +36,17 @@ export function dedupe(records) {
     // 键里带 source，避免两个工具的 id 空间偶然碰撞时互相吃掉记录。
     const scope = record.source ?? '';
 
-    if (messageId) {
+    // Claude Code 的一个 API 响应会把多个独立 usage 片段写成相同的
+    // message.id/requestId，但每个片段有自己的 UUID。Vibe Usage 的真实数据
+    // 证明按 message/request 合并会吃掉一半以上 Token，所以 Claude 必须以 UUID
+    // 为逻辑记录身份；没有 UUID 的匿名行宁可保留，也不能猜成重复。
+    if (record.source === 'claude-code') {
+      if (record.uuid) {
+        exactKey = `u ${scope} ${record.uuid}`;
+        const hit = exact.get(exactKey);
+        if (hit !== undefined) index = hit;
+      }
+    } else if (messageId) {
       exactKey = `m ${scope} ${messageId} ${record.requestId ?? ''}`;
       const hit = exact.get(exactKey);
       if (hit !== undefined) {
@@ -66,7 +77,7 @@ export function dedupe(records) {
     index = selected.length;
     selected.push(record);
     if (exactKey !== null) exact.set(exactKey, index);
-    if (messageId) {
+    if (messageId && record.source !== 'claude-code') {
       const groupKey = `${scope} ${messageId}`;
       const list = byMessage.get(groupKey);
       if (list) list.push(index);

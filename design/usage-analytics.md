@@ -12,7 +12,7 @@ Maclawd 的原生统计页与本地 Web 页的**统计数字**只消费同一个
 slotStart × source × model × project → token bucket
 ```
 
-槽位只为实际发生过用量的组合建桶。`rollup.v = 3`；读取旧版本时服务端明确返回
+槽位只为实际发生过用量的组合建桶。`rollup.v = 4`，并携带 `collection` 采集完整度；读取旧版本时服务端明确返回
 `stale`，下一次扫描会从原始日志重建，不静默展示零值。
 
 当前应用只追踪本机，因而不提供没有决策价值的 hostname/terminal 筛选。数据结构可在
@@ -25,7 +25,7 @@ slotStart × source × model × project → token bucket
 - `reasoningTokens`：推理 Token（已经包含在底层 output 中）
 - `cachedTokens`：缓存读取
 - `totalTokens`：输入、完整输出、缓存读取之和；reasoning 不重复相加
-- `billableTokens`：输入、缓存写、完整输出之和；不含缓存读取
+- `nonCachedReadTokens`：输入、缓存写、完整输出之和；不含缓存读取（兼容字段 `billableTokens` 暂时保留）
 
 费用由当前价格表在查询时计算，不固化进 rollup。未知模型不猜价，接口同时返回
 `coverage`、未计价 Token 和模型列表。

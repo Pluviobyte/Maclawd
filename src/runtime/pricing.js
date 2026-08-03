@@ -58,6 +58,21 @@ const FALLBACK_FAMILIES = [
   ['haiku', [0.8, 4]],
 ];
 
+// Anthropic 官方 Claude Platform 价格（美元 / 1M token）。已知模型优先用
+// 一方价格；OpenRouter 只补足其他供应商/模型。缓存倍率来自同一官方页面：
+// https://platform.claude.com/docs/en/build-with-claude/prompt-caching
+const OFFICIAL_PRICE_SOURCE = 'https://platform.claude.com/docs/en/about-claude/pricing';
+const OFFICIAL_PRICES = new Map(Object.entries({
+  'claude-fable-5': fromInputOutput(10, 50),
+  'claude-opus-5': fromInputOutput(5, 25),
+  'claude-opus-4-8': fromInputOutput(5, 25),
+  'claude-opus-4-7': fromInputOutput(5, 25),
+  'claude-opus-4-6': fromInputOutput(5, 25),
+  'claude-opus-4-5': fromInputOutput(5, 25),
+  'claude-sonnet-5': fromInputOutput(2, 10),
+  'claude-haiku-4-5': fromInputOutput(0.8, 4),
+}));
+
 /** 永不计价：这些不是真实模型，而是工具内部的记账/别名条目。 */
 const NON_MODELS = new Set(['<synthetic>', 'unknown', '', 'codex-auto-review']);
 
@@ -130,7 +145,12 @@ export function resetPricingCache() {
 
 export function pricingMeta() {
   const { meta, byId } = loadTables();
-  return { ...(meta ?? {}), models: byId.size };
+  return {
+    ...(meta ?? {}),
+    models: byId.size,
+    officialModels: OFFICIAL_PRICES.size,
+    officialSource: OFFICIAL_PRICE_SOURCE,
+  };
 }
 
 export function priceFor(model) {
@@ -140,7 +160,11 @@ export function priceFor(model) {
   const { overrides, byId, byBare } = loadTables();
 
   // 1. 手工修正优先，且允许只写 input/output 两个数
-  const override = overrides[raw] ?? overrides[raw.toLowerCase()];
+  let override = null;
+  for (const variant of nameVariants(raw)) {
+    override = overrides[variant] ?? overrides[variant.toLowerCase()];
+    if (override) break;
+  }
   if (override) {
     if (typeof override.input === 'number' && typeof override.output === 'number') {
       return { ...fromInputOutput(override.input, override.output), ...override };
@@ -148,13 +172,19 @@ export function priceFor(model) {
     return override;
   }
 
-  // 2. 拉取到的价格表
+  // 2. 已知供应商的一方公开价格
+  for (const variant of nameVariants(raw)) {
+    const official = OFFICIAL_PRICES.get(variant);
+    if (official) return official;
+  }
+
+  // 3. 拉取到的聚合价格表
   for (const variant of nameVariants(raw)) {
     const hit = byId.get(variant) ?? byBare.get(variant);
     if (hit) return hit;
   }
 
-  // 3. 内置家族兜底
+  // 4. 内置家族兜底
   const lower = raw.toLowerCase();
   for (const [keyword, [input, output]] of FALLBACK_FAMILIES) {
     if (lower.includes(keyword)) return fromInputOutput(input, output);

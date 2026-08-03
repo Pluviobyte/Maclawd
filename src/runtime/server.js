@@ -223,6 +223,9 @@ function buildSummary(query) {
   const coverage = summary.throughput > 0
     ? 1 - (summary.unpricedTokens / summary.throughput)
     : 1;
+  const collection = rollup.collection ?? {
+    complete: false, scannedAt: null, deferredFiles: null, sources: {},
+  };
 
   return {
     range,
@@ -231,10 +234,12 @@ function buildSummary(query) {
     summary,
     sessions,
     coverage,
-    baseline: baseline(rollup),
+    // 部分索引会以不均匀方式影响今天与历史天，不能据此计算“比平时”。
+    baseline: collection.complete ? baseline(rollup) : null,
     dimensions: dimensions(rollup),
     labels: SOURCE_LABELS,
     pricing: pricingMeta(),
+    collection,
     projectPaths: rollup.projectPaths ?? {},
     wrapped: wrapped(rollup, summary),
   };

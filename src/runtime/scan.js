@@ -29,10 +29,10 @@ import { usageEnabled } from './settings.js';
  * 修复对存量数据静默不生效——你会看到「代码改了、数字没变」，
  * 而且没有任何东西提示你缓存才是原因。
  *
- * 7: OpenClaw 改为从会话首行的 cwd 取项目归属（此前只从文件路径反推，
- *    推不出来就落到 unknown）。
+ * 10: 重建 Claude UUID 去重、Desktop Cowork roots、Codex 重放边界，并给
+ *     缓存条目写入 source，以便 discovery 瞬时失败时安全回落。
  */
-const CACHE_VERSION = 7;
+const CACHE_VERSION = 10;
 const MAX_WARNINGS = 20;
 const DEFAULT_BUDGET_MS = 20_000;
 
@@ -41,14 +41,15 @@ function budgetFromEnv() {
   return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_BUDGET_MS;
 }
 
-export function listJsonl(baseDir, { extensions = ['.jsonl'] } = {}) {
+export function listJsonl(baseDir, { extensions = ['.jsonl'], onError = null } = {}) {
   const results = [];
   const walk = (dir) => {
     let entries;
     try {
       entries = readdirSync(dir, { withFileTypes: true });
-    } catch {
-      // 不可读的分支不应该让整次扫描失败。
+    } catch (err) {
+      // 不存在表示工具没安装；权限/IO 错误则必须上报，否则空结果会被误认成精确零值。
+      if (err?.code !== 'ENOENT') onError?.(dir, err);
       return;
     }
     for (const entry of entries) {
@@ -65,8 +66,9 @@ export function listJsonl(baseDir, { extensions = ['.jsonl'] } = {}) {
             ino: stat.ino,
             relative: relativePath(baseDir, full),
           });
-        } catch {
-          // 刚被删掉的文件，跳过。
+        } catch (err) {
+          // 刚被删掉的文件可跳过；其他错误会使该来源不完整。
+          if (err?.code !== 'ENOENT') onError?.(full, err);
         }
       }
     }
@@ -188,6 +190,11 @@ async function runParser(parser, candidate, { start, end, prevState }) {
     : (typeof filter === 'string' && filter ? (line) => line.includes(filter) : null);
 
   await readLines(candidate.path, start, end, (line) => {
+    try {
+      fileParser.onRawLine?.(line);
+    } catch {
+      // 时间线等旁路解析失败不能影响用量主记录。
+    }
     if (accept && !accept(line)) return;
     let obj;
     try {
@@ -221,6 +228,7 @@ export async function scanAll({
       records: [],
       bySource: {},
       sessionsBySource: {},
+      sourceStatus: {},
       projectPaths: {},
       warnings: [],
       stats: { reused: 0, appended: 0, full: 0, deferred: 0, bytesRead: 0 },
@@ -241,17 +249,70 @@ export async function scanAll({
   const projectPaths = {};
   let cacheChanged = false;
   const stats = { reused: 0, appended: 0, full: 0, deferred: 0, bytesRead: 0 };
+  const sourceStatus = {};
 
   const warn = (message) => {
     if (warnings.length < MAX_WARNINGS) warnings.push(message);
   };
 
-  for (const parser of parsers) {
+  const restoreCachedSource = (parserId, records, sessions, status) => {
+    for (const [path, entry] of Object.entries(cache.files)) {
+      if (entry.source !== parserId || livePaths.has(path) || !entry.packed) continue;
+      livePaths.add(path);
+      status.indexedFiles++;
+      for (const record of unpackRecords(entry.packed, parserId, entry.project)) {
+        records.push(record);
+      }
+      if (entry.session) sessions.push({ ...entry.session, project: entry.project });
+      if (entry.project && entry.projectPath) projectPaths[entry.project] = entry.projectPath;
+    }
+  };
+
+  // 上一轮在哪个来源耗尽预算，下一轮就从那个来源开始。单纯固定顺序会让
+  // Claude 的活跃大文件永远占满预算，后面的 Codex/Kimi 等来源永久饥饿。
+  const resumeIndex = Math.max(0, parsers.findIndex((parser) => (
+    parser.id === cache.scheduler?.nextParserId
+  )));
+  const orderedParsers = parsers.length > 0
+    ? parsers.slice(resumeIndex).concat(parsers.slice(0, resumeIndex))
+    : [];
+
+  for (const parser of orderedParsers) {
+    const status = sourceStatus[parser.id] = {
+      discoveredFiles: 0,
+      indexedFiles: 0,
+      deferredFiles: 0,
+      failedFiles: 0,
+      complete: true,
+      latestRecordAt: null,
+    };
     let candidates;
+    let discoveryErrors = 0;
     try {
-      candidates = parser.discover({ listJsonl });
+      candidates = parser.discover({
+        listJsonl: (baseDir, options = {}) => listJsonl(baseDir, {
+          ...options,
+          onError: (path, err) => {
+            discoveryErrors++;
+            status.failedFiles++;
+            status.complete = false;
+            options.onError?.(path, err);
+            warn(`${parser.id}: 无法读取 ${path} — ${err.message}`);
+          },
+        }),
+      });
     } catch (err) {
+      status.failedFiles++;
+      status.complete = false;
       warn(`${parser.id}: discover 失败 — ${err.message}`);
+      const records = [];
+      const sessions = [];
+      restoreCachedSource(parser.id, records, sessions, status);
+      bySource[parser.id] = dedupe(records);
+      status.latestRecordAt = bySource[parser.id].reduce(
+        (latest, record) => Math.max(latest ?? Number.NEGATIVE_INFINITY, record.ts), null,
+      );
+      sessionsBySource[parser.id] = sessions;
       continue;
     }
 
@@ -264,6 +325,7 @@ export async function scanAll({
 
     const records = [];
     const sessions = [];
+    status.discoveredFiles = groups.size;
     for (const candidate of groups.values()) {
       livePaths.add(candidate.path);
       const entry = cache.files[candidate.path];
@@ -272,6 +334,7 @@ export async function scanAll({
       // ---- 第 1 级：签名未变，零读取 ----
       if (entry && entry.sig === sig && entry.packed) {
         stats.reused++;
+        status.indexedFiles++;
         for (const record of unpackRecords(entry.packed, parser.id, entry.project)) {
           records.push(record);
         }
@@ -283,7 +346,10 @@ export async function scanAll({
       // 预算耗尽：保留旧数据（若有），把这个文件留到下次。
       if (Date.now() - startedAt > budgetMs) {
         stats.deferred++;
+        status.deferredFiles++;
+        status.complete = false;
         if (entry?.packed) {
+          status.indexedFiles++;
           for (const record of unpackRecords(entry.packed, parser.id, entry.project)) {
             records.push(record);
           }
@@ -319,9 +385,11 @@ export async function scanAll({
                 record.project = project;
                 delete record.cwd;
               }
-              const merged = unpackRecords(entry.packed, parser.id, project)
-                .concat(result.records);
+              const merged = result.resetRecords
+                ? result.records
+                : unpackRecords(entry.packed, parser.id, project).concat(result.records);
               cache.files[candidate.path] = {
+                source: parser.id,
                 sig,
                 ino: candidate.ino,
                 offset: boundary,
@@ -334,6 +402,7 @@ export async function scanAll({
               };
               cacheChanged = true;
               stats.appended++;
+              status.indexedFiles++;
               stats.bytesRead += boundary - entry.offset;
               for (const record of merged) records.push(record);
               if (result.session) sessions.push({ ...result.session, project });
@@ -346,6 +415,7 @@ export async function scanAll({
           } else {
             // 只增长了不完整的一行，等下次。
             stats.reused++;
+            status.indexedFiles++;
             for (const record of unpackRecords(entry.packed, parser.id, entry.project)) {
               records.push(record);
             }
@@ -371,6 +441,7 @@ export async function scanAll({
           delete record.cwd;
         }
         cache.files[candidate.path] = {
+          source: parser.id,
           sig,
           ino: candidate.ino,
           offset: boundary,
@@ -383,14 +454,18 @@ export async function scanAll({
         };
         cacheChanged = true;
         stats.full++;
+        status.indexedFiles++;
         stats.bytesRead += boundary;
         for (const record of result.records) records.push(record);
         if (result.session) sessions.push({ ...result.session, project });
         onProgress?.({ source: parser.id, path: candidate.path, mode: 'full' });
       } catch (err) {
+        status.failedFiles++;
+        status.complete = false;
         warn(`${parser.id}: 无法读取 ${candidate.path} — ${err.message}`);
         // 读取失败时保留旧缓存，避免把一次瞬时故障变成数据缺口。
         if (entry?.packed) {
+          status.indexedFiles++;
           for (const record of unpackRecords(entry.packed, parser.id, entry.project)) {
             records.push(record);
           }
@@ -398,9 +473,29 @@ export async function scanAll({
       }
     }
 
+    // 某个 root 权限错误时，discover 可能仍返回其他 root 的候选。保留不可见
+    // 分支上一次的缓存，并把来源标为不完整，不能把暂时看不见当成用户删除。
+    if (discoveryErrors > 0) restoreCachedSource(parser.id, records, sessions, status);
+
     // 跨文件去重：fork 与 subagent 会把父会话记录复制到新文件。
     bySource[parser.id] = dedupe(records);
+    status.latestRecordAt = bySource[parser.id].reduce(
+      (latest, record) => Math.max(latest ?? Number.NEGATIVE_INFINITY, record.ts), null,
+    );
     sessionsBySource[parser.id] = sessions;
+  }
+
+  const firstDeferredIndex = orderedParsers.findIndex((parser) => (
+    sourceStatus[parser.id]?.deferredFiles > 0
+  ));
+  // 从耗尽预算的来源“后一个”开始，而不是再从它自己开始。否则一个拥有
+  // 数百个慢文件的来源会连续占用很多轮，后面的来源虽非永久饥饿，却会等待过久。
+  const nextParserId = firstDeferredIndex >= 0
+    ? orderedParsers[(firstDeferredIndex + 1) % orderedParsers.length]?.id ?? null
+    : null;
+  if (cache.scheduler?.nextParserId !== nextParserId) {
+    cache.scheduler = { nextParserId };
+    cacheChanged = true;
   }
 
   // 逐出解析器已不再产出的文件（用户删了日志），防止缓存无界增长。
@@ -424,6 +519,7 @@ export async function scanAll({
     records,
     bySource,
     sessionsBySource,
+    sourceStatus,
     projectPaths,
     warnings,
     stats,

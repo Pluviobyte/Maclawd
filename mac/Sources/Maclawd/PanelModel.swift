@@ -157,13 +157,15 @@ struct PanelSummary: Equatable {
     var unpricedModels: [String] = []
     var primaryMetric: String = "billable"
     var showCost = false
+    var collectionComplete = false
+    var deferredFiles = 0
 
     var primary: Double { primaryMetric == "throughput" ? throughput : billable }
 
     /// 与个人 14 天中位数比。**不用「比昨天」**——昨天可能正好休息，
     /// 波动没有信息量。
     var comparedToUsual: Double? {
-        guard let baseline, baseline > 0, throughput > 0 else { return nil }
+        guard collectionComplete, let baseline, baseline > 0, throughput > 0 else { return nil }
         return (throughput - baseline) / baseline
     }
 }
@@ -191,7 +193,7 @@ struct AnalyticsTotals: Equatable {
     var reasoningTokens = 0.0
     var cachedTokens = 0.0
     var totalTokens = 0.0
-    var billableTokens = 0.0
+    var nonCachedReadTokens = 0.0
 
     init() {}
     init(_ raw: Any?) {
@@ -201,7 +203,9 @@ struct AnalyticsTotals: Equatable {
         reasoningTokens = jsonDouble(d["reasoningTokens"])
         cachedTokens = jsonDouble(d["cachedTokens"])
         totalTokens = jsonDouble(d["totalTokens"])
-        billableTokens = jsonDouble(d["billableTokens"])
+        nonCachedReadTokens = d["nonCachedReadTokens"] == nil
+            ? jsonDouble(d["billableTokens"])
+            : jsonDouble(d["nonCachedReadTokens"])
     }
 }
 
@@ -302,14 +306,16 @@ struct AnalyticsHeatCell: Identifiable, Equatable {
 struct AnalyticsDistributionItem: Identifiable, Equatable {
     let id: String
     let totalTokens: Double
-    let billableTokens: Double
+    let nonCachedReadTokens: Double
     let estimatedCost: Double?
 
     init?(_ raw: [String: Any]) {
         guard let id = raw["id"] as? String else { return nil }
         self.id = id
         totalTokens = jsonDouble(raw["totalTokens"])
-        billableTokens = jsonDouble(raw["billableTokens"])
+        nonCachedReadTokens = raw["nonCachedReadTokens"] == nil
+            ? jsonDouble(raw["billableTokens"])
+            : jsonDouble(raw["nonCachedReadTokens"])
         estimatedCost = jsonOptionalDouble(raw["estimatedCost"])
     }
 }
@@ -339,6 +345,44 @@ struct AnalyticsDimensions: Equatable {
         sources = d["sources"] as? [String] ?? []
         models = d["models"] as? [String] ?? []
         projects = d["projects"] as? [String] ?? []
+    }
+}
+
+struct AnalyticsSourceStatus: Equatable {
+    var discoveredFiles = 0
+    var indexedFiles = 0
+    var deferredFiles = 0
+    var failedFiles = 0
+    var complete = false
+    var latestRecordAt: Double?
+
+    init() {}
+    init(_ raw: Any?) {
+        let d = raw as? [String: Any] ?? [:]
+        discoveredFiles = jsonInt(d["discoveredFiles"])
+        indexedFiles = jsonInt(d["indexedFiles"])
+        deferredFiles = jsonInt(d["deferredFiles"])
+        failedFiles = jsonInt(d["failedFiles"])
+        complete = d["complete"] as? Bool ?? false
+        latestRecordAt = jsonOptionalDouble(d["latestRecordAt"])
+    }
+}
+
+struct AnalyticsCollection: Equatable {
+    var complete = false
+    var scannedAt: String?
+    var deferredFiles = 0
+    var sources: [String: AnalyticsSourceStatus] = [:]
+
+    init() {}
+    init(_ raw: Any?) {
+        let d = raw as? [String: Any] ?? [:]
+        complete = d["complete"] as? Bool ?? false
+        scannedAt = d["scannedAt"] as? String
+        deferredFiles = jsonInt(d["deferredFiles"])
+        for (key, value) in d["sources"] as? [String: Any] ?? [:] {
+            sources[key] = AnalyticsSourceStatus(value)
+        }
     }
 }
 
@@ -398,6 +442,7 @@ struct AnalyticsSnapshot: Equatable {
     var heatmap: [AnalyticsHeatCell] = []
     var distributions = AnalyticsDistributions()
     var dimensions = AnalyticsDimensions()
+    var collection = AnalyticsCollection()
     var records = AnalyticsRecords()
 
     static func decode(_ json: [String: Any]) -> AnalyticsSnapshot {
@@ -417,6 +462,7 @@ struct AnalyticsSnapshot: Equatable {
         out.heatmap = (json["heatmap"] as? [[String: Any]] ?? []).compactMap(AnalyticsHeatCell.init)
         out.distributions = AnalyticsDistributions(json["distributions"])
         out.dimensions = AnalyticsDimensions(json["dimensions"])
+        out.collection = AnalyticsCollection(json["collection"])
         out.records = AnalyticsRecords(json["records"])
         return out
     }
@@ -569,6 +615,10 @@ final class PanelStore: ObservableObject {
         out.showCost = settings["showCost"] as? Bool ?? false
         out.coverage = json["coverage"] as? Double ?? 1
         out.baseline = json["baseline"] as? Double
+        if let collection = json["collection"] as? [String: Any] {
+            out.collectionComplete = collection["complete"] as? Bool ?? false
+            out.deferredFiles = jsonInt(collection["deferredFiles"])
+        }
 
         if let s = json["summary"] as? [String: Any] {
             out.billable = s["billable"] as? Double ?? 0
@@ -664,6 +714,10 @@ enum Fmt {
         return String(Int(n.rounded()))
     }
 
+    static func exactTokens(_ n: Double) -> String {
+        "\(NumberFormatter.localizedString(from: NSNumber(value: n.rounded()), number: .decimal)) Token"
+    }
+
     static func percent(_ x: Double) -> String {
         String(format: x >= 0.995 || x == 0 ? "%.0f%%" : "%.1f%%", x * 100)
     }
@@ -671,6 +725,16 @@ enum Fmt {
     static func duration(_ seconds: Int) -> String {
         let h = seconds / 3600, m = (seconds % 3600) / 60
         return h > 0 ? "\(h)h \(m)m" : "\(m)m"
+    }
+
+    static func exactDuration(_ seconds: Int) -> String {
+        let safe = max(0, seconds)
+        let h = safe / 3600, m = (safe % 3600) / 60, s = safe % 60
+        return [h > 0 ? "\(h) 小时" : nil,
+                m > 0 ? "\(m) 分钟" : nil,
+                "\(s) 秒"]
+            .compactMap { $0 }
+            .joined(separator: " ")
     }
 
     /// 距离重置还有多久。越远精度越粗——「6 天后」比「151h14m」好读。

@@ -122,7 +122,7 @@ node bin/maclawd-usage.js probe <source> --diff   # 2. 与操作前的差异
 如果那个工具自己有用量统计（很多 CLI 有 `/cost`、`/usage` 或状态栏），
 拿它和 Maclawd 的 `probe` 输出对一下。注意**口径**：
 
-- Maclawd 的 **计费量** = 输入 + 缓存写 + 输出（**不含**缓存读）
+- Maclawd 的 **非缓存读取量** = 输入 + 缓存写 + 输出（**不含**缓存读，但缓存读仍收费）
 - Maclawd 的 **吞吐量** = 四项全加（**含**缓存读）
 
 多数工具自己报的是吞吐量。实测两个口径能差 **20 倍以上**，
@@ -137,7 +137,7 @@ node bin/maclawd-usage.js probe <source> --diff   # 2. 与操作前的差异
 | Qwen Code | 项目归属 | `token-usage-*.jsonl` 里根本没有 cwd 字段 |
 | Amp | 项目归属 | thread 文件里没有工作目录 |
 | Gemini CLI | 项目归属 | `tmp/` 下是路径哈希目录，反推不出真实路径 |
-| Kiro | 从正文估算 token 的那条路径 | **有意不实现**——估算值混进「计费量」会让这个口径失去意义 |
+| Kiro | 从正文估算 token 的那条路径 | **有意不实现**——估算值混进「非缓存读取量」会让这个口径失去意义 |
 | Cursor | 本地用量 | 它本地只存登录态，用量全在云端 |
 
 ---

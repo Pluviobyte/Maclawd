@@ -112,6 +112,8 @@ test('/api/analytics 暴露统一的同比、趋势、热力图、分布和分�
   assert.equal(d.records.nextCursor, null);
   assert.equal(d.sessions.available, false, '模型筛选下会话指标不能伪造');
   assert.ok(d.cost.coverage >= 0 && d.cost.coverage <= 1);
+  assert.equal(d.collection.complete, true);
+  assert.equal(d.totals.nonCachedReadTokens, d.totals.billableTokens);
 });
 
 test('聚合结构版本不匹配时明确报 stale，而不是静默返回 0', async () => {

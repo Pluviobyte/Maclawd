@@ -378,9 +378,9 @@ function renderSettings(){
     </div>`;
   }).join('') + `<div class="row">
       <div style="flex:1"><strong>面板主口径</strong>
-        <p>计费量不含缓存读，吞吐量四项全加。实测两者可差 20 倍以上，所以任何数字都必须标注口径。</p></div>
+        <p>非缓存读取量不含缓存读，吞吐量四项全加。缓存读仍会收费，所以任何数字都必须标注口径。</p></div>
       <select id="metric" style="padding:6px 10px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:12px">
-        <option value="billable"${settings.primaryMetric==='billable'?' selected':''}>计费量 billable</option>
+        <option value="billable"${settings.primaryMetric==='billable'?' selected':''}>非缓存读取量</option>
         <option value="throughput"${settings.primaryMetric==='throughput'?' selected':''}>吞吐量 throughput</option>
       </select></div>`;
 

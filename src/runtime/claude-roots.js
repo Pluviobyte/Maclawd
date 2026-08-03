@@ -12,7 +12,54 @@ function expandHome(value) {
 }
 
 function hasClaudeData(root) {
-  return existsSync(join(root, 'projects'));
+  return existsSync(join(root, 'projects')) || existsSync(join(root, 'transcripts'));
+}
+
+const MAX_DESKTOP_DISCOVERY_DEPTH = 8;
+const DESKTOP_NON_SESSION_DIRS = new Set(['rpm', 'skills']);
+
+function defaultClaudeDesktopDataDir() {
+  if (process.platform === 'darwin') {
+    return join(homedir(), 'Library', 'Application Support', 'Claude');
+  }
+  if (process.platform === 'win32') {
+    const appData = process.env.APPDATA?.trim();
+    return appData ? expandHome(appData) : join(homedir(), 'AppData', 'Roaming', 'Claude');
+  }
+  const configHome = process.env.XDG_CONFIG_HOME?.trim();
+  return join(configHome ? expandHome(configHome) : join(homedir(), '.config'), 'Claude');
+}
+
+function discoverDesktopRoots(dir, depth, roots, onWarning) {
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch (err) {
+    if (err?.code !== 'ENOENT') onWarning(`Claude Desktop: 无法读取 ${dir}: ${err.message}`);
+    return;
+  }
+  const stateRoot = entries.find((entry) => entry.name === '.claude' && entry.isDirectory());
+  if (stateRoot) {
+    roots.push(join(dir, stateRoot.name));
+    return;
+  }
+  if (depth >= MAX_DESKTOP_DISCOVERY_DEPTH) return;
+  for (const entry of entries) {
+    if (!entry.isDirectory() || DESKTOP_NON_SESSION_DIRS.has(entry.name)) continue;
+    discoverDesktopRoots(join(dir, entry.name), depth + 1, roots, onWarning);
+  }
+}
+
+/** Claude Desktop Cowork 为每个 local-agent session 建一份私有 .claude。 */
+export function findClaudeDesktopRoots(
+  desktopDataDirs = [defaultClaudeDesktopDataDir()],
+  onWarning = () => {},
+) {
+  const roots = [];
+  for (const dataDir of desktopDataDirs) {
+    discoverDesktopRoots(join(dataDir, 'local-agent-mode-sessions'), 0, roots, onWarning);
+  }
+  return roots;
 }
 
 /**
@@ -24,7 +71,7 @@ function hasClaudeData(root) {
  *
  * MACLAWD_CLAUDE_DIRS 是测试与诊断用的覆盖入口，用 path.delimiter 分隔。
  */
-export function getClaudeRoots() {
+export function getClaudeRoots({ onWarning = () => {} } = {}) {
   const override = process.env.MACLAWD_CLAUDE_DIRS?.trim();
   const roots = override
     ? override.split(delimiter).map(expandHome).filter(Boolean)
@@ -45,6 +92,7 @@ export function getClaudeRoots() {
     } catch {
       // home 目录读取失败时，默认根与显式配置的根仍然可用。
     }
+    roots.push(...findClaudeDesktopRoots([defaultClaudeDesktopDataDir()], onWarning));
   }
 
   const seen = new Set();

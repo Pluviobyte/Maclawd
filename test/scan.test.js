@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, appendFileSync, writeFileSync, rmSync } from 'node:fs';
+import {
+  mkdtempSync, mkdirSync, appendFileSync, writeFileSync, rmSync, statSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createTurnTracker, summarizeSessions } from '../src/runtime/sessions.js';
@@ -149,6 +151,133 @@ test('日志被删除后缓存条目被逐出', async () => {
     const result = await scan();
     assert.equal(result.bySource['claude-code'].length, 0);
   });
+});
+
+test('预算耗尽后下次扫描从被饿死的来源开始，并公开每来源完整度', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'maclawd-fair-scan-'));
+  const previous = process.env.MACLAWD_DATA_DIR;
+  process.env.MACLAWD_DATA_DIR = join(root, 'data');
+  const files = [join(root, 'slow-1.jsonl'), join(root, 'slow-2.jsonl'), join(root, 'waiting.jsonl')];
+  writeFileSync(files[0], '{"value":1}\n');
+  writeFileSync(files[1], '{"value":2}\n');
+  writeFileSync(files[2], '{"value":3}\n');
+
+  const parser = (id, fileOrFiles, delayMs = 0) => ({
+    id,
+    discover: () => (Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles]).map((file, index) => {
+      const stat = statSync(file);
+      return { path: file, size: stat.size, mtimeMs: stat.mtimeMs, ino: stat.ino,
+        sessionId: `${id}-${index}` };
+    }),
+    createFileParser: () => {
+      const records = [];
+      return {
+        onObject(obj) {
+          const until = Date.now() + delayMs;
+          while (Date.now() < until) { /* fixture burns this scan's work budget */ }
+          records.push({ source: id, model: 'm', project: 'p', ts: 1,
+            input: obj.value, output: 0, cacheRead: 0, write5m: 0, write1h: 0,
+            reasoning: 0, messageId: `${id}-${obj.value}`, requestId: null,
+            uuid: null, sidechain: false });
+        },
+        finish: () => ({ records }),
+      };
+    },
+  });
+  const slow = parser('slow', files.slice(0, 2), 8);
+  const waiting = parser('waiting', files[2]);
+  const { scanAll } = await import('../src/runtime/scan.js');
+
+  try {
+    const first = await scanAll({ parsers: [slow, waiting], budgetMs: 2, ignoreSettings: true });
+    assert.equal(first.bySource.waiting.length, 0);
+    assert.equal(first.sourceStatus.slow.deferredFiles, 1,
+      '慢来源自己仍有文件待处理，不能让它连续霸占下一轮起点');
+    assert.equal(first.sourceStatus.waiting.complete, false);
+    assert.equal(first.sourceStatus.waiting.deferredFiles, 1);
+
+    const second = await scanAll({ parsers: [slow, waiting], budgetMs: 2, ignoreSettings: true });
+    assert.equal(second.bySource.waiting.length, 1,
+      '持久化调度游标必须让下一轮先处理上次没机会运行的来源');
+    assert.equal(second.sourceStatus.waiting.complete, true);
+    assert.equal(second.sourceStatus.waiting.indexedFiles, 1);
+    assert.equal(second.sourceStatus.waiting.latestRecordAt, 1);
+  } finally {
+    if (previous === undefined) delete process.env.MACLAWD_DATA_DIR;
+    else process.env.MACLAWD_DATA_DIR = previous;
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('来源目录读取失败时标为不完整，不能把权限错误当成精确零值', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'maclawd-discovery-error-'));
+  const previous = process.env.MACLAWD_DATA_DIR;
+  process.env.MACLAWD_DATA_DIR = join(root, 'data');
+  const notDirectory = join(root, 'not-a-directory');
+  writeFileSync(notDirectory, 'x');
+  const parser = {
+    id: 'broken-root',
+    discover: ({ listJsonl }) => listJsonl(notDirectory),
+    createFileParser: () => ({ finish: () => ({ records: [] }) }),
+  };
+  const { scanAll } = await import('../src/runtime/scan.js');
+  try {
+    const result = await scanAll({ parsers: [parser], budgetMs: 1000, ignoreSettings: true });
+    assert.equal(result.sourceStatus['broken-root'].complete, false);
+    assert.equal(result.sourceStatus['broken-root'].failedFiles, 1);
+    assert.match(result.warnings.join('\n'), /无法读取/);
+  } finally {
+    if (previous === undefined) delete process.env.MACLAWD_DATA_DIR;
+    else process.env.MACLAWD_DATA_DIR = previous;
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('discover 瞬时失败时保留该来源缓存，不发布空值也不逐出', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'maclawd-discover-fallback-'));
+  const previous = process.env.MACLAWD_DATA_DIR;
+  process.env.MACLAWD_DATA_DIR = join(root, 'data');
+  const file = join(root, 'usage.jsonl');
+  writeFileSync(file, '{"value":7}\n');
+  let fail = false;
+  const parser = {
+    id: 'flaky',
+    discover: () => {
+      if (fail) throw new Error('temporary failure');
+      const stat = statSync(file);
+      return [{ path: file, size: stat.size, mtimeMs: stat.mtimeMs, ino: stat.ino,
+        sessionId: 'flaky' }];
+    },
+    createFileParser: () => {
+      const records = [];
+      return {
+        onObject(obj) {
+          records.push({ source: 'flaky', model: 'm', project: 'p', ts: 1,
+            input: obj.value, output: 0, cacheRead: 0, write5m: 0, write1h: 0,
+            reasoning: 0, messageId: 'flaky-1', requestId: null, uuid: null,
+            sidechain: false });
+        },
+        finish: () => ({ records }),
+      };
+    },
+  };
+  const { scanAll } = await import('../src/runtime/scan.js');
+  try {
+    const first = await scanAll({ parsers: [parser], budgetMs: 1000, ignoreSettings: true });
+    assert.equal(first.bySource.flaky.length, 1);
+    fail = true;
+    const second = await scanAll({ parsers: [parser], budgetMs: 1000, ignoreSettings: true });
+    assert.equal(second.sourceStatus.flaky.complete, false);
+    assert.equal(second.bySource.flaky.length, 1, '瞬时故障必须回落到上一份缓存');
+    fail = false;
+    const third = await scanAll({ parsers: [parser], budgetMs: 1000, ignoreSettings: true });
+    assert.equal(third.bySource.flaky.length, 1, '失败轮次不能把缓存逐出');
+    assert.equal(third.stats.reused, 1);
+  } finally {
+    if (previous === undefined) delete process.env.MACLAWD_DATA_DIR;
+    else process.env.MACLAWD_DATA_DIR = previous;
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('会话时长跨增量尾读保持连续', async () => {

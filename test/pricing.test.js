@@ -86,24 +86,46 @@ test('非真实模型永不计价', () => {
   }
 });
 
-test('内置家族兜底在没有价格表时可用', () => {
+test('已知 Claude 模型使用官方价，未知旧家族才使用离线兜底', () => {
   resetPricingCache();
   const opus = priceFor('claude-opus-4-8');
-  assert.ok(opus && opus.input === 15);
+  assert.ok(opus && opus.input === 5);
+  assert.equal(opus.output, 25);
+  assert.equal(opus.write5m, 6.25);
+  assert.equal(opus.write1h, 10);
   assert.equal(priceFor('某个完全没见过的模型'), null, '未知模型不猜价格');
+});
+
+test('官方 Claude 价格优先于聚合商价格，但用户 overrides 仍可覆盖', () => {
+  writePricingTable({
+    _meta: {}, models: {
+      'anthropic/claude-opus-4.8': { input: 99, output: 99, cacheRead: 9.9,
+        write5m: 99, write1h: 99 },
+    },
+  });
+  writeJson(OVERRIDES_FILE, {});
+  resetPricingCache();
+  assert.equal(priceFor('claude-opus-4-8').input, 5);
+  assert.ok(pricingMeta().officialModels >= 5);
+
+  writeJson(OVERRIDES_FILE, { 'claude-opus-4-8': { input: 7, output: 8 } });
+  resetPricingCache();
+  assert.equal(priceFor('claude-opus-4-8').input, 7);
+  assert.equal(priceFor('anthropic/claude-opus-4-8-20260801').input, 7,
+    '归一化后的 override 也必须压过官方价格');
 });
 
 test('拉取到的价格表能命中归一化后的名称', () => {
   writePricingTable({
     _meta: { fetchedAt: '2026-07-30T00:00:00.000Z', count: 2 },
     models: {
-      'anthropic/claude-fable-5': { input: 5, output: 25, cacheRead: 0.5, write5m: 6.25, write1h: 10 },
+      'vendor/novel-model': { input: 5, output: 25, cacheRead: 0.5, write5m: 6.25, write1h: 10 },
       'openai/gpt-5.6-sol': { input: 1, output: 8, cacheRead: 0.1, write5m: 1.25, write1h: 2 },
     },
   });
   resetPricingCache();
-  // 手工关键词表里没有 fable，这条正是自动适配要解决的场景
-  assert.equal(priceFor('claude-fable-5').input, 5);
+  // 官方表与手工关键词表都没有 novel-model，这条正是自动适配要解决的场景
+  assert.equal(priceFor('novel-model').input, 5);
   assert.equal(priceFor('gpt-5.6-sol').output, 8);
   assert.equal(pricingMeta().models, 2);
 });

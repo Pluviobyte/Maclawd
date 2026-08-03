@@ -151,13 +151,16 @@ function bucketForPeriod(rollup, bounds, filters) {
 
 function publicTotals(bucket) {
   const reasoningTokens = bucket.reasoning;
+  const nonCachedReadTokens = billable(bucket);
   return {
     inputTokens: bucket.input + bucket.write5m + bucket.write1h,
     outputTokens: Math.max(bucket.output - reasoningTokens, 0),
     reasoningTokens,
     cachedTokens: bucket.cacheRead,
     totalTokens: throughput(bucket),
-    billableTokens: billable(bucket),
+    nonCachedReadTokens,
+    // 兼容旧版原生面板；新客户端应使用语义准确的 nonCachedReadTokens。
+    billableTokens: nonCachedReadTokens,
   };
 }
 
@@ -240,7 +243,8 @@ function heatmap(rows, sessions = []) {
   for (let weekday = 1; weekday <= 7; weekday++) {
     for (let hour = 0; hour < 24; hour++) {
       cells.push({ weekday, hour, inputTokens: 0, outputTokens: 0,
-        reasoningTokens: 0, cachedTokens: 0, totalTokens: 0, billableTokens: 0,
+        reasoningTokens: 0, cachedTokens: 0, totalTokens: 0,
+        nonCachedReadTokens: 0, billableTokens: 0,
         estimatedCost: null, activeSeconds: 0 });
     }
   }
@@ -249,7 +253,7 @@ function heatmap(rows, sessions = []) {
     const weekday = ((date.getDay() + 6) % 7) + 1;
     const cell = cells[(weekday - 1) * 24 + date.getHours()];
     for (const key of ['inputTokens', 'outputTokens', 'reasoningTokens', 'cachedTokens',
-      'totalTokens', 'billableTokens']) cell[key] += row[key];
+      'totalTokens', 'nonCachedReadTokens', 'billableTokens']) cell[key] += row[key];
     if (row.estimatedCost !== null) {
       cell.estimatedCost = (cell.estimatedCost ?? 0) + row.estimatedCost;
     }
@@ -396,6 +400,9 @@ export function queryUsageAnalytics(rollup, {
   const start = matchedCursor >= 0 ? matchedCursor + 1 : 0;
   const pageSize = Math.min(100, Math.max(1, Number(limit) || 50));
   const items = allRows.slice(start, start + pageSize);
+  const collection = rollup?.collection ?? {
+    complete: false, scannedAt: null, deferredFiles: null, sources: {},
+  };
   return {
     empty: totals.totalTokens === 0 && (!sessions.available || sessions.totals.sessions === 0),
     range,
@@ -403,8 +410,10 @@ export function queryUsageAnalytics(rollup, {
     bounds,
     totals,
     previous,
-    comparison: previous ? compare(currentComparable, previous) : null,
+    // 缺失文件对前后区间的影响通常不对称，不完整索引不能产出可信同比。
+    comparison: collection.complete && previous ? compare(currentComparable, previous) : null,
     dimensions: dimensions(rollup),
+    collection,
     cost,
     series: series(rollup, bounds.current, filters, priceBucket, currentSessionList ?? []),
     sessions,
