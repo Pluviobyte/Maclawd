@@ -258,3 +258,39 @@ test('动作总表必须覆盖全部契约动作，且每个都有触发源', ()
   assert.ok(!html.includes('没有触发源'),
     '总表上有动作被标为「没有触发源」——要么真是死动作，要么解析器失配了');
 });
+
+test('外壳的角色命中区与角色几何契约一致', () => {
+  // 桌宠窗口 135×135，而角色只占其中 45×27px（6.7% 面积）。
+  // 鼠标命中区必须收到角色身上，否则光标在它上方 93px 的空白处
+  // 就能触发「注视」、甚至把它拎起来——那里看起来什么都没有。
+  //
+  // 外壳里那四个归一化数字是从契约手算的。手算的东西必须有断言盯着，
+  // 否则改了 characterContract 而忘了改外壳，命中区会静默错位，
+  // 表现是「有时候点得到、有时候点不到」——最难查的那种。
+  const swift = read('mac/Sources/Maclawd/PetWindow.swift');
+  const m = swift.match(
+    /characterBox = \(x0: ([\d.]+), x1: ([\d.]+), y0: ([\d.]+), y1: ([\d.]+)\)/,
+  );
+  assert.ok(m, '读不到外壳里的 characterBox');
+  const [, sx0, sx1, sy0, sy1] = m.map(Number);
+
+  const c = JSON.parse(read('design/main-state-actions.json')).characterContract;
+  const [vx, vy, vw, vh] = c.viewBox.split(' ').map(Number);
+  const left = c.leftArm.x;
+  const right = c.rightArm.x + c.rightArm.width;
+  const top = c.torso.y;
+  const bottom = c.legsY + c.legHeight;
+
+  // AppKit 原点在左下、SVG 的 y 向下，所以纵向要翻转
+  const want = {
+    x0: (left - vx) / vw,
+    x1: (right - vx) / vw,
+    y0: 1 - (bottom - vy) / vh,
+    y1: 1 - (top - vy) / vh,
+  };
+  const close = (a, b) => Math.abs(a - b) < 0.001;
+  assert.ok(close(sx0, want.x0), `x0 应为 ${want.x0.toFixed(4)}，外壳写的是 ${sx0}`);
+  assert.ok(close(sx1, want.x1), `x1 应为 ${want.x1.toFixed(4)}，外壳写的是 ${sx1}`);
+  assert.ok(close(sy0, want.y0), `y0 应为 ${want.y0.toFixed(4)}，外壳写的是 ${sy0}`);
+  assert.ok(close(sy1, want.y1), `y1 应为 ${want.y1.toFixed(4)}，外壳写的是 ${sy1}`);
+});

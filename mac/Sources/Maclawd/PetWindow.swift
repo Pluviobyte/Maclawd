@@ -18,6 +18,7 @@ final class PetWindow: NSWindow {
     /// 外壳事件回灌入口，由 AppDelegate 接到 RuntimeClient 上。
     var onShellEvent: ((String) -> Void)?
     private var trackingArea: NSTrackingArea?
+    private var pointerMonitor: Any?
 
     // MARK: - 拖动状态
 
@@ -80,6 +81,7 @@ final class PetWindow: NSWindow {
 
         // 先试着回到上次拖到的地方；没有记录或那块屏幕已经不在了才回默认角落。
         if !restorePosition() { positionAtDefaultCorner() }
+        startPointerTracking()
     }
 
     private func positionAtDefaultCorner() {
@@ -89,9 +91,75 @@ final class PetWindow: NSWindow {
         setFrameOrigin(NSPoint(x: area.maxX - frame.width - inset, y: area.minY + inset))
     }
 
-    /// 让桌宠只接受落在角色身上的点击，空白处点击穿透到下面的窗口。
-    var clickThrough: Bool = false {
-        didSet { ignoresMouseEvents = clickThrough }
+    // MARK: - 命中区域
+
+    /**
+     角色本体在窗口里的归一化包围盒。
+
+     取景是 45 单位，但**角色只占其中一小块**：横向 x0…15（含双爪）、
+     纵向 y6…15（躯干顶到腿底）。换算下来 135px 的窗口里角色只有
+     45×27px，**占面积 6.7%**——其余 93% 是透明的。
+
+     这些数由 design/main-state-actions.json 的 characterContract 算出，
+     test/motion-quality.test.js 会断言两边一致，改了契约这里不改就会挂。
+
+     取景 `-15 -25 45 45`，AppKit 原点在左下而 SVG 的 y 向下，所以纵向要翻转：
+       x: (0-(-15))/45 = 0.3333 … (15-(-15))/45 = 0.6667
+       y: 1-(15-(-25))/45 = 0.1111 … 1-(6-(-25))/45 = 0.3111
+     */
+    private static let characterBox = (x0: 0.3333, x1: 0.6667, y0: 0.1111, y1: 0.3111)
+
+    /// 抓取容差。角色只有 45×27px，一个像素不差地要求命中太苛刻——
+    /// 但也不能给太多，给多了又回到「在空白处能拎起它」。
+    private static let grabMargin: CGFloat = 6
+
+    /// 角色在当前窗口坐标下的可抓取矩形。
+    private var characterRect: NSRect {
+        let b = Self.characterBox
+        let side = frame.width
+        let rect = NSRect(
+            x: side * b.x0, y: side * b.y0,
+            width: side * (b.x1 - b.x0), height: side * (b.y1 - b.y0)
+        )
+        return rect.insetBy(dx: -Self.grabMargin, dy: -Self.grabMargin)
+    }
+
+    /// 这个点落在角色身上吗？点在窗口坐标系里。
+    private func hitsCharacter(_ point: NSPoint) -> Bool {
+        // mini 档整个窗口就是角色（取景已经裁到只剩演员），不必再收
+        if isMini { return true }
+        return characterRect.contains(point)
+    }
+
+    /**
+     让窗口的空白部分对鼠标透明。
+
+     原本有一个 `clickThrough` 开关声明了这件事，但它默认 `false`、
+     而且**全项目没有任何地方设置过它**——等于承诺了没做。
+     后果是 93% 的透明区域照样吃掉点击：你想点桌宠底下的窗口，
+     点不着；你以为点了空白，其实把桌宠拎了起来。
+
+     这里改成跟着光标实时切换。必须用**全局**监听：
+     `ignoresMouseEvents` 为真时窗口自己收不到 mouseMoved，
+     只用窗口内的追踪区会一进入透明区就再也出不来。
+     （鼠标类的全局监听不需要辅助功能权限，键盘才需要。）
+     */
+    private func startPointerTracking() {
+        pointerMonitor = NSEvent.addGlobalMonitorForEvents(
+            matching: [.mouseMoved, .leftMouseDragged]
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.updatePassthrough() }
+        }
+    }
+
+    private func updatePassthrough() {
+        // 拖动途中绝不能改：一旦中途置为 true，后续的拖动事件会直接丢失，
+        // 桌宠会停在半路上。
+        guard !isDragging else { return }
+        let cursor = NSEvent.mouseLocation
+        let local = NSPoint(x: cursor.x - frame.minX, y: cursor.y - frame.minY)
+        let onCharacter = frame.contains(cursor) && hitsCharacter(local)
+        if ignoresMouseEvents != !onCharacter { ignoresMouseEvents = !onCharacter }
     }
 
     // MARK: - 渲染
@@ -144,6 +212,9 @@ final class PetWindow: NSWindow {
      这是拖放的标准做法。
      */
     override func mouseDown(with event: NSEvent) {
+        // 空白处按下不算数。ignoresMouseEvents 大多数时候已经拦住了，
+        // 但它是跟着光标移动更新的——用键盘或脚本瞬移光标再按下时会来不及。
+        guard hitsCharacter(event.locationInWindow) else { return }
         pressedAt = NSEvent.mouseLocation
         grabOffset = event.locationInWindow
         pendingClicks = event.clickCount
@@ -246,8 +317,11 @@ final class PetWindow: NSWindow {
     func refreshTracking() {
         if let existing = trackingArea { contentView?.removeTrackingArea(existing) }
         guard let view = contentView else { return }
+        // 追踪区跟着角色走，不是整个窗口。用 view.bounds 的话，
+        // 光标停在桌宠上方 93px 的空白处就会触发「注视」——
+        // 那里看起来什么都没有，用户不会明白它在看什么。
         let area = NSTrackingArea(
-            rect: view.bounds,
+            rect: isMini ? view.bounds : characterRect,
             options: [.mouseEnteredAndExited, .activeAlways],
             owner: self,
             userInfo: nil
@@ -316,6 +390,10 @@ final class PetWindow: NSWindow {
         }
         if hitEdge { onShellEvent?("shell.screenEdge") }
         onShellEvent?(edge == .none ? "shell.miniExit" : "shell.miniEnter")
+    }
+
+    deinit {
+        if let monitor = pointerMonitor { NSEvent.removeMonitor(monitor) }
     }
 
     override var canBecomeKey: Bool { false }
