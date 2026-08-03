@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  classifyBash, createStateEngine, energyFrom, idleWeights, pickWeighted, PRIORITY,
+  classifyBash, createStateEngine, energyFrom, idleWeights, ONESHOT, pickWeighted,
+  PRIORITY, SHELL_ACTIONS,
 } from '../src/runtime/state-engine.js';
 import { createOrchestrator, fallbackChain } from '../src/runtime/orchestrator.js';
 
@@ -483,4 +484,35 @@ test('落地必须清掉拖拽的持有态，否则桌宠卡在吊环上出不�
 
   // 一次性动作播完（引擎里插播时长 3 秒）后必须回到底下真实的状态
   assert.equal(e.tick(7 * SEC).actionId, 'working.testing', '落地后应回到工作态，而不是卡在拖拽姿势');
+});
+
+test('外壳交互状态不许被驻留挡住——它们不在 PRIORITY 表里', () => {
+  // resolve() 给 shell 会话判的是 SHELL_PRIORITY(4.3)，稳赢 thinking(7)。
+  // 但 emit() 曾经按 actionId 反查 PRIORITY 表来决定能不能抢占，
+  // 而 interaction.* / ambient.* 一个都不在表里 → 全被当成 idle(8) →
+  // 被驻留中的 thinking 挡住，仲裁判赢了却上不了屏。
+  // `waiting` 当年就是这么消失的，拖拽是同一个坑的第二次。
+  const e = createStateEngine({ random: fixed(0.999), minDwellMs: 1200 });
+  e.observeEvent({ type: 'UserPromptSubmit', sessionId: 's' }, 1000);
+  assert.equal(e.current().actionId, 'thinking');
+
+  // 驻留期内（才过 200ms）就拖起来，必须立刻切过去
+  e.observeEvent({ type: 'shell.dragStart' }, 1200);
+  assert.equal(e.current().actionId, 'interaction.drag',
+    '拖拽被最小驻留挡住了——外壳交互必须能立刻抢占');
+});
+
+test('每一个外壳事件对应的动作都能真正上屏', () => {
+  // 逐个验证，而不是只验一个：SHELL_ACTIONS 里有十几个映射，
+  // 它们全都不在 PRIORITY 表里，一个漏网就是一个「画了但从没出现过」的动作。
+  const held = Object.entries(SHELL_ACTIONS)
+    .filter(([, action]) => !ONESHOT.has(action) && action !== 'idle');
+  assert.ok(held.length >= 4, `held 型外壳事件太少：${held.length}`);
+
+  for (const [type, action] of held) {
+    const e = createStateEngine({ random: fixed(0.999), minDwellMs: 1200 });
+    e.observeEvent({ type: 'UserPromptSubmit', sessionId: 's' }, 1000);
+    e.observeEvent({ type }, 1200);
+    assert.equal(e.current().actionId, action, `${type} 没能上屏`);
+  }
 });

@@ -199,13 +199,20 @@ export function createStateEngine(options = {}) {
     return s;
   };
 
-  function emit(next, reason, now) {
+  function emit(next, reason, now, priority) {
     if (next.actionId === current.actionId && next.variant === current.variant) return;
 
     // 最小驻留：优先级不高于当前的状态，要等驻留期满才能替换。
     // 一次性插播与更高优先级的状态不受限制——要人决定、出错必须立刻可见。
-    const incoming = PRIORITY[next.actionId] ?? PRIORITY.idle;
-    const holding = PRIORITY[current.actionId] ?? PRIORITY.idle;
+    //
+    // 优先级必须由**调用方**给出。此前这里按 actionId 反查 PRIORITY 表，
+    // 而 interaction.* 与 ambient.* 一个都不在表里，于是全被当成 idle(8) 级，
+    // 被驻留中的 thinking(7) / working(6) 挡住，永远上不了屏——
+    // 仲裁明明已经判它们赢了。`waiting` 当年就是这么消失的（见 PRIORITY 表的注释），
+    // 拖拽是同一个坑的第二次：resolve() 用 SHELL_PRIORITY 判赢，
+    // emit() 却反查不到、按 idle 处理，于是拖起来的姿势根本不显示。
+    const incoming = priority ?? PRIORITY[next.actionId] ?? PRIORITY.idle;
+    const holding = current.priority ?? PRIORITY[current.actionId] ?? PRIORITY.idle;
     const elapsed = now - current.since;
     if (
       reason !== 'oneshot'
@@ -214,7 +221,7 @@ export function createStateEngine(options = {}) {
       && elapsed < config.minDwellMs
     ) return;
 
-    current = { ...next, since: now, reason };
+    current = { ...next, since: now, reason, priority: incoming };
     options.onChange?.(current);
   }
 
@@ -451,7 +458,8 @@ export function createStateEngine(options = {}) {
       s.priority = priority;
     }
     if (best) {
-      emit({ actionId: best.state, variant: best.variant, sessionId: best.id }, 'session', now);
+      emit({ actionId: best.state, variant: best.variant, sessionId: best.id },
+        'session', now, best.priority);
       return current;
     }
 
