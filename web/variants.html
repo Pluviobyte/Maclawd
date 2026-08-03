@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Maclawd — 候选变体浏览</title>
+    <!--
+      候选变体浏览页：每个动作 5 个样本，横向摆开来挑。
+
+      为什么不用 <object>：变体靠 `data-variant` 驱动共享样式表里的规则，而
+      <object> 里的 SVG 是**独立文档**，父元素的属性不会穿透进去——五格会长得一模一样。
+      所以这里 fetch SVG 文本内联进来。
+
+      内联之后有两个坑，本项目都踩过（见 scripts/motion-check.html）：
+
+      ① 每个样本必须放进**独立的 shadow root**。SVG 里的 <style> 不作用域隔离，
+         直接内联时页面上所有副本会共用最后一个设置，五格又会长得一模一样——
+         而这个假象比页面空白更糟，它会让人去改本来是对的动画。
+
+      ② 共享样式表要**手动注入**到每个 shadow root。<?xml-stylesheet?> 是根
+         <svg> 的兄弟节点，取根元素时不会跟过来；少了它整页都是静态基准姿势。
+         129KB × 235 份太贵，所以用 constructable stylesheet 解析一次、全部共享。
+
+      还有一条本页特有的：`data-variant` 要放在**带 state class 的那个元素**上。
+      生成的规则是 `.state-idle[data-variant="bold"]`（复合选择器，同一个元素），
+      不是后代选择器——挂在外层 div 上不生效。所以属性直接打在 <svg> 根上。
+    -->
+    <style>
+      :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+              background:#f4f1ea; color:#1e1e2e; }
+      * { box-sizing:border-box; }
+      body { margin:0; padding:44px 24px 90px; --scale:3; }
+      body[data-scale="4"] { --scale:4; }
+      body[data-scale="6"] { --scale:6; }
+      main { width:min(1560px,100%); margin:0 auto; }
+      h1 { margin:0 0 12px; font-size:clamp(30px,4vw,46px); letter-spacing:-.03em; }
+      .lede { max-width:820px; margin:0 0 8px; color:#50505e; line-height:1.65; }
+      .lede b { color:#1e1e2e; }
+      code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+
+      .stats { display:flex; flex-wrap:wrap; gap:10px; margin:22px 0 0; }
+      .stat { padding:10px 14px; border-radius:14px; background:#fbfaf7;
+              border:1px solid rgba(30,30,46,.1); font-size:13px; color:#50505e; }
+      .stat b { font-size:20px; display:block; letter-spacing:-.02em; color:#1e1e2e; }
+
+      .note { max-width:820px; margin:20px 0 8px; padding:14px 16px; border-radius:14px;
+              background:rgba(255,255,255,.55); border:1px solid rgba(30,30,46,.1);
+              color:#626271; font-size:13.5px; line-height:1.7; }
+      .note b { color:#1e1e2e; }
+      .note.warn { background:#fdecea; border-color:#e6b0a6; color:#a8432c; }
+      .note.warn b { color:#8f3826; }
+
+      /* 工具条 ------------------------------------------------------------ */
+      .tools { position:sticky; top:0; z-index:5; margin:26px -24px 30px; padding:12px 24px 14px;
+               background:rgba(244,241,234,.93); backdrop-filter:blur(10px);
+               border-bottom:1px solid rgba(30,30,46,.1); }
+      .bar { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; padding:3px 0; }
+      .bar > .k { flex:none; width:44px; font-size:12px; font-weight:800; color:#8a8a99;
+                  letter-spacing:.04em; }
+      .chip { padding:5px 11px; border-radius:999px; background:#fbfaf7; cursor:pointer;
+              border:1px solid rgba(30,30,46,.14); font:inherit; font-size:12.5px;
+              color:#50505e; line-height:1.4; }
+      .chip:hover { border-color:rgba(198,122,98,.55); color:#1e1e2e; }
+      .chip[aria-pressed="true"] { background:#c67a62; border-color:#c67a62; color:#fff; font-weight:700; }
+      .chip .n { opacity:.6; font-size:11px; margin-left:3px; }
+      .axis-note { margin:6px 0 0; font-size:12.5px; color:#a55f4c; min-height:1.2em; }
+      .axis-note:empty { display:none; }
+
+      /* 分区 -------------------------------------------------------------- */
+      section { margin:0 0 44px; --units:45; }
+      section[hidden] { display:none; }
+      section > .head { margin-bottom:14px; }
+      section > .head h2 { margin:0 0 4px; font-size:24px; }
+      .count { display:inline-block; margin-left:6px; padding:2px 9px; border-radius:999px;
+               background:#1e1e2e; color:#fbfaf7; font-size:13px; vertical-align:middle; }
+      section > .head p { margin:0; max-width:760px; color:#50505e; font-size:13.5px; line-height:1.6; }
+
+      .deck { display:grid; gap:14px; --cell:calc(var(--units) * var(--scale) * 1px); }
+
+      /* 一行一个动作：左边是元信息，右边是并排的五个样本 */
+      .row { display:grid; grid-template-columns:190px minmax(0,1fr); gap:18px; align-items:center;
+             padding:14px 16px; border-radius:20px; background:#fbfaf7;
+             border:1px solid rgba(30,30,46,.11); box-shadow:0 10px 30px rgba(30,30,46,.05);
+             --cell:calc(var(--units) * var(--scale) * 1px); }
+      .row.mini { --units:16; }
+      .row[hidden] { display:none; }
+      .meta { order:0; min-width:0; }
+      .meta .id { font:11px ui-monospace,SFMono-Regular,Menlo,monospace; color:#c67a62;
+                  word-break:break-all; }
+      .meta h3 { margin:3px 0 5px; font-size:17px; line-height:1.25; }
+      .meta .sub { margin:0; font-size:11.5px; line-height:1.5; color:#8a8a99;
+                   font-family:ui-monospace,SFMono-Regular,Menlo,monospace; word-break:break-all; }
+
+      /* 270px 档：五格 1350px 摆不进「元信息 + 样本」的两栏，元信息挪到上面一行，
+         五格才能同屏看全——放大档的意义就是同屏比。 */
+      body[data-scale="6"] #sections:not(.solo) .row:not(.mini) {
+        grid-template-columns:minmax(0,1fr); gap:10px; }
+      .strip { order:1; display:flex; gap:14px; overflow-x:auto; padding:2px 0 4px; }
+      .cell { flex:none; margin:0; text-align:center; }
+      .cell[hidden] { display:none; }
+      /* 描边只能用 box-shadow：border 会吃进 border-box，135px 的框内容区变成 133，
+         2.96px/单位——正是这一页要避免的非整数倍。box-shadow 不参与布局。 */
+      .stage { width:var(--cell); height:var(--cell); border-radius:10px;
+               background:linear-gradient(rgba(30,30,46,.045) 1px,transparent 1px),
+                          linear-gradient(90deg,rgba(30,30,46,.045) 1px,transparent 1px),#fff;
+               /* 网格 = 3 取景单位，用来目测位移到底多大 */
+               background-size:calc(var(--scale) * 3px) calc(var(--scale) * 3px);
+               box-shadow:0 0 0 1px rgba(30,30,46,.09); overflow:hidden; }
+      .stage.missing { display:grid; place-items:center; font-size:11px; color:#b4553f;
+                       background:#fdecea; }
+      .cell figcaption { margin-top:6px; font-size:12px; color:#50505e; cursor:help; }
+      .cell[data-axis="base"] figcaption { color:#8a8a99; }
+      .cell[data-axis="base"] figcaption::after { content:" · 对照"; font-size:10px; opacity:.75; }
+
+      /* 只看一条轴：换成密排网格，好横着比所有动作的同一条轴。
+         下限 132px 是给名字留的——mini 只有 48px，纯按画面算列宽会把
+         `mini.sleep` 断成两行。 */
+      .solo .deck { grid-template-columns:repeat(auto-fill,minmax(max(132px,calc(var(--cell) + 36px)),1fr));
+                    align-items:start; }
+      .solo .row { grid-template-columns:minmax(0,1fr); justify-items:center; text-align:center;
+                   gap:10px; padding:14px 12px 16px; }
+      .solo .meta { order:1; width:100%; }
+      .solo .meta h3 { font-size:14px; margin:2px 0 3px; }
+      .solo .meta .sub { display:none; }
+      /* 密排时 id 不换行：折行会让同一排卡片高度参差。全文在 title 里。 */
+      .solo .meta .id { display:block; font-size:10.5px; white-space:nowrap;
+                        overflow:hidden; text-overflow:ellipsis; }
+      .solo .strip { order:0; overflow:visible; }
+      .solo .cell figcaption { display:none; }
+
+      .empty { max-width:820px; margin:30px 0; padding:18px 20px; border-radius:18px;
+               background:#fbfaf7; border:1px solid rgba(30,30,46,.11); line-height:1.7;
+               font-size:14px; color:#50505e; }
+      .empty b { color:#1e1e2e; }
+      a { color:#a55f4c; }
+      @media(max-width:820px){
+        body { padding:28px 14px 70px; }
+        .tools { margin-left:-14px; margin-right:-14px; padding-left:14px; padding-right:14px; }
+        .row { grid-template-columns:minmax(0,1fr); }
+        .meta { order:0; } .strip { order:1; }
+      }
+    </style>
+  </head>
+  <body data-scale="3">
+    <main>
+      <h1>候选变体</h1>
+      <p class="lede"><b>这些是系统化变体，不是逐个手工设计的动画。</b>
+        每个动作的 5 个样本由同一组轴参数化生成——位移 ×2、时长 ×0.7、把权重推向两极之类——
+        同一条轴对每个动作做的是同一件事。</p>
+      <p class="lede">所以它们回答的是「这个动作的<b>幅度与节奏</b>该往哪调」，
+        不是「这个动作该<b>换成什么</b>」。后者是
+        <a href="working-candidates.html">working 那 16 个候选</a>在做的事，那些是手设计的。
+        别把这一页读成几百个原创动画。</p>
+
+      <div class="stats" id="stats"></div>
+      <div class="note" id="sizeNote">
+        <b>尺寸不是随便挑的。</b>渲染尺寸必须是<b>取景单位数的整数倍</b>——
+        主形态取景 45 单位，所以只有 135 / 180 / 270；mini 取景 16 单位，所以只有 48 / 64 / 96。
+        非整数倍会让 1 单位宽的矩形忽宽忽窄，看起来像动画在抖。<br>
+        <b>135px 是桌面上的真实大小</b>，判断「小尺寸下读不读得出来」以它为准；放大档只用来看清姿态。
+      </div>
+      <div class="note warn" id="warn" hidden></div>
+
+      <div class="tools" id="tools" hidden>
+        <div class="bar" id="groupBar"><span class="k">分组</span></div>
+        <div class="bar" id="axisBar"><span class="k">轴</span></div>
+        <div class="bar" id="zoomBar"><span class="k">尺寸</span></div>
+        <p class="axis-note" id="axisNote"></p>
+      </div>
+
+      <div class="empty" id="empty" hidden>
+        <b>没读到 <code>/variant-data.js</code>。</b>
+        <p>这一页只负责渲染，数据由 <code>web/variant-data.js</code> 提供——
+          它挂 <code>window.MaclawdVariants = { axes, actions }</code>。
+          跑一次 <code>node scripts/build-variants.mjs</code> 生成它，然后刷新。</p>
+      </div>
+
+      <div id="sections"></div>
+    </main>
+
+    <script src="/variant-data.js"></script>
+    <script>
+      (() => {
+        const DATA = window.MaclawdVariants;
+        const host = document.getElementById('sections');
+        const warn = document.getElementById('warn');
+        const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) =>
+          ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+        const okData = DATA && Array.isArray(DATA.axes) && DATA.axes.length
+          && Array.isArray(DATA.actions) && DATA.actions.length;
+        if (!okData) {
+          document.getElementById('empty').hidden = false;
+          document.getElementById('sizeNote').hidden = true;
+          return;
+        }
+        const { axes, actions } = DATA;
+
+        // 分组的名字与顺序跟总表页保持一致；数据里出现的新分组追加在后面。
+        const GROUPS = {
+          primary: ['主状态', 'Agent 与 owner 的稳定状态。'],
+          modifier: ['工作修饰', '挂在 working 上的活动细分。'],
+          interaction: ['互动与环境', '由桌面交互或系统事件触发。'],
+          lifecycle: ['生命周期与生命感', '启动、退出、等待、收尾，以及低频 idle 彩蛋。'],
+          mini: ['mini（贴边）', '取景 16 单位——镜头推近、裁掉场景只留演员，所以卡片比主形态小。'],
+        };
+        const ORDER = ['primary', 'modifier', 'interaction', 'lifecycle', 'mini'];
+
+        // ---- 统计（从数据算，不写死；写死的数字迟早会骗人）----------------
+        const stats = [
+          [actions.length, '个动作'],
+          [axes.length, '条轴'],
+          [actions.length * axes.length, '个样本'],
+          [actions.length, '个原创动画'],
+        ];
+        document.getElementById('stats').innerHTML = stats
+          .map(([n, t]) => `<div class="stat"><b>${n}</b>${t}</div>`).join('');
+
+        // ---- 共享样式表：解析一次，所有 shadow root 共享 -------------------
+        // 129KB × 235 份的 <style> 会卡死页面，constructable stylesheet 只解析一份。
+        const LOCAL = ':host{display:block;width:100%;height:100%}'
+          + '.holder{width:100%;height:100%}'
+          + 'svg{display:block;width:100%;height:100%;image-rendering:pixelated}';
+        let sheets = null;      // [CSSStyleSheet] —— 首选
+        let cssText = '';       // 退路：老浏览器逐份内联
+        const cssReady = fetch('/src/animations/maclawd-actions.css')
+          .then((r) => { if (!r.ok) throw new Error(r.status); return r.text(); })
+          .then((css) => {
+            try {
+              const a = new CSSStyleSheet(); a.replaceSync(css);
+              const b = new CSSStyleSheet(); b.replaceSync(LOCAL);
+              sheets = [a, b];
+            } catch { cssText = css; }
+          })
+          .catch(() => {
+            warn.hidden = false;
+            warn.innerHTML = '<b>没读到 /src/animations/maclawd-actions.css。</b>'
+              + '所有样本都会停在静态基准姿势——这不是动画坏了，是样式表没加载上。';
+          });
+
+        const svgCache = new Map();
+        const loadSvg = (src) => {
+          const url = '/' + String(src).replace(/^\/+/, '');
+          if (!svgCache.has(url)) {
+            svgCache.set(url, fetch(url)
+              .then((r) => (r.ok ? r.text() : Promise.reject(new Error(r.status))))
+              .catch(() => null));
+          }
+          return svgCache.get(url);
+        };
+
+        /**
+         * 把一个样本挂进它自己的 shadow root。
+         *
+         * data-variant 打两处：<svg> 根上（生成的规则是
+         * `.state-idle[data-variant="bold"]`，复合选择器，必须落在带 state class
+         * 的那个元素上），外层 div 上（兼容老的后代形式，如 one-subagent）。
+         * shadow 边界挡住选择器，所以两处都必须在 shadow root **内部**。
+         */
+        async function mount(cell) {
+          if (cell.mounted) return;
+          cell.mounted = true;
+          await cssReady;
+          const text = cell.source ? await loadSvg(cell.source) : null;
+          if (!text) {
+            cell.stage.classList.add('missing');
+            cell.stage.textContent = '素材缺失';
+            return;
+          }
+          const root = cell.stage.attachShadow({ mode: 'open' });
+          if (sheets) root.adoptedStyleSheets = sheets;
+          else root.innerHTML = `<style>${cssText}${LOCAL}</style>`;
+
+          const holder = document.createElement('div');
+          holder.className = 'holder';
+          holder.setAttribute('data-variant', cell.axis);
+          holder.innerHTML = text;   // <?xml-stylesheet?> 会被当成注释吃掉，无害
+          const svg = holder.querySelector('svg');
+          if (svg) {
+            svg.setAttribute('data-variant', cell.axis);
+            // 素材自带的 state class 是权威的；只在缺的时候补，绝不替换——
+            // 别名动作（command 之于 working）的基准规则挂在素材那个 class 上。
+            if (cell.state && !svg.classList.contains('state-' + cell.state)) {
+              svg.classList.add('state-' + cell.state);
+            }
+            svg.removeAttribute('width');
+            svg.removeAttribute('height');
+          }
+          root.append(holder);
+        }
+
+        // ---- 建 DOM -------------------------------------------------------
+        const byGroup = new Map();
+        for (const a of actions) {
+          if (!byGroup.has(a.group)) byGroup.set(a.group, []);
+          byGroup.get(a.group).push(a);
+        }
+        const order = [...ORDER.filter((g) => byGroup.has(g)),
+          ...[...byGroup.keys()].filter((g) => !ORDER.includes(g))];
+
+        const rows = [];        // { el, cells, near }
+        const cells = [];       // { el, stage, axis, source, state, mounted }
+        const sections = [];
+
+        for (const group of order) {
+          const list = byGroup.get(group);
+          const [label, desc] = GROUPS[group] ?? [group, ''];
+          const section = document.createElement('section');
+          section.dataset.group = group;
+          if (list.every((a) => a.isMini)) section.style.setProperty('--units', '16');
+          section.innerHTML = `<div class="head"><h2>${esc(label)}`
+            + `<span class="count">${list.length}</span></h2>`
+            + `<p>${esc(desc)}</p></div><div class="deck"></div>`;
+          const deck = section.querySelector('.deck');
+
+          for (const action of list) {
+            const row = document.createElement('article');
+            row.className = 'row' + (action.isMini ? ' mini' : '');
+            const secs = action.durationMs ? (action.durationMs / 1000) + 's' : '—';
+            const file = String(action.source || '').split('/').pop() || '无素材';
+            row.innerHTML = `<div class="meta" title="${esc(action.id)} · ${esc(secs)} · ${esc(file)}">`
+              + `<code class="id">${esc(action.id)}</code>`
+              + `<h3>${esc(action.name)}</h3>`
+              + `<p class="sub">${esc(secs)} · ${esc(file)}</p></div>`
+              + `<div class="strip">` + axes.map((ax) =>
+                `<figure class="cell" data-axis="${esc(ax.id)}" title="${esc(ax.label)}——${esc(ax.note)}">`
+                + `<div class="stage"></div>`
+                + `<figcaption>${esc(ax.label)}</figcaption></figure>`).join('')
+              + `</div>`;
+
+            const entry = { el: row, cells: [], near: false };
+            row.querySelectorAll('.cell').forEach((el, i) => {
+              const cell = {
+                el, stage: el.querySelector('.stage'), axis: axes[i].id,
+                source: action.source, state: action.state, mounted: false,
+              };
+              cells.push(cell);
+              entry.cells.push(cell);
+            });
+            rows.push(entry);
+            deck.append(row);
+          }
+          sections.push(section);
+          host.append(section);
+        }
+
+        // ---- 懒挂载：235 个样本一次性动起来会把风扇吹起来 -------------------
+        const rowIndex = new Map(rows.map((r) => [r.el, r]));
+        const io = new IntersectionObserver((entries) => {
+          for (const e of entries) {
+            const row = rowIndex.get(e.target);
+            if (row) row.near = e.isIntersecting;
+          }
+          pump();
+        }, { rootMargin: '700px 0px' });
+        rows.forEach((r) => io.observe(r.el));
+
+        function pump() {
+          for (const row of rows) {
+            if (!row.near) continue;
+            for (const cell of row.cells) {
+              if (axisFilter !== 'all' && cell.axis !== axisFilter) continue;
+              mount(cell);
+            }
+          }
+        }
+
+        // ---- 筛选 ---------------------------------------------------------
+        let groupFilter = 'all';
+        let axisFilter = 'all';
+
+        function chips(bar, items, get, set) {
+          bar.querySelectorAll('.chip').forEach((c) => c.remove());
+          for (const it of items) {
+            const b = document.createElement('button');
+            b.className = 'chip';
+            b.type = 'button';
+            b.innerHTML = esc(it.label) + (it.n != null ? `<span class="n">${it.n}</span>` : '');
+            if (it.title) b.title = it.title;
+            b.setAttribute('aria-pressed', String(get() === it.id));
+            b.addEventListener('click', () => { set(it.id); render(); });
+            bar.append(b);
+          }
+        }
+
+        const groupBar = document.getElementById('groupBar');
+        const axisBar = document.getElementById('axisBar');
+        const zoomBar = document.getElementById('zoomBar');
+        const axisNote = document.getElementById('axisNote');
+
+        const ZOOMS = [
+          { id: '3', label: '135px · 真实', title: '主形态 135 / mini 48——桌面上的真实大小' },
+          { id: '4', label: '180px', title: '主形态 180 / mini 64' },
+          { id: '6', label: '270px', title: '主形态 270 / mini 96' },
+        ];
+        let zoom = '3';
+
+        function render() {
+          chips(groupBar, [{ id: 'all', label: '全部', n: actions.length },
+            ...order.map((g) => ({ id: g, label: (GROUPS[g] ?? [g])[0], n: byGroup.get(g).length }))],
+            () => groupFilter, (v) => { groupFilter = v; });
+          chips(axisBar, [{ id: 'all', label: '全部轴', title: '五个并排比' },
+            ...axes.map((a) => ({ id: a.id, label: a.label, title: a.note }))],
+            () => axisFilter, (v) => { axisFilter = v; });
+          chips(zoomBar, ZOOMS, () => zoom, (v) => { zoom = v; });
+
+          for (const s of sections) s.hidden = groupFilter !== 'all' && s.dataset.group !== groupFilter;
+          for (const c of cells) c.el.hidden = axisFilter !== 'all' && c.axis !== axisFilter;
+          host.classList.toggle('solo', axisFilter !== 'all');
+          document.body.dataset.scale = zoom;
+
+          const ax = axes.find((a) => a.id === axisFilter);
+          axisNote.textContent = ax
+            ? `只看「${ax.label}」——${ax.note}。同一条轴横着比，最容易看出它对哪些动作有用、对哪些是灾难。`
+            : '';
+          pump();
+        }
+
+        document.getElementById('tools').hidden = false;
+        render();
+
+        // 系统开了「减弱动态效果」时整套动画会被样式表关掉，先说清楚，
+        // 免得被读成「变体没生效」。
+        if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          warn.hidden = false;
+          warn.innerHTML = '<b>系统开着「减弱动态效果」。</b>'
+            + '样式表里有 prefers-reduced-motion 规则，会把所有动画关掉——'
+            + '这一页现在全是静态姿势，不是变体没生效。';
+        }
+      })();
+    </script>
+  </body>
+</html>
