@@ -9,7 +9,7 @@ import {
 import { costOf, updatePrices, pricingMeta } from '../src/runtime/pricing.js';
 import { summarizeSessions } from '../src/runtime/sessions.js';
 import { createTailer, intensityFromRate } from '../src/runtime/tail.js';
-import { serve } from '../src/runtime/server.js';
+import { loadActions, serve } from '../src/runtime/server.js';
 import { createCollector } from '../src/runtime/daemon.js';
 import { installHooks, uninstallHooks, hookStatus } from '../src/runtime/hook-install.js';
 import { probe, diffProbe } from '../src/runtime/probe.js';
@@ -18,7 +18,8 @@ import {
   billable, cacheWrite, hitRate, throughput,
 } from '../src/runtime/usage-record.js';
 import { readJson, writeJson } from '../src/runtime/store.js';
-import { ROLLUP_FILE, usageDir } from '../src/runtime/paths.js';
+import { COVERAGE_FILE, ROLLUP_FILE, usageDir } from '../src/runtime/paths.js';
+import { classify, GLIMPSE_MS } from '../src/runtime/coverage.js';
 
 const dim = (s) => `\x1b[2m${s}\x1b[0m`;
 const bold = (s) => `\x1b[1m${s}\x1b[0m`;
@@ -255,6 +256,47 @@ async function runUpdatePrices() {
 const PROBE_SNAPSHOT = 'probe-snapshot.json';
 const LEVEL_MARK = { ok: '\x1b[32m✓\x1b[0m', warn: '\x1b[33m!\x1b[0m', fail: '\x1b[31m✗\x1b[0m', info: dim('·') };
 
+/**
+ * 动作覆盖报告。
+ *
+ * 回答一个测试答不了的问题：**这个动作在真实使用中被看见过吗**。
+ * 可达性测试只能证明「合成场景下能上屏」——一个动作可能完全可达，
+ * 却因为触发条件在日常里不出现、或每次只闪几十毫秒，事实上从没被看见过。
+ * 这个项目已经三次栽在这类问题上，三次都是靠人肉排查发现的。
+ */
+function runCoverage() {
+  const snapshot = readJson(COVERAGE_FILE, null);
+  if (!snapshot?.actions) {
+    console.log(dim('还没有覆盖数据。桌宠跑起来之后会自动记录，用一天再回来看。'));
+    return;
+  }
+  const known = loadActions().filter((a) => a.name).map((a) => a.id);
+  const { never, glimpsed, normal } = classify(snapshot, known);
+  const secs = (ms) => (ms >= 60_000 ? `${(ms / 60_000).toFixed(1)}分` : `${(ms / 1000).toFixed(1)}秒`);
+
+  const since = snapshot.since ? new Date(snapshot.since).toLocaleString() : '未知';
+  console.log(bold('动作覆盖') + dim(`  自 ${since} 起`));
+  console.log(dim(`  共 ${known.length} 个动作：${normal.length} 正常 · ${glimpsed.length} 一闪而过 · ${never.length} 从没出现`));
+
+  if (never.length) {
+    console.log('\n' + bold('从没出现过') + dim('  ——可达性测试是绿的，但日常里这些条件从不发生'));
+    for (const r of never) console.log(`  ${r.id}`);
+  }
+  if (glimpsed.length) {
+    console.log('\n' + bold('出现过但每次都看不清') + dim(`  ——最长一次都不到 ${GLIMPSE_MS}ms`));
+    for (const r of glimpsed) {
+      console.log(`  ${r.id.padEnd(24)} ${r.count} 次 · 最长 ${r.maxMs}ms`);
+    }
+  }
+  if (normal.length) {
+    console.log('\n' + bold('正常'));
+    for (const r of normal) {
+      const flash = r.glimpses ? dim(`（其中 ${r.glimpses} 次一闪而过）`) : '';
+      console.log(`  ${r.id.padEnd(24)} ${String(r.count).padStart(4)} 次 · 共 ${secs(r.totalMs).padStart(7)} · 最长 ${secs(r.maxMs)} ${flash}`);
+    }
+  }
+}
+
 async function runProbe(args) {
   const save = args.includes('--save');
   const showDiff = args.includes('--diff');
@@ -406,6 +448,7 @@ try {
     case 'daemon': await runDaemon(rest); break;
     case 'hook': runHook(rest); break;
     case 'probe': await runProbe(rest); break;
+    case 'coverage': runCoverage(); break;
     default:
       console.log(`用法: maclawd-usage <命令>
 
@@ -417,6 +460,7 @@ try {
     --cost            估算成本
   watch               实时 token 速率（Ctrl+C 退出）
   probe [source…]     解析器体检（不变量检查）
+  coverage            动作覆盖：哪些动作在真实使用中被看见过
     --save            保存快照，之后用 --diff 对比
     --diff            与上次快照对比，看新操作有没有被记到
     --issues          只显示有问题的

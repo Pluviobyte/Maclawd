@@ -24,6 +24,8 @@ export const ROLLUP_FILE = 'rollup.json';
 export const SCAN_CACHE_FILE = 'scan-cache.json';
 export const TAIL_STATE_FILE = 'tail-state.json';
 export const SETTINGS_FILE = 'settings.json';
+/** 动作覆盖记录：哪些动作在**真实使用**中被看见过。见 coverage.js。 */
+export const COVERAGE_FILE = 'action-coverage.json';
 
 export function usagePath(name) {
   return join(usageDir(), name);

@@ -24,7 +24,8 @@ import { authorize, currentToken, pairingUrls, resetToken, rotateToken } from '.
 import { createOrchestrator } from './orchestrator.js';
 import { loadSettings, saveSettings, usageEnabled } from './settings.js';
 import { readJson, writeJson, removeJson } from './store.js';
-import { ROLLUP_FILE, SCAN_CACHE_FILE, TAIL_STATE_FILE } from './paths.js';
+import { COVERAGE_FILE, ROLLUP_FILE, SCAN_CACHE_FILE, TAIL_STATE_FILE } from './paths.js';
+import { classify, createCoverage } from './coverage.js';
 
 /**
  * 本地前端服务。零依赖，只绑 127.0.0.1。
@@ -339,7 +340,25 @@ export function createUsageServer({ collector = null } = {}) {
 
   // 状态引擎 + 编排器：目前只有「速率推断」这条降级路径在喂它，
   // hook 通道接上后同一个引擎直接消费 hook 事件，不需要改结构。
-  const engine = createStateEngine();
+  // 动作覆盖：记真实使用中每个动作上过屏几次、多久。
+  // 可达性测试只能证明「合成场景下能上屏」，证明不了「日常里会上屏」——
+  // 一个动作可能完全可达，却因为触发条件在日常里不出现、或每次只闪几十毫秒，
+  // 事实上从没被看见过。那种情况没有任何测试会红，也没有人会注意到。
+  const coverage = createCoverage(readJson(COVERAGE_FILE, {}) ?? {});
+  const engine = createStateEngine({
+    onChange: (state) => coverage.observe(state.actionId, Date.now()),
+  });
+  // 落盘节流：状态变化很频繁，每次都写会把一个诊断功能变成 IO 负担。
+  let coverageSavedAt = 0;
+  const COVERAGE_SAVE_MS = 60_000;
+  function persistCoverage(now, force = false) {
+    if (!coverage.dirty && !force) return;
+    if (!force && now - coverageSavedAt < COVERAGE_SAVE_MS) return;
+    const snap = coverage.snapshot(now);
+    writeJson(COVERAGE_FILE, { ...snap, since: snap.since ?? now });
+    coverage.markClean();
+    coverageSavedAt = now;
+  }
   const orchestrator = createOrchestrator({
     actions: loadActions(),
     convergence: loadConvergence(),
@@ -390,6 +409,7 @@ export function createUsageServer({ collector = null } = {}) {
 
     engine.observeRate(live.disabled ? 0 : live.tokensPerMin, now);
     const state = engine.tick(now);
+    persistCoverage(now);
 
     // 转场进行中：直接播转场，绕过收敛。播完 mini.exit 才真正回到主形态。
     if (miniTransition) {
@@ -546,6 +566,17 @@ export function createUsageServer({ collector = null } = {}) {
 
       if (pathname === '/api/status') {
         sendJson(res, 200, worker.status());
+        return;
+      }
+
+      if (pathname === '/api/coverage') {
+        const now = Date.now();
+        persistCoverage(now, true);
+        const known = loadActions().filter((a) => a.name).map((a) => a.id);
+        sendJson(res, 200, {
+          ...classify(coverage.snapshot(now), known),
+          since: readJson(COVERAGE_FILE, {})?.since ?? null,
+        });
         return;
       }
 

@@ -158,6 +158,10 @@ not started.
   unknown: every time this project *was* run for real, it immediately surfaced a
   defect that no test had caught — `PostToolUse` erasing work modifiers, the drag
   pose never appearing, the pet grabbable from 93 px of empty space.
+  `maclawd-usage coverage` now records which actions actually reach the screen in
+  real use, and for how long, so a day of normal work produces the list instead of
+  someone having to remember. Reachability tests prove an action *can* appear in a
+  synthetic scenario; this measures whether it ever *does*.
 - **The `working` action is unresolved.** Sixteen candidates are built and deployed
   at `/working-candidates`; none is selected. `working` currently plays Tile Feed.
 
