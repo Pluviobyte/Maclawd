@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { parsers as allParsers, VERIFIED_SOURCES } from './parsers/index.js';
 import { listJsonl, scanAll } from './scan.js';
 import { billable, cacheWrite, hitRate, throughput } from './usage-record.js';
@@ -23,6 +23,60 @@ const LEVEL = { ok: 'ok', warn: 'warn', fail: 'fail', info: 'info' };
 /** 单条记录的荒谬阈值。超过多半是把累计值当成了增量。 */
 const ABSURD_SINGLE_RECORD = 50_000_000;
 const EARLIEST_PLAUSIBLE = Date.UTC(2022, 0, 1);
+
+/**
+ * 抽样源文件里出现过的键名。
+ *
+ * 为什么需要它：probe 此前只看**解析结果**，于是把两件完全不同的事
+ * 报成了同一个警告——「我们没提取到」和「源数据里压根没有」。
+ * 实测三条警告全是后者：Gemini 的会话日志没有任何 token 字段、
+ * Qwen 与 OpenClaw 的记录没有任何项目字段。
+ *
+ * 这类误报比不报更糟：它让人去查一个不存在的 bug。
+ * （这条教训在本项目里已经写过一次——probe 刚上线时就误报过两次。）
+ *
+ * 只抽样：最多 3 个文件 × 前 40 行，够判断「有没有这类字段」，
+ * 不为一个诊断把用户几百兆的日志全读一遍。
+ */
+function sampleKeys(files) {
+  const keys = new Set();
+  for (const file of files.slice(0, 3)) {
+    let text;
+    try {
+      text = readFileSync(file, 'utf8');
+    } catch {
+      continue;
+    }
+    for (const line of text.split('\n', 40)) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      let parsed;
+      try {
+        parsed = JSON.parse(trimmed);
+      } catch {
+        continue;
+      }
+      collectKeys(parsed, keys, 0);
+    }
+  }
+  return keys;
+}
+
+function collectKeys(node, into, depth) {
+  if (depth > 4 || !node || typeof node !== 'object') return;
+  if (Array.isArray(node)) {
+    for (const item of node.slice(0, 6)) collectKeys(item, into, depth + 1);
+    return;
+  }
+  for (const [key, value] of Object.entries(node)) {
+    into.add(key.toLowerCase());
+    collectKeys(value, into, depth + 1);
+  }
+}
+
+const hasAny = (keys, needles) => [...keys].some((k) => needles.some((n) => k.includes(n)));
+const TOKEN_KEYS = ['token', 'usage'];
+const PROJECT_KEYS = ['project', 'cwd', 'workspace', 'repo'];
 
 function sumRecords(records) {
   const total = {
@@ -51,7 +105,7 @@ function fileStats(parser) {
   try {
     candidates = parser.discover({ listJsonl }) ?? [];
   } catch {
-    return { count: 0, bytes: 0, newest: null };
+    return { count: 0, bytes: 0, newest: null, paths: [] };
   }
   let bytes = 0;
   let newest = 0;
@@ -59,14 +113,21 @@ function fileStats(parser) {
     bytes += candidate.size ?? 0;
     newest = Math.max(newest, candidate.mtimeMs ?? 0);
   }
-  return { count: candidates.length, bytes, newest: newest || null };
+  // paths 要带出去：诊断「源里到底有没有这个字段」必须能回去读原文件，
+  // 只有统计数字是判断不了的。
+  return {
+    count: candidates.length,
+    bytes,
+    newest: newest || null,
+    paths: candidates.map((c) => c.path).filter(Boolean),
+  };
 }
 
 /**
  * 不变量检查。每一条都要能回答「查出来说明哪里错了」，
  * 查不出问题的检查项没有价值。
  */
-export function runChecks({ parser, records, files, now = Date.now() }) {
+export function runChecks({ parser, records, files, now = Date.now(), scanComplete = true }) {
   const checks = [];
   const add = (level, id, message) => checks.push({ level, id, message });
 
@@ -87,14 +148,28 @@ export function runChecks({ parser, records, files, now = Date.now() }) {
   }
 
   if (records.length === 0) {
-    // 「0 条记录」有两种可能，工具自己分不清，必须让人来判断：
-    //   a) 这个工具装了但还没真正对话过（正常）
-    //   b) 日志结构与解析器假设不一致（真 bug）
-    // 实测就撞到过 a：Gemini 的会话文件里只有一条 user 消息，没有模型输出。
-    add(LEVEL.warn, 'no-records',
-      `发现 ${files.count} 个文件（${(files.bytes / 1024).toFixed(0)}KB）却解析出 0 条记录。`
-      + '\n      如果你**确实用它生成过内容**，这就是解析器的 bug，最需要反馈；'
-      + '\n      如果只是装了没真正对话过，属正常。');
+    // 「0 条记录」以前一律报警告，但它其实有两种完全不同的成因，
+    // 只有一种是 bug。先去源文件里看有没有 token 字段再下结论——
+    // 报一个不存在的 bug 会让人白查半天。
+    const size = `${files.count} 个文件（${(files.bytes / 1024).toFixed(0)}KB）`;
+    // 冷重建有工作预算，一轮跑不完就把剩下的推到下一轮。这时候还没轮到的
+    // 解析器当然是 0 条——那不是 bug。不加这道判断的话，
+    // 本来为了消灭误报做的检查自己会变成一个**偶发**误报，更难判断。
+    if (!scanComplete) {
+      add(LEVEL.info, 'scan-incomplete',
+        `${size}，但本轮扫描还没跑完（冷建有工作预算，剩下的会在下一轮继续）。`
+        + '再跑一次 probe 才能判断。');
+      return checks;
+    }
+    if (!hasAny(sampleKeys(files.paths), TOKEN_KEYS)) {
+      add(LEVEL.info, 'no-usage-fields',
+        `${size}，但日志里**没有任何 token 字段**——这个工具的这份日志不记用量，`
+        + '解析出 0 条是对的，不是解析器的问题。');
+    } else {
+      add(LEVEL.warn, 'no-records',
+        `${size}里有 token 字段，却解析出 0 条记录——`
+        + '结构与解析器的假设对不上，这是真 bug。');
+    }
     return checks;
   }
 
@@ -152,7 +227,15 @@ export function runChecks({ parser, records, files, now = Date.now() }) {
   }
   const projects = new Set(records.map((r) => r.project ?? 'unknown'));
   if (projects.size === 1 && projects.has('unknown')) {
-    add(LEVEL.warn, 'project-unknown', '全部记录的项目都是 unknown，项目归属没生效。');
+    // 同理：源数据里根本没有项目字段时，unknown 是**正确**结果。
+    // Qwen 的用量日志与 OpenClaw 的记录都属于这种，此前被误报成 bug。
+    if (hasAny(sampleKeys(files.paths), PROJECT_KEYS)) {
+      add(LEVEL.warn, 'project-unknown',
+        '源数据里有项目字段，但全部记录的项目都是 unknown——提取没生效。');
+    } else {
+      add(LEVEL.info, 'project-not-recorded',
+        '这个工具的日志本身不含项目信息，所以项目一律是 unknown——按用量口径统计不受影响。');
+    }
   }
 
   // ---- 去重键健康度 ----
@@ -189,6 +272,8 @@ export async function probe({ sources = null, parsers = allParsers } = {}) {
 
   const result = await scanAll({ parsers: selected, ignoreSettings: true });
   const now = Date.now();
+  // indexing 非空 = 这一轮有文件被工作预算推迟了，结果是不完整的。
+  const scanComplete = !result.indexing;
 
   return selected.map((parser) => {
     const records = result.bySource[parser.id] ?? [];
@@ -213,7 +298,7 @@ export async function probe({ sources = null, parsers = allParsers } = {}) {
       models: [...new Set(records.map((r) => r.model))].sort().slice(0, 8),
       projects: [...new Set(records.map((r) => r.project ?? 'unknown'))].sort().slice(0, 8),
       newest: records.length > 0 ? Math.max(...records.map((r) => r.ts)) : null,
-      checks: runChecks({ parser, records, files, now }),
+      checks: runChecks({ parser, records, files, now, scanComplete }),
     };
   });
 }

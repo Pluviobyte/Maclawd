@@ -129,16 +129,23 @@ export function parseObject(obj) {
  */
 export function createFileParser({ candidate } = {}) {
   const records = [];
+  // 会话首行（不带 usage，因此不产出记录）上就有 cwd。此前只从**文件路径**
+  // 反推工作目录，路径推不出来时项目就成了 unknown——而正确答案明明
+  // 就写在第一行里，只是那一行被 parseObject 判为「没有用量」丢掉了。
+  let headerCwd = null;
 
   return {
     onObject(obj) {
+      if (!headerCwd && typeof obj?.cwd === 'string' && obj.cwd) headerCwd = obj.cwd;
       // model.completed 与 message 携带**完全相同**的 usage，绝不能都收。
       if (obj?.type === 'model.completed') return;
       const record = parseObject(obj);
       if (record) records.push(record);
     },
     finish() {
-      const workspaceDir = candidate?.path ? workspaceFromTrajectory(candidate.path) : null;
+      // 首行的 cwd 优先：它是会话自己声明的，比从路径反推可靠。
+      const workspaceDir = headerCwd
+        ?? (candidate?.path ? workspaceFromTrajectory(candidate.path) : null);
       if (workspaceDir) {
         for (const record of records) record.cwd = workspaceDir;
       }

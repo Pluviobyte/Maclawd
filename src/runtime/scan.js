@@ -21,7 +21,18 @@ import { usageEnabled } from './settings.js';
  * 冷建有工作预算，超时后存断点、下次继续，期间照常汇报进度，不把界面卡死。
  */
 
-const CACHE_VERSION = 6;
+/**
+ * 解析缓存的版本。
+ *
+ * **改了任何解析器的产出（字段、去重、项目归属…）都必须把它 +1**，
+ * 否则已经解析过的文件会一直命中缓存、永远不重新解析，
+ * 修复对存量数据静默不生效——你会看到「代码改了、数字没变」，
+ * 而且没有任何东西提示你缓存才是原因。
+ *
+ * 7: OpenClaw 改为从会话首行的 cwd 取项目归属（此前只从文件路径反推，
+ *    推不出来就落到 unknown）。
+ */
+const CACHE_VERSION = 7;
 const MAX_WARNINGS = 20;
 const DEFAULT_BUDGET_MS = 20_000;
 
