@@ -324,6 +324,26 @@ test('没有契约动作能绕过运动质量门槛', () => {
     `这些动作没走姿态谱管线，整个躲过了密度与缓动门槛：${outside.join(', ')}`);
 });
 
+test('opacity 这类非 transform 属性必须每帧写全', () => {
+  // CSS 对**每个属性**独立求值。一条关键帧里只有部分帧写了 opacity，
+  // 浏览器会给缺失的两端合成隐式关键帧（取元素自身的计算值），
+  // 于是这个属性的关键帧只剩零星几个点。配上 step-end——保持前一帧的值
+  // 直到下一帧——就会出现「opacity:0 一直保持到循环结束」。
+  //
+  // 这在页面上**看不出任何异常**：位移照常播放，只是那个元素从头到尾不可见。
+  // delegating 的第二个助手就这样消失了整整一轮，没有任何东西报错。
+  const broken = [];
+  for (const [name, body] of Object.entries(keyframes)) {
+    const frames = [...body.matchAll(/[\d%,\s]+\{([^}]*)\}/g)].map((m) => m[1]);
+    for (const prop of ['opacity', 'fill']) {
+      const n = frames.filter((f) => f.includes(`${prop}:`)).length;
+      if (n > 0 && n < frames.length) broken.push(`${name}.${prop} ${n}/${frames.length}`);
+    }
+  }
+  assert.deepEqual(broken, [],
+    `这些属性只写了一部分帧，step-end 下会一直保持首个值：${broken.join(', ')}`);
+});
+
 test('手工候选也要过密度门槛——豁免不等于免检', () => {
   const list = JSON.parse(
     read('web/candidate-data.js').match(/=\s*(\[[\s\S]*\]);/)[1],

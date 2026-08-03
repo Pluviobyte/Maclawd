@@ -414,10 +414,22 @@ ANIMATIONS.push(
         p('translate(0,0)', 3), p('translate(-2px,-1px)', 1), p('translate(-4px,0)', 3),
         p('translate(0,-2px)', 1), p('translate(4px,0)', 3), p('translate(2px,-1px)', 1),
         p('translate(0,0)', 3) ] },
+      /**
+       * **opacity 必须每一帧都写。**
+       *
+       * CSS 对每个属性独立求值。只在 0% 写 `opacity:0`、后面几帧不写，
+       * 浏览器会为 100% 合成一个隐式关键帧取元素自身的 opacity（=1），
+       * 于是这条属性只有「0% 是 0、100% 是 1」两个点——而这些动画用的是
+       * `step-end`，它保持前一个关键帧的值直到下一个关键帧，
+       * 结果就是**整轮 opacity 都是 0，助手从头到尾没出现过**。
+       * 原意是「前 18% 藏着、之后登场」，实际是一个看不见的元素在移动。
+       * 位移照常播放，所以看不出任何异常——只是画面里少了一个助手。
+       */
       { sel: '.helper-a', name: 'helper-a', origin: '-4px 15px', poses: [
-        p('opacity:0;transform:translate(-1px,1px)', 3), p('translate(-1px,0)', 1),
-        p('translate(0,0)', 3), p('translate(1px,1px)', 3), p('translate(2px,0)', 3),
-        p('translate(3px,1px)', 3) ] },
+        p('opacity:0;transform:translate(-1px,1px)', 3), p('opacity:1;transform:translate(-1px,0)', 1),
+        p('opacity:1;transform:translate(0,0)', 3), p('opacity:1;transform:translate(1px,1px)', 3),
+        p('opacity:1;transform:translate(2px,0)', 3),
+        p('opacity:1;transform:translate(3px,1px)', 3) ] },
       { sel: '.helper-b', name: 'helper-b', origin: '18px 15px', poses: [
         p('translate(-3px,1px)', 5), p('translate(-2px,0)', 3), p('translate(-1px,1px)', 3),
         p('translate(0,0)', 3), p('translate(1px,1px)', 2) ] },
@@ -1997,9 +2009,14 @@ ANIMATIONS.push(
         sel: '.done-pile',
         name: 'long-pile',
         origin: '17.5px 15px',
+        // opacity 每帧写全。这里靠隐式 100% 关键帧碰巧是对的（元素本身
+        // opacity=1，step-end 一路保持到 95% 才变 0），但那是运气不是设计：
+        // 只要有人在末尾之前插一帧带 opacity 的姿势，保持链就断了。
         poses: [
-          p('scaleY(.34)', 4), p('scaleY(.5)', 4), p('scaleY(.67)', 4),
-          p('scaleY(.84)', 4), p('scaleY(1)', 5), p('opacity:0;transform:scaleY(1) translateY(-3px)', 1),
+          p('opacity:1;transform:scaleY(.34)', 4), p('opacity:1;transform:scaleY(.5)', 4),
+          p('opacity:1;transform:scaleY(.67)', 4), p('opacity:1;transform:scaleY(.84)', 4),
+          p('opacity:1;transform:scaleY(1)', 5),
+          p('opacity:0;transform:scaleY(1) translateY(-3px)', 1),
         ],
       },
       {
