@@ -151,6 +151,15 @@ async function main() {
     // 变体页还没生成时不阻断整个站点构建
   }
 
+  // 手工候选（design/candidates/）。与参数化变体是两回事：
+  // 变体是同一个设计的五种调法，候选是**换一个设计**。
+  try {
+    await write('candidates.html', await read('web/candidates.html'));
+    await write('candidate-data.js', await read('web/candidate-data.js'));
+  } catch {
+    // 还没有手工候选时不阻断构建
+  }
+
   await write('demo-engine.js', await bundleEngine());
   await write('demo-data.js', await read('web/demo-data.js'));
   await write('demo-mode.js', await read('web/demo-mode.js'));
