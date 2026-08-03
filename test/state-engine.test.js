@@ -448,12 +448,15 @@ test('没有 disposition 字段时按老行为庆祝（面板手动触发 / 旧�
   assert.equal(e.current().actionId, 'success');
 });
 
-test('PostToolUseFailure 脱离具体修饰但不升级成 error', () => {
-  // 一次工具失败不等于整轮失败；但「正在读文件」已经不成立了
+test('PostToolUseFailure 转入重试态，不升级成 error', () => {
+  // 一次工具失败不等于整轮失败（那是 StopFailure）。但也不能退回通用 working——
+  // 那等于把「刚才那步没成功」丢掉，而 Claude 经常静默重试，
+  // 用户只看到它一直在忙，不知道它在原地打转。
   const e = engine();
   e.observeEvent({ type: 'PreToolUse', sessionId: 's', toolName: 'Read' }, SEC);
   e.observeEvent({ type: 'PostToolUseFailure', sessionId: 's' }, 2 * SEC);
-  assert.equal(e.current().actionId, 'working');
+  assert.equal(e.current().actionId, 'working.retrying');
+  assert.notEqual(e.current().actionId, 'error', '单个工具失败不该升级成整轮失败');
 });
 
 // ---------- held 模式 ----------
@@ -515,4 +518,23 @@ test('每一个外壳事件对应的动作都能真正上屏', () => {
     e.observeEvent({ type }, 1200);
     assert.equal(e.current().actionId, action, `${type} 没能上屏`);
   }
+});
+
+test('会话被强杀后不能永远卡在工作态——否则桌宠再也不会睡', () => {
+  // Stop / SessionEnd 是正常收尾路径，但 kill -9、关终端、崩溃时它们都不会来。
+  // 活跃态如果永不过期，桌宠会一直显示「正在工作」，
+  // away → sleeping 这条链就永远走不到——而那是用户明确要保留的。
+  const e = engine();
+  e.observeEvent({ type: 'PreToolUse', sessionId: 's', toolName: 'Bash', command: 'npm test' }, SEC);
+  assert.equal(e.current().actionId, 'working.testing');
+
+  // 五分钟没有事件：长时间跑的测试就是这样，**不该**被收掉
+  assert.equal(e.tick(5 * 60 * SEC).actionId, 'working.testing',
+    '长时间跑的工具被误收了——它本来就没有中间事件');
+
+  // 三十分钟没有任何事件：源头几乎肯定已经断了，必须放行到静默链
+  const after = e.tick(40 * 60 * SEC);
+  assert.notEqual(after.actionId, 'working.testing', '卡死的会话没有被兜底清掉');
+  assert.ok(['away', 'sleeping'].includes(after.actionId),
+    `清掉之后应进入静默链，实际是 ${after.actionId}`);
 });

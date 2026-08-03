@@ -126,6 +126,8 @@
     "working": "mini.busy",
     "working.building": "mini.busy",
     "working.testing": "mini.busy",
+    "working.retrying": "mini.busy",
+    "working.long": "mini.busy",
     "delegating": "mini.busy",
     "compacting": "mini.busy",
     "recovering": "mini.busy",

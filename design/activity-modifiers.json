@@ -28,6 +28,30 @@
         "qa_start",
         "validation_start"
       ]
+    },
+    {
+      "id": "working.retrying",
+      "name": "Retry Grip",
+      "durationMs": 3400,
+      "source": "src/animations/work-retry.svg",
+      "signalExamples": [
+        "PostToolUseFailure"
+      ],
+      "accessory": "the same two work tiles as Tile Feed",
+      "action": "A tile slips out of the claws and drops away; the claws grab for the next one and start over.",
+      "designNote": "刻意**复用 Tile Feed 的道具与场景**，只改材料的命运：牌升到一半滑脱掉下去，爪子扑空，身体一顿，再抓下一块。用户不需要学新符号——同样的画面里「这次没接住」本身就是失败的意思。与 working 的对比是这个动作全部的表意来源，所以时长也刻意取一样的 3.4s。"
+    },
+    {
+      "id": "working.long",
+      "name": "Deep Work",
+      "durationMs": 5000,
+      "source": "src/animations/work-long.svg",
+      "signalExamples": [
+        "同一个 working 状态持续超过 3 分钟"
+      ],
+      "accessory": "the work tiles plus a slowly growing stack of finished ones",
+      "action": "Smaller, steadier motion with half-lidded eyes; finished tiles pile up at the side.",
+      "designNote": "「干很久」不能画成「更快」——那读作着急。反过来：幅度更小、节奏更沉、眼睛半阖，像进了心流。身侧那摞完成品缓慢增高，是唯一说明「已经干了不少」的可见证据。时长 5.0s 比 working 的 3.4s 更慢，也是同一个意思。"
     }
   ]
 }

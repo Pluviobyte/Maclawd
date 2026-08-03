@@ -25,10 +25,11 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 /**
  * hook 事件 → 状态。从引擎源码里解析出来，避免在这里再抄一份。
  *
- * 注意 switch 块**之外**还有两条产生状态的路径，必须一起收：
- * 静默转场（away / sleeping）与唤醒插播（waking）。漏掉它们，
- * 表上会把这三个动作标成「没有触发源」——那正好是这张表最该避免的
- * 那种错误：看起来权威，实际在骗人。
+ * 注意 switch 块**之外**还有三条产生状态的路径，必须一起收：
+ * 静默转场（away / sleeping）、唤醒插播（waking），
+ * 以及 resolve() 里按驻留时长派生的久战态（working.long）。
+ * 漏掉任何一条，表上都会把对应动作标成「没有触发源」——
+ * 那正好是这张表最该避免的那种错误：看起来权威，实际在骗人。
  */
 async function hookTriggers() {
   const src = await readFile(join(ROOT, 'src/runtime/state-engine.js'), 'utf8');
@@ -41,6 +42,17 @@ async function hookTriggers() {
   // 唤醒插播：wakeIfAsleep() 在 switch 之外
   if (/function wakeIfAsleep[\s\S]*?pushOneshot\('waking'/.test(src)) {
     (out.waking ??= new Set()).add('从 away / sleeping 被唤醒');
+  }
+  // 时长派生：resolve() 里按「这个状态持续够久」升级，不经过 s.state 赋值。
+  // 这是解析器第二次在同类路径上失配——第一次是静默转场。凡是不走
+  // `s.state =` 的产出路径都要单独收，否则表上会凭空多出「死动作」。
+  for (const m of src.matchAll(/\?\s*'([a-z_.]+)'\s*\n?\s*:\s*s\.state/g)) {
+    (out[m[1]] ??= new Set()).add('由持续时长升级');
+  }
+  // 久战态不是事件驱动的：resolve() 里按「同一个通用 working 持续够久」派生。
+  // 这条路径在 switch 之外，上面的解析器看不见它。
+  for (const m of src.matchAll(/\?\s*'(working\.[a-z]+)'\s*\n?\s*:\s*s\.state/g)) {
+    (out[m[1]] ??= new Set()).add('通用 working 持续超过 longWorkMs');
   }
 
   const body = src.slice(src.indexOf('switch (type)'));

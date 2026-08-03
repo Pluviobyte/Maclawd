@@ -832,5 +832,43 @@
 @keyframes signal-pulse-c { 0%,21%{opacity:0;transform:translateY(-8px) scaleX(1.6)} 22%,32%{opacity:0;transform:translateY(4px) scaleX(.4)} 33%,55%{opacity:1;transform:translateY(1px) scaleX(.7)} 56%,77%{opacity:1;transform:translateY(-2px) scaleX(1)} 78%,100%{opacity:1;transform:translateY(-5px) scaleX(1.3)} }
 @keyframes signal-eyes { 0%,35%{transform:translate(0,-1px)} 36%,54%{transform:translate(0,0)} 55%,81%{transform:translate(0,-1px)} 82%,100%{transform:translate(1px,0)} }
 @keyframes signal-blink { 0%,68%{transform:scaleY(1)} 69%,74%{transform:scaleY(.15)} 75%,100%{transform:scaleY(1)} }
+/* working-retrying：重试。牌升到一半滑脱掉下去，爪子扑空，身体一顿，再抓下一块。
+   与 Tile Feed 用**同样的道具、同样的时长**——对比才是表意来源：
+   同一个画面里「这次没接住」本身就是失败的意思。
+   滑脱那一下必须**快**（一拍掉到底），顿住必须**长**——
+   慢慢滑下去读作「放下」，不是「掉了」。 */
+.state-working-retrying { --duration: 3.4s; }
+.state-working-retrying .actor { animation-name: retry-body; }
+.state-working-retrying .left-claw { animation-name: retry-left; }
+.state-working-retrying .right-claw { animation-name: retry-right; }
+.state-working-retrying .tile-slip { animation-name: retry-slip; }
+.state-working-retrying .tile-ok { animation-name: retry-next; }
+.state-working-retrying .eyes { animation-name: retry-eyes; animation-duration: 2.9s; }
+.state-working-retrying .blink { animation-name: retry-blink; animation-duration: 3.7s; }
+@keyframes retry-body { 0%,20%{transform:translate(0,-1px)} 21%,28%{transform:translate(-1px,0)} 29%,42%{transform:translate(-1px,-1px)} 43%,49%{transform:translate(0,1px)} 50%,78%{transform:translate(0,2px)} 79%,85%{transform:translate(0,0)} 86%,100%{transform:translate(1px,-1px)} }
+@keyframes retry-left { 0%,20%{transform:translate(4px,2px)} 21%,28%{transform:translate(4px,0)} 29%,42%{transform:translate(3px,-2px)} 43%,49%{transform:translate(3px,0)} 50%,78%{transform:translate(4px,3px)} 79%,85%{transform:translate(4px,2px)} 86%,100%{transform:translate(3px,-1px)} }
+@keyframes retry-right { 0%,20%{transform:translate(-3px,0)} 21%,28%{transform:translate(-3px,-2px)} 29%,42%{transform:translate(-4px,-3px)} 43%,49%{transform:translate(-3px,-1px)} 50%,78%{transform:translate(-3px,2px)} 79%,85%{transform:translate(-3px,1px)} 86%,100%{transform:translate(-4px,-2px)} }
+@keyframes retry-slip { 0%,20%{opacity:1;transform:translateY(4px)} 21%,28%{opacity:1;transform:translateY(1px)} 29%,42%{opacity:1;transform:translateY(-1px)} 43%,49%{opacity:1;transform:translate(1px,6px)} 50%,78%{opacity:0;transform:translate(2px,12px)} 79%,85%{opacity:0;transform:translateY(7px)} 86%,100%{opacity:1;transform:translateY(5px)} }
+@keyframes retry-next { 0%,37%{opacity:0;transform:translateY(9px)} 38%,53%{opacity:0;transform:translateY(8px)} 54%,84%{opacity:1;transform:translateY(6px)} 85%,100%{opacity:1;transform:translateY(4px)} }
+@keyframes retry-eyes { 0%,29%{transform:translate(0,1px)} 30%,59%{transform:translate(0,2px)} 60%,79%{transform:translate(-1px,1px)} 80%,100%{transform:translate(0,1px)} }
+@keyframes retry-blink { 0%,63%{transform:scaleY(1)} 64%,72%{transform:scaleY(.15)} 73%,100%{transform:scaleY(1)} }
+/* working-long：久战。「干很久」**不能画成更快**——那读作着急。反过来做：
+   幅度更小、节奏更沉、眼睛半阖，像进了心流。
+   身侧那摞完成品缓慢增高，是唯一说明「已经干了不少」的可见证据。 */
+.state-working-long { --duration: 5s; }
+.state-working-long .actor { animation-name: long-body; }
+.state-working-long .left-claw { animation-name: long-left; animation-duration: 2.5s; }
+.state-working-long .right-claw { animation-name: long-right; animation-duration: 2.5s; }
+.state-working-long .tile-a { animation-name: long-tile; animation-duration: 2.5s; }
+.state-working-long .done-pile { transform-origin: 17.5px 15px; animation-name: long-pile; }
+.state-working-long .eyes { animation-name: long-eyes; animation-duration: 3.1s; }
+.state-working-long .blink { animation-name: long-blink; animation-duration: 6.7s; }
+@keyframes long-body { 0%,21%{transform:translate(0,-1px)} 22%,29%{transform:translate(0,0)} 30%,47%{transform:translate(-1px,-1px)} 48%,56%{transform:translate(0,0)} 57%,77%{transform:translate(0,-1px)} 78%,86%{transform:translate(1px,0)} 87%,100%{transform:translate(1px,-1px)} }
+@keyframes long-left { 0%,35%{transform:translate(3px,1px)} 36%,54%{transform:translate(3px,0)} 55%,81%{transform:translate(4px,-1px)} 82%,100%{transform:translate(3px,0)} }
+@keyframes long-right { 0%,26%{transform:translate(-3px,-1px)} 27%,44%{transform:translate(-3px,0)} 45%,81%{transform:translate(-2px,1px)} 82%,100%{transform:translate(-3px,0)} }
+@keyframes long-tile { 0%,9%{opacity:0;transform:translateY(7px)} 10%,39%{opacity:1;transform:translateY(5px)} 40%,69%{opacity:1;transform:translateY(2px)} 70%,89%{opacity:1;transform:translateY(0)} 90%,100%{opacity:0;transform:translateY(-2px)} }
+@keyframes long-pile { 0%,17%{transform:scaleY(.34)} 18%,35%{transform:scaleY(.5)} 36%,54%{transform:scaleY(.67)} 55%,72%{transform:scaleY(.84)} 73%,94%{transform:scaleY(1)} 95%,100%{opacity:0;transform:scaleY(1) translateY(-3px)} }
+@keyframes long-eyes { 0%,37%{transform:translateY(1px) scaleY(.6)} 38%,61%{transform:translateY(1px) scaleY(.5)} 62%,76%{transform:translateY(1px) scaleY(.65)} 77%,100%{transform:translateY(1px) scaleY(.55)} }
+@keyframes long-blink { 0%,69%{transform:scaleY(1)} 70%,74%{transform:scaleY(.15)} 75%,100%{transform:scaleY(1)} }
 
 /* === 生成区结束 === */

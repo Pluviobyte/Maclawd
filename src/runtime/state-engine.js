@@ -17,10 +17,16 @@ export const PRIORITY = {
   // 位置在委派之下、工作修饰之上——agent 在等外部信号时，
   // 显示「正在读文件」是错的。
   waiting: 4.6,
+  // 工具刚失败、正在重试。比普通工作更值得看见——「它在挣扎」是
+  // 用户会据此决定要不要介入的信息，而这个信号此前被整个丢掉了。
+  'working.retrying': 4.8,
   // 只保留跑得够久、看得见的两个。Read/Edit 几毫秒就返回，
   // 修饰一闪而过，真机试跑时实测看不见——为它们各画一套是白费。
   'working.building': 5,
   'working.testing': 5,
+  // 同一件事干很久。「跑了 10 秒」和「跑了 10 分钟」是完全不同的信息，
+  // 此前无法区分。优先级压在通用 working 之上一点点。
+  'working.long': 5.8,
   working: 6,
   thinking: 7,
   idle: 8,
@@ -141,8 +147,13 @@ export function pickWeighted(weights, random = Math.random) {
 }
 
 const DEFAULTS = {
-  // 会话静默多久后退出活跃集
+  // 会话静默多久后退出活跃集（idle 级）
   sessionIdleMs: 90_000,
+  // 活跃态（working / thinking / needs_owner…）的兜底过期。
+  // 这些状态**不该**被 90 秒收掉——长时间跑的工具本来就没有中间事件。
+  // 但也不能永不过期：会话被 kill -9 时 Stop / SessionEnd 都不会来，
+  // 没有兜底的话桌宠会永远卡在「正在工作」，再也不会睡。
+  staleActiveMs: 30 * 60_000,
   // 全部会话静默多久后进入 away（energy 低时缩短）
   awayMs: 5 * 60_000,
   // away 之后多久睡着
@@ -151,6 +162,9 @@ const DEFAULTS = {
   workingRateThreshold: 200,
   // idle 变体轮换间隔
   idleVariantMs: 45_000,
+  // 同一个工作态持续多久算「久战」。三分钟是个分界：
+  // 短于它多半是一次普通的工具调用，长于它用户会开始想「它是不是卡了」。
+  longWorkMs: 3 * 60_000,
   // 最小驻留时长。动作契约给每个动作锁了 durationMs，如果状态切得比这还快，
   // 用户永远看不完一个完整循环。低优先级状态要等驻留期满才能顶掉当前状态；
   // 高优先级（要人决定、出错）永远可以立刻抢占。
@@ -283,6 +297,10 @@ export function createStateEngine(options = {}) {
     // 先判断再更新时间戳：wakeIfAsleep 要看的是「醒来之前」的状态
     const wasAsleep = wakeIfAsleep(now);
     lastActivityAt = now;
+    // 进入当前状态的时刻。`s.at` 是**最后一次事件**的时间，不是这个——
+    // 一个跑了十分钟的任务每几秒就有事件进来，s.at 一直在刷新，
+    // 用它算不出「这件事干了多久」。
+    const before = s.state;
 
     switch (type) {
       case 'SessionStart':
@@ -307,9 +325,11 @@ export function createStateEngine(options = {}) {
         break;
       }
       case 'PostToolUseFailure':
-        // 工具执行失败。不升级到 error（那是整轮失败），但要脱离
-        // 「正在读文件」这类具体修饰——它已经不成立了。
-        s.state = 'working';
+        // 工具执行失败。不升级到 error（那是整轮失败），但也不该退回
+        // 通用 working——那等于把「刚才那步没成功」这个信号丢掉。
+        // Claude 经常静默重试，用户只看到它一直在忙，不知道它在原地打转。
+        s.state = 'working.retrying';
+        s.failedAt = now;
         break;
       case 'PostToolUse':
       case 'PostToolBatch':
@@ -393,6 +413,10 @@ export function createStateEngine(options = {}) {
       default:
         break;
     }
+    // 状态真的变了才重置计时；同一个状态被反复确认不算重新开始。
+    if (s.state !== before) s.stateSince = now;
+    else if (s.stateSince === undefined) s.stateSince = now;
+
     resolve(now);
   }
 
@@ -438,22 +462,41 @@ export function createStateEngine(options = {}) {
       oneshot = null;
     }
 
-    // 清理静默会话
+    // 清理静默会话。**两档超时**，因为这里有一对相反的需求：
+    //
+    // - 长时间跑的工具（npm test 三分钟不出事件）不能中途掉回 idle，
+    //   所以活跃态不能用 90 秒那档。
+    // - 但会话被 kill -9 / 关终端时 Stop 与 SessionEnd 都不会来，
+    //   只用「活跃态永不过期」的话它会**永远**卡在 working 上，
+    //   桌宠再也不会进 away / sleeping——用户明确在意的那条睡眠链就死了。
+    //
+    // 于是：idle 级 90 秒收，活跃态给一个明显更长的兜底。
+    // 一个 30 分钟没有任何 hook 事件的「正在工作」，只可能是源头断了。
     for (const [id, s] of sessions) {
-      if (now - s.at > config.sessionIdleMs && PRIORITY[s.state] >= PRIORITY.idle) {
-        sessions.delete(id);
-      }
+      const silent = now - s.at;
+      const limit = PRIORITY[s.state] >= PRIORITY.idle
+        ? config.sessionIdleMs
+        : config.staleActiveMs;
+      if (silent > limit) sessions.delete(id);
     }
 
     // 取所有活跃会话里优先级最高的；同级取最近
     let best = null;
     for (const [id, s] of sessions) {
+      // 通用 working 干够久就升级成久战。**只升级通用 working**：
+      // testing / building 已经说明了在干什么，retrying 更紧急，
+      // 都不该被「干很久」这条更弱的信息盖掉。
+      const state = (s.state === 'working'
+        && s.stateSince !== undefined
+        && now - s.stateSince >= config.longWorkMs)
+        ? 'working.long'
+        : s.state;
       const priority = id === 'shell'
         ? SHELL_PRIORITY
-        : (PRIORITY[s.state] ?? PRIORITY.idle);
+        : (PRIORITY[state] ?? PRIORITY.idle);
       if (priority >= PRIORITY.idle) continue;
       if (!best || priority < best.priority || (priority === best.priority && s.at > best.at)) {
-        best = { priority, id, state: s.state, variant: s.variant, at: s.at };
+        best = { priority, id, state, variant: s.variant, at: s.at };
       }
       s.priority = priority;
     }

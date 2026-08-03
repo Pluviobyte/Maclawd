@@ -1821,3 +1821,186 @@ ANIMATIONS.push(
     ],
   },
 );
+
+// ============================================================================
+// 两个新的工作修饰
+//
+// 都**复用 Tile Feed 的道具与场景**，只改材料的命运——用户不需要学新符号。
+// 这是它们全部的表意来源，所以必须和 working 放在一起看才成立。
+// ============================================================================
+
+ANIMATIONS.push(
+  {
+    state: 'working-retrying',
+    svg: {
+      file: 'work-retry.svg',
+      title: 'Retry Grip',
+      desc: 'A work tile slips from the claws and drops away; the claws grab for the next one and start over.',
+      propsAfter: '<g class="tile-ok motion"><rect x="5" y="11" width="5" height="4" fill="#7BC8C4"/>'
+        + '<rect x="6" y="12" width="3" height="1" fill="#BDE7E4"/></g>'
+        + '<g class="tile-slip motion"><rect x="5" y="11" width="5" height="4" fill="#C4715A"/>'
+        + '<rect x="6" y="12" width="3" height="1" fill="#E09A85"/></g>',
+    },
+    duration: 3400,
+    comment: '重试。牌升到一半滑脱掉下去，爪子扑空，身体一顿，再抓下一块。\n'
+      + '   与 Tile Feed 用**同样的道具、同样的时长**——对比才是表意来源：\n'
+      + '   同一个画面里「这次没接住」本身就是失败的意思。\n'
+      + '   滑脱那一下必须**快**（一拍掉到底），顿住必须**长**——\n'
+      + '   慢慢滑下去读作「放下」，不是「掉了」。',
+    layers: [
+      {
+        sel: '.actor',
+        name: 'retry-body',
+        poses: [
+          p('translate(0,-1px)', 3), p('translate(-1px,0)', 1), p('translate(-1px,-1px)', 2),
+          p('translate(0,1px)', 1),        // 扑空，重心往下一沉
+          p('translate(0,2px)', 4),        // 顿住：这一拍最长，是「怎么又掉了」
+          p('translate(0,0)', 1), p('translate(1px,-1px)', 2),
+        ],
+      },
+      {
+        sel: '.left-claw',
+        name: 'retry-left',
+        poses: [
+          p('translate(4px,2px)', 3), p('translate(4px,0)', 1), p('translate(3px,-2px)', 2),
+          p('translate(3px,0)', 1),        // 手滑
+          p('translate(4px,3px)', 4),      // 空抓，停在低位
+          p('translate(4px,2px)', 1), p('translate(3px,-1px)', 2),
+        ],
+      },
+      {
+        sel: '.right-claw',
+        name: 'retry-right',
+        poses: [
+          p('translate(-3px,0)', 3), p('translate(-3px,-2px)', 1), p('translate(-4px,-3px)', 2),
+          p('translate(-3px,-1px)', 1), p('translate(-3px,2px)', 4),
+          p('translate(-3px,1px)', 1), p('translate(-4px,-2px)', 2),
+        ],
+      },
+      {
+        // 滑脱的那块：升到一半突然一拍掉到画面外
+        sel: '.tile-slip',
+        name: 'retry-slip',
+        poses: [
+          p('opacity:1;transform:translateY(4px)', 3),
+          p('opacity:1;transform:translateY(1px)', 1),
+          p('opacity:1;transform:translateY(-1px)', 2),
+          p('opacity:1;transform:translate(1px,6px)', 1),   // 一拍掉到底
+          p('opacity:0;transform:translate(2px,12px)', 4),
+          p('opacity:0;transform:translateY(7px)', 1),
+          p('opacity:1;transform:translateY(5px)', 2),
+        ],
+      },
+      {
+        // 下一块已经在等着：失败不是终点，它还在继续
+        sel: '.tile-ok',
+        name: 'retry-next',
+        poses: [
+          p('opacity:0;transform:translateY(9px)', 5),
+          p('opacity:0;transform:translateY(8px)', 2),
+          p('opacity:1;transform:translateY(6px)', 4),
+          p('opacity:1;transform:translateY(4px)', 2),
+        ],
+      },
+      {
+        sel: '.eyes',
+        name: 'retry-eyes',
+        period: 2900,
+        poses: [
+          p('translate(0,1px)', 3), p('translate(0,2px)', 3), p('translate(-1px,1px)', 2),
+          p('translate(0,1px)', 2),
+        ],
+      },
+      {
+        sel: '.blink',
+        name: 'retry-blink',
+        period: 3700,
+        poses: [p('scaleY(1)', 7), p('scaleY(.15)', 1), p('scaleY(1)', 3)],
+      },
+    ],
+  },
+
+  {
+    state: 'working-long',
+    svg: {
+      file: 'work-long.svg',
+      title: 'Deep Work',
+      desc: 'Smaller, steadier motion with half-lidded eyes; finished tiles pile up at the side.',
+      propsAfter: '<g class="tile-a motion"><rect x="5" y="11" width="5" height="4" fill="#7BC8C4"/>'
+        + '<rect x="6" y="12" width="3" height="1" fill="#BDE7E4"/></g>'
+        + '<g class="done-pile motion"><rect x="15" y="9" width="5" height="6" fill="#B9A1D9"/>'
+        + '<rect x="16" y="10" width="3" height="1" fill="#E7DCF2"/>'
+        + '<rect x="16" y="12" width="3" height="1" fill="#E7DCF2"/></g>',
+    },
+    duration: 5000,
+    comment: '久战。「干很久」**不能画成更快**——那读作着急。反过来做：\n'
+      + '   幅度更小、节奏更沉、眼睛半阖，像进了心流。\n'
+      + '   身侧那摞完成品缓慢增高，是唯一说明「已经干了不少」的可见证据。',
+    layers: [
+      {
+        sel: '.actor',
+        name: 'long-body',
+        // 幅度只有 working 的一半：全程 1 格以内，但一刻不停
+        poses: [
+          p('translate(0,-1px)', 5), p('translate(0,0)', 2), p('translate(-1px,-1px)', 4),
+          p('translate(0,0)', 2), p('translate(0,-1px)', 5), p('translate(1px,0)', 2),
+          p('translate(1px,-1px)', 3),
+        ],
+      },
+      {
+        sel: '.left-claw',
+        name: 'long-left',
+        period: 2500,
+        poses: [
+          p('translate(3px,1px)', 4), p('translate(3px,0)', 2), p('translate(4px,-1px)', 3),
+          p('translate(3px,0)', 2),
+        ],
+      },
+      {
+        sel: '.right-claw',
+        name: 'long-right',
+        period: 2500,
+        poses: [
+          p('translate(-3px,-1px)', 3), p('translate(-3px,0)', 2), p('translate(-2px,1px)', 4),
+          p('translate(-3px,0)', 2),
+        ],
+      },
+      {
+        sel: '.tile-a',
+        name: 'long-tile',
+        period: 2500,
+        poses: [
+          p('opacity:0;transform:translateY(7px)', 1), p('opacity:1;transform:translateY(5px)', 3),
+          p('opacity:1;transform:translateY(2px)', 3), p('opacity:1;transform:translateY(0)', 2),
+          p('opacity:0;transform:translateY(-2px)', 1),
+        ],
+      },
+      {
+        // 完成品一层层长高，满了整摞搬走再来。这是「已经干了很久」的证据。
+        sel: '.done-pile',
+        name: 'long-pile',
+        origin: '17.5px 15px',
+        poses: [
+          p('scaleY(.34)', 4), p('scaleY(.5)', 4), p('scaleY(.67)', 4),
+          p('scaleY(.84)', 4), p('scaleY(1)', 5), p('opacity:0;transform:scaleY(1) translateY(-3px)', 1),
+        ],
+      },
+      {
+        sel: '.eyes',
+        name: 'long-eyes',
+        period: 3100,
+        // 半阖：专注，不是困倦——所以不往下沉，只是收窄
+        poses: [
+          p('translateY(1px) scaleY(.6)', 5), p('translateY(1px) scaleY(.5)', 3),
+          p('translateY(1px) scaleY(.65)', 2), p('translateY(1px) scaleY(.55)', 3),
+        ],
+      },
+      {
+        sel: '.blink',
+        name: 'long-blink',
+        period: 6700,
+        poses: [p('scaleY(1)', 14), p('scaleY(.15)', 1), p('scaleY(1)', 5)],
+      },
+    ],
+  },
+);
