@@ -149,6 +149,14 @@ async function main() {
       priority: PRIORITY[a.id] ?? null,
       density: cls && density[cls] ? density[cls] : null,
       mini: convergence[a.id] ?? null,
+      // 分档：同一状态按并发会话数换素材，状态 id 不变
+      tiers: a.tiers?.levels
+        ? a.tiers.levels
+          .slice()
+          .sort((x, y) => x.minSessions - y.minSessions)
+          .map((l) => `≥${l.minSessions} → ${esc(l.name)}${l.placeholder ? ' <b>（占位）</b>' : ''}`)
+          .join('<br>')
+        : null,
       triggers,
     });
   }
@@ -171,6 +179,7 @@ async function main() {
               <div><dt>优先级</dt><dd>${r.priority ?? '<span class="dim">不参与仲裁</span>'}</dd></div>
               ${r.density ? `<div><dt>姿态密度</dt><dd>${r.density} /秒</dd></div>` : ''}
               ${r.mini ? `<div><dt>mini 收敛到</dt><dd><code>${esc(r.mini)}</code></dd></div>` : ''}
+              ${r.tiers ? `<div><dt>并发分档</dt><dd>${r.tiers}</dd></div>` : ''}
             </dl>
             <div class="trig">${r.triggers.length
     ? r.triggers.map((t) => `<span class="chip">${esc(t)}</span>`).join('')
