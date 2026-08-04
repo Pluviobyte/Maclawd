@@ -68,6 +68,7 @@ struct UsageSnapshot {
 /// 菜单栏放不下更多，也不该放。
 struct QuotaBrief: Equatable {
     var usedPercent: Double?
+    var sourceLabel: String?
     var windowLabel: String?
     var resetAt: Date?
     /// 通道装没装。菜单栏据此决定「显示 —」还是干脆不显示这一档。
@@ -683,6 +684,7 @@ final class RuntimeClient: ObservableObject {
             var brief = QuotaBrief()
             brief.available = !snapshot.empty
             brief.usedPercent = tightest?.1.usedPercent
+            brief.sourceLabel = tightest?.0.label
             brief.windowLabel = tightest?.1.label
             brief.resetAt = tightest?.1.resetAt
             DispatchQueue.main.async {

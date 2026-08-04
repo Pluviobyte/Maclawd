@@ -21,6 +21,9 @@ export const DEFAULTS = {
   // 往里加一条谁也不影响；statusLine 是**单槽位**，占了就把用户原来的挤掉。
   // 用户完全可能愿意加 hooks 却不愿意让出状态行，那是两个独立的信任决定。
   quotaStatusline: false,
+  // 所有服务商的额度主开关。Codex 只读官方 CLI，Claude Code 另需
+  // quotaStatusline 通道；两者不能再用同一个布尔值表示。
+  quotaTracking: false,
   // 额度快用完时弹一次自绘浮窗。默认开——这是用户主动要的功能，
   // 而且有实际决策价值（决定现在敢不敢开大活），不是骚扰。
   quotaAlert: true,
@@ -53,7 +56,12 @@ export const DEFAULTS = {
 export function loadSettings() {
   try {
     const raw = JSON.parse(readFileSync(settingsPath(), 'utf-8'));
-    return { ...DEFAULTS, ...raw };
+    const merged = { ...DEFAULTS, ...raw };
+    // 旧版只有 quotaStatusline：已开启的用户升级后应继续读取额度。
+    if (!Object.hasOwn(raw, 'quotaTracking')) {
+      merged.quotaTracking = raw.quotaStatusline === true;
+    }
+    return merged;
   } catch {
     return { ...DEFAULTS };
   }

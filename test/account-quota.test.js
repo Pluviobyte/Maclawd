@@ -16,7 +16,7 @@ process.env.MACLAWD_DATA_DIR = DATA;
 
 const {
   recordQuota, readQuota, clearQuota, pendingAlerts, markAlerted, freshness,
-  QUIET_AFTER_MS, DROP_AFTER_RESET_MS,
+  QUIET_AFTER_MS, CODEX_QUIET_AFTER_MS, DROP_AFTER_RESET_MS,
 } = await import('../src/runtime/account-quota.js');
 
 after(() => rmSync(DATA, { recursive: true, force: true }));
@@ -72,6 +72,18 @@ test('超过 5 分钟没确认 → quiet，并给出过了多久', () => {
 
   assert.equal(five.state, 'quiet');
   assert.ok(five.staleSeconds >= 360);
+});
+
+test('Codex 十分钟缓存期内保持 live，超过缓存期才 quiet', () => {
+  recordQuota({
+    source: 'codex',
+    windows: { seven_day: { usedPercent: 51, resetAt: T0 + 7 * 24 * HOUR } },
+  }, { now: T0 });
+
+  assert.equal(readQuota({ now: T0 + QUIET_AFTER_MS + 60_000 })
+    .sources[0].windows[0].state, 'live');
+  assert.equal(readQuota({ now: T0 + CODEX_QUIET_AFTER_MS + 1 })
+    .sources[0].windows[0].state, 'quiet');
 });
 
 test('过了重置时刻 → reset，且**不再给百分比**', () => {

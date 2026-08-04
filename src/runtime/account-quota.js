@@ -14,8 +14,8 @@ import { readJson, writeJson, removeJson } from './store.js';
  *
  * | 状态     | 判据                      | 面板表现            |
  * | -------- | ------------------------- | ------------------- |
- * | live     | 5 分钟内确认过            | 正常                |
- * | quiet    | 超过 5 分钟没确认         | 标注「N 分钟前」    |
+ * | live     | 来源的刷新周期内确认过     | 正常                |
+ * | quiet    | 超过来源刷新周期没确认     | 标注「N 分钟前」    |
  * | reset    | now > resetAt             | 变灰，不显示百分比  |
  * | （丢弃） | resetAt 过去超过 48 小时  | 直接删掉            |
  *
@@ -29,6 +29,8 @@ export const QUOTA_VERSION = 1;
 
 /** 超过这么久没收到确认就标注「N 分钟前」。 */
 export const QUIET_AFTER_MS = 5 * 60 * 1000;
+/** Codex 官方读取做十分钟缓存，不能在下一次正常刷新前误标过期。 */
+export const CODEX_QUIET_AFTER_MS = 10 * 60 * 1000;
 /** 窗口重置这么久之后仍无新报告，记录直接丢弃。 */
 export const DROP_AFTER_RESET_MS = 48 * 60 * 60 * 1000;
 /** 没有 resetAt 的记录（理论上不该有）靠这个兜底老化。 */
@@ -40,6 +42,25 @@ export const WINDOW_LABELS = {
 };
 /** 面板里的显示顺序。短窗口在前——它才是「现在能不能开大活」的那个。 */
 export const WINDOW_ORDER = ['five_hour', 'seven_day'];
+
+function validWindowKey(source, key) {
+  if (WINDOW_ORDER.includes(key)) return true;
+  return (source === 'codex' || source.startsWith('codex:'))
+    && (/^duration_\d+$/.test(key) || /^codex_(primary|secondary)$/.test(key));
+}
+
+function orderedWindowKeys(source, windows) {
+  return Object.keys(windows ?? {})
+    .filter((key) => validWindowKey(source, key))
+    .sort((a, b) => {
+      const aDuration = num(windows[a]?.durationMinutes);
+      const bDuration = num(windows[b]?.durationMinutes);
+      if (aDuration !== null || bDuration !== null) {
+        return (aDuration ?? Infinity) - (bDuration ?? Infinity);
+      }
+      return WINDOW_ORDER.indexOf(a) - WINDOW_ORDER.indexOf(b);
+    });
+}
 
 export const SOURCE_LABELS = {
   'claude-code': 'Claude Code',
@@ -94,17 +115,21 @@ export function recordQuota(report, { now = Date.now() } = {}) {
   const store = loadStore();
   const prev = store.sources[source] ?? { windows: {} };
   const next = {
-    windows: { ...(prev.windows ?? {}) },
+    // Claude 状态行是部分上报，要 merge；Codex RPC 是完整 snapshot，
+    // 本次没出现的窗口必须消失，不能继续显示上个周期的旧值。
+    windows: report.completeSnapshot === true ? {} : { ...(prev.windows ?? {}) },
     context: prev.context ?? null,
     sessionCostUsd: prev.sessionCostUsd ?? null,
     model: prev.model ?? null,
     version: prev.version ?? null,
+    sourceLabel: prev.sourceLabel ?? null,
+    planType: prev.planType ?? null,
     lastSeenAt: now,
   };
 
   const windows = report.windows && typeof report.windows === 'object' ? report.windows : {};
   for (const key of Object.keys(windows)) {
-    if (!WINDOW_ORDER.includes(key)) continue;
+    if (!validWindowKey(source, key)) continue;
     const usedPercent = clampPercent(windows[key]?.usedPercent);
     if (usedPercent === null) continue;
     const resetAt = num(windows[key]?.resetAt);
@@ -116,6 +141,9 @@ export function recordQuota(report, { now = Date.now() } = {}) {
     next.windows[key] = {
       usedPercent,
       resetAt,
+      label: typeof windows[key]?.label === 'string'
+        ? windows[key].label.trim().slice(0, 48) : (before?.label ?? null),
+      durationMinutes: num(windows[key]?.durationMinutes) ?? before?.durationMinutes ?? null,
       updatedAt: changed ? now : (before?.updatedAt ?? now),
       lastSeenAt: now,
     };
@@ -136,6 +164,10 @@ export function recordQuota(report, { now = Date.now() } = {}) {
   if (cost !== null) next.sessionCostUsd = cost;
   if (typeof report.model === 'string') next.model = report.model;
   if (typeof report.version === 'string') next.version = report.version;
+  if (typeof report.sourceLabel === 'string' && report.sourceLabel.trim()) {
+    next.sourceLabel = report.sourceLabel.trim().slice(0, 96);
+  }
+  if (typeof report.planType === 'string') next.planType = report.planType.slice(0, 32);
 
   store.sources[source] = next;
   persist(prune(store, now));
@@ -172,11 +204,12 @@ function persist(store) {
 }
 
 /** 一个窗口现在处于哪一档。 */
-export function freshness(window, now = Date.now()) {
+export function freshness(window, now = Date.now(), source = null) {
   const resetAt = num(window?.resetAt);
   if (resetAt !== null && now > resetAt) return 'reset';
   const lastSeenAt = num(window?.lastSeenAt) ?? 0;
-  return now - lastSeenAt > QUIET_AFTER_MS ? 'quiet' : 'live';
+  const quietAfter = source === 'codex' ? CODEX_QUIET_AFTER_MS : QUIET_AFTER_MS;
+  return now - lastSeenAt > quietAfter ? 'quiet' : 'live';
 }
 
 /**
@@ -189,13 +222,13 @@ export function readQuota({ now = Date.now() } = {}) {
   for (const id of Object.keys(store.sources)) {
     const entry = store.sources[id];
     const windows = [];
-    for (const key of WINDOW_ORDER) {
+    for (const key of orderedWindowKeys(id, entry?.windows)) {
       const w = entry?.windows?.[key];
       if (!w) continue;
-      const state = freshness(w, now);
+      const state = freshness(w, now, id);
       windows.push({
         id: key,
-        label: WINDOW_LABELS[key] ?? key,
+        label: w.label ?? WINDOW_LABELS[key] ?? key,
         // 已重置的窗口不给百分比——那个数字是重置前的，已经不成立了。
         usedPercent: state === 'reset' ? null : w.usedPercent,
         resetAt: w.resetAt ?? null,
@@ -208,11 +241,12 @@ export function readQuota({ now = Date.now() } = {}) {
     if (windows.length === 0 && !entry?.context) continue;
     sources.push({
       id,
-      label: SOURCE_LABELS[id] ?? id,
+      label: entry?.sourceLabel ?? SOURCE_LABELS[id] ?? id,
       windows,
       context: entry?.context ?? null,
       sessionCostUsd: entry?.sessionCostUsd ?? null,
       model: entry?.model ?? null,
+      planType: entry?.planType ?? null,
       lastSeenAt: entry?.lastSeenAt ?? null,
     });
   }
@@ -232,19 +266,19 @@ export function pendingAlerts({ threshold = 85, now = Date.now() } = {}) {
   const out = [];
   for (const id of Object.keys(store.sources)) {
     const entry = store.sources[id];
-    for (const key of WINDOW_ORDER) {
+    for (const key of orderedWindowKeys(id, entry?.windows)) {
       const w = entry?.windows?.[key];
       if (!w) continue;
-      if (freshness(w, now) === 'reset') continue;
+      if (freshness(w, now, id) === 'reset') continue;
       if (!(w.usedPercent >= threshold)) continue;
       const alertKey = `${id}:${key}:${w.resetAt ?? 0}`;
       if (store.alerted[alertKey]) continue;
       out.push({
         key: alertKey,
         source: id,
-        sourceLabel: SOURCE_LABELS[id] ?? id,
+        sourceLabel: entry?.sourceLabel ?? SOURCE_LABELS[id] ?? id,
         window: key,
-        windowLabel: WINDOW_LABELS[key] ?? key,
+        windowLabel: w.label ?? WINDOW_LABELS[key] ?? key,
         usedPercent: w.usedPercent,
         resetAt: w.resetAt ?? null,
       });

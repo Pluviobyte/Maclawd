@@ -27,9 +27,12 @@ const { createUsageServer } = await import('../src/runtime/server.js');
 const { buildRollup } = await import('../src/runtime/rollup.js');
 const { writeJson } = await import('../src/runtime/store.js');
 const { ROLLUP_FILE } = await import('../src/runtime/paths.js');
+const { clearQuota, recordQuota } = await import('../src/runtime/account-quota.js');
+const { createCodexQuotaCollector } = await import('../src/runtime/codex-quota.js');
 
 let server;
 let base;
+let quotaWorker;
 
 before(async () => {
   // 造一份最小聚合数据，带一个已知项目路径。
@@ -41,6 +44,17 @@ before(async () => {
   writeJson(ROLLUP_FILE, buildRollup(records, {}, { Maclawd: '/Users/rain/Desktop/Maclawd' }));
 
   // 测试里不启动后台采集循环，避免它去扫真实目录。
+  quotaWorker = createCodexQuotaCollector({
+    enabled: () => true,
+    command: '/fake/codex',
+    intervalMs: 60_000,
+    read: async () => ({
+      rateLimits: {
+        limitId: 'codex', planType: 'pro',
+        primary: { usedPercent: 51, windowDurationMins: 10_080, resetsAt: Math.floor(Date.now() / 1000) + 86_400 },
+      },
+    }),
+  });
   ({ server } = createUsageServer({
     collector: {
       live: () => ({ tokensPerMin: 0, sources: [], trackedFiles: 0, disabled: false, updatedAt: null }),
@@ -49,6 +63,7 @@ before(async () => {
       start: async () => {},
       stop: () => {},
     },
+    quotaCollector: quotaWorker,
   }));
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   base = `http://127.0.0.1:${server.address().port}`;
@@ -156,6 +171,28 @@ test('/api/actions 返回全部动作与角色合同', async () => {
   assert.equal(d.contract.bodyColor, '#DE886D');
 });
 
+test('/api/quota 刷新官方 Codex 额度后与 Claude Code 按服务商分开返回', async () => {
+  clearQuota();
+  recordQuota({
+    source: 'claude-code',
+    windows: {
+      five_hour: { usedPercent: 20, resetAt: Date.now() + 3_600_000 },
+    },
+  });
+
+  await json('/api/quota');
+  const deadline = Date.now() + 200;
+  let snapshot;
+  do {
+    snapshot = await json('/api/quota');
+    if (snapshot.sources.some((source) => source.id === 'codex')) break;
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  } while (Date.now() < deadline);
+
+  assert.deepEqual(snapshot.sources.map((source) => source.label), ['Claude Code', 'Codex']);
+  assert.equal(snapshot.sources.find((source) => source.id === 'codex').windows[0].usedPercent, 51);
+});
+
 test('/api/settings 只接受已知键，未知键被丢弃', async () => {
   const res = await fetch(`${base}/api/settings`, {
     method: 'POST',
@@ -202,6 +239,28 @@ test('设置开关不能借隐藏参数自动修改未知状态行', async () =>
   assert.equal(result.settings.quotaStatusline, false);
   assert.equal(result.blocked, 'statusline');
   assert.deepEqual(JSON.parse(readFileSync(CLAUDE_SETTINGS, 'utf-8')).statusLine, custom);
+});
+
+test('自定义 Claude 状态行被保护时，Codex 额度读取仍可独立开启', async () => {
+  const custom = { type: 'command', command: '/usr/local/bin/my-statusline' };
+  writeFileSync(CLAUDE_SETTINGS, `${JSON.stringify({ statusLine: custom }, null, 2)}\n`);
+
+  const result = await post('/api/settings', { quotaTracking: true });
+  assert.equal(result.settings.quotaTracking, true);
+  assert.equal(result.settings.quotaStatusline, false);
+  assert.equal(result.blocked, 'statusline');
+  assert.deepEqual(JSON.parse(readFileSync(CLAUDE_SETTINGS, 'utf-8')).statusLine, custom);
+
+  await post('/api/settings', { quotaTracking: false });
+});
+
+test('关闭统一额度开关后不再接收 Claude Code 上报', async () => {
+  await post('/api/settings', { quotaTracking: false });
+  const response = await post('/api/quota', {
+    source: 'claude-code',
+    windows: { five_hour: { usedPercent: 77, resetAt: Date.now() + 3_600_000 } },
+  });
+  assert.deepEqual(response, { ignored: true });
 });
 
 test('/api/open 拒绝未知动作与未知路径', async () => {

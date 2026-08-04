@@ -169,8 +169,10 @@ final class MenuBarController {
     private var tooltip: String {
         var parts: [String] = []
         if !client.state.name.isEmpty { parts.append(client.state.name) }
-        if let used = client.quota.usedPercent, let label = client.quota.windowLabel {
-            parts.append("\(label) 已用 \(Int(used))%")
+        if let source = client.quota.sourceLabel,
+           let label = client.quota.windowLabel,
+           let used = client.quota.usedPercent {
+            parts.append("\(source) · \(label) 已用 \(Int(used))%")
         }
         parts.append(client.state.actionId)
         return parts.joined(separator: " · ")

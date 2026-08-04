@@ -312,11 +312,11 @@ private struct QuotaBlock: View {
                 VStack(spacing: 10) {
                     ForEach(store.quota.sources) { source in
                         VStack(alignment: .leading, spacing: 7) {
-                            if store.quota.sources.count > 1 {
-                                Text(source.label)
-                                    .font(.system(size: 10, weight: .semibold))
-                                    .foregroundStyle(.secondary)
-                            }
+                            // 来源是额度的一部分，不是只有多来源时才需要的分组标题。
+                            // 只显示「本周 51%」会让用户无法判断它属于 Claude 还是 Codex。
+                            Text(source.label)
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(.primary)
                             ForEach(source.windows) { window in
                                 QuotaRow(window: window)
                             }
@@ -336,18 +336,26 @@ private struct QuotaBlock: View {
     /// 「没装通道」和「装了但还没数据」的文案完全不同——
     /// 混成一句会让用户对着一个永远不来的数字干等。
     @ViewBuilder private var emptyState: some View {
-        switch store.quota.statusline {
-        case .none, .foreign:
+        if !store.quota.enabled {
             VStack(alignment: .leading, spacing: 3) {
                 Text("未开启").font(.system(size: 12))
-                Text("在设置里开启后，Maclawd 就能看到 5 小时与本周额度")
+                Text("在设置里开启后，Maclawd 会分别读取 Codex 与 Claude Code 额度")
                     .font(.system(size: 11)).foregroundStyle(.secondary)
             }
-        default:
-            VStack(alignment: .leading, spacing: 3) {
-                Text("等待第一次响应").font(.system(size: 12))
-                Text("额度会在交互式会话产生第一次 API 响应后出现")
-                    .font(.system(size: 11)).foregroundStyle(.secondary)
+        } else {
+            switch store.quota.statusline {
+            case .foreign:
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("正在读取 Codex 额度").font(.system(size: 12))
+                    Text("Claude Code 的自定义状态行未被修改，可在设置中确认兼容")
+                        .font(.system(size: 11)).foregroundStyle(.secondary)
+                }
+            default:
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("等待第一次响应").font(.system(size: 12))
+                    Text("Codex 会自动刷新；Claude Code 在交互式会话首次响应后出现")
+                        .font(.system(size: 11)).foregroundStyle(.secondary)
+                }
             }
         }
     }
