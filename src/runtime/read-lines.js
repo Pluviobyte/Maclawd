@@ -74,3 +74,31 @@ export async function lastNewlineBoundary(path, size) {
     await handle?.close();
   }
 }
+
+/**
+ * 从 offset 向后找第一个换行。分块点落在一条 JSONL 中间时，切到该行末尾，
+ * 既不会产出半条 JSON，也不会像“退回最后换行”那样误吞整个文件。
+ */
+export async function nextNewlineBoundary(path, offset, size) {
+  if (offset >= size) return null;
+  let handle;
+  try {
+    handle = await open(path, 'r');
+    const chunkSize = 64 * 1024;
+    let position = Math.max(0, offset);
+    while (position < size) {
+      const length = Math.min(chunkSize, size - position);
+      const buffer = Buffer.allocUnsafe(length);
+      const { bytesRead } = await handle.read(buffer, 0, length, position);
+      if (bytesRead <= 0) return null;
+      const index = buffer.indexOf(0x0a, 0);
+      if (index >= 0 && index < bytesRead) return position + index + 1;
+      position += bytesRead;
+    }
+    return null;
+  } catch {
+    return null;
+  } finally {
+    await handle?.close();
+  }
+}

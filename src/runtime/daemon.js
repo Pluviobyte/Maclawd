@@ -1,8 +1,9 @@
 import { scanAll } from './scan.js';
 import { buildRollup } from './rollup.js';
 import { createTailer } from './tail.js';
-import { writeJson } from './store.js';
-import { ROLLUP_FILE } from './paths.js';
+import { statSync } from 'node:fs';
+import { readJson, writeJson } from './store.js';
+import { ROLLUP_FILE, usagePath } from './paths.js';
 import { usageEnabled } from './settings.js';
 
 /**
@@ -48,6 +49,8 @@ export function createCollector({
   const tailer = createTailer();
   let tailTimer = null;
   let scanTimer = null;
+  let reconcileTimer = null;
+  let nextScanAt = null;
   let scanning = false;
   let stopped = true;
   let lifecycle = 0;
@@ -61,15 +64,52 @@ export function createCollector({
     updatedAt: null,
   };
   let lastScan = null;
+  let observedRollupMtimeMs = null;
+  let persistedBacklog = false;
+
+  function diskHasBacklog({ force = false } = {}) {
+    let mtimeMs = null;
+    try { mtimeMs = statSync(usagePath(ROLLUP_FILE)).mtimeMs; } catch { return false; }
+    if (!force && mtimeMs === observedRollupMtimeMs) return persistedBacklog;
+    observedRollupMtimeMs = mtimeMs;
+    const collection = readJson(ROLLUP_FILE, null)?.collection;
+    // complete=false 也可能只是权限/解析失败，无法靠 5 秒重试推进。只有明确
+    // deferred 的时间预算积压才走 catch-up；永久错误保持普通周期。
+    const sourceDeferred = Object.values(collection?.sources ?? {})
+      .reduce((sum, source) => sum + (source?.deferredFiles ?? 0), 0);
+    persistedBacklog = (collection?.deferredFiles ?? sourceDeferred) > 0;
+    return persistedBacklog;
+  }
 
   function scheduleScan(delayMs) {
     if (stopped) return;
     if (scanTimer) clearTimeout(scanTimer);
+    nextScanAt = Date.now() + delayMs;
     scanTimer = setTimeout(async () => {
       scanTimer = null;
+      nextScanAt = null;
       if (!stopped) await runScan();
     }, delayMs);
     scanTimer.unref?.();
+  }
+
+  // 独立 CLI 或旧进程可能在本服务运行期间写入一份未完成 rollup。
+  // 只看内存里的 lastScan 会误等 30 分钟。每个 catch-up 周期只 stat 一次，
+  // mtime 变化时才解析 JSON，并把远期普通扫描提前。
+  function scheduleReconciliation() {
+    if (stopped) return;
+    if (reconcileTimer) clearTimeout(reconcileTimer);
+    reconcileTimer = setTimeout(() => {
+      reconcileTimer = null;
+      if (!stopped && !scanning && diskHasBacklog()) {
+        const catchUpAt = Date.now() + catchUpIntervalMs;
+        if (!scanTimer || nextScanAt === null || nextScanAt > catchUpAt + 1) {
+          scheduleScan(catchUpIntervalMs);
+        }
+      }
+      scheduleReconciliation();
+    }, catchUpIntervalMs);
+    reconcileTimer.unref?.();
   }
 
   async function runScan({ force = false } = {}) {
@@ -133,11 +173,12 @@ export function createCollector({
       stopped = false;
       const currentLifecycle = ++lifecycle;
       if (scanNow) await runScan();
-      else scheduleScan(scanIntervalMs);
+      else scheduleScan(diskHasBacklog({ force: true }) ? catchUpIntervalMs : scanIntervalMs);
       if (stopped || currentLifecycle !== lifecycle) return;
       tailTimer = setInterval(() => { if (!stopped) tick(); }, tailIntervalMs);
       // 让定时器不阻止进程退出——CLI 与服务端各自决定生命周期。
       tailTimer.unref?.();
+      scheduleReconciliation();
     },
 
     stop() {
@@ -145,8 +186,11 @@ export function createCollector({
       lifecycle++;
       if (tailTimer) clearInterval(tailTimer);
       if (scanTimer) clearTimeout(scanTimer);
+      if (reconcileTimer) clearTimeout(reconcileTimer);
       tailTimer = null;
       scanTimer = null;
+      reconcileTimer = null;
+      nextScanAt = null;
     },
 
     /** 用户点「重新扫描」时用 force，绕过开关只此一次。 */

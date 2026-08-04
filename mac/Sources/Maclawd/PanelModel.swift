@@ -169,6 +169,8 @@ struct PanelSummary: Equatable {
     var collectionScannedAt: Date?
 
     var primary: Double { throughput }
+    /// 索引未完成且还没找到今天的记录时，0 只是默认值，不是可展示的测量值。
+    var primaryAvailable: Bool { collectionComplete || primary > 0 }
 
     var collectionProgress: Double? {
         guard collectionTotalFiles > 0 else { return nil }
@@ -176,6 +178,7 @@ struct PanelSummary: Equatable {
     }
 
     var nextCollectionScanLabel: String {
+        if !collectionComplete { return "正在自动继续处理" }
         guard let collectionScannedAt else { return "稍后会自动继续处理" }
         let seconds = collectionScannedAt.addingTimeInterval(30 * 60).timeIntervalSinceNow
         if seconds <= 30 { return "即将自动继续处理" }

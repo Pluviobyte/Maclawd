@@ -14,6 +14,110 @@ process.env.MACLAWD_WORKBUDDY_DIR = join(root, 'empty-workbuddy');
 writeFileSync(join(data, 'settings.json'), '{"recordUsage":true}\n');
 
 const { createCollector } = await import('../src/runtime/daemon.js');
+const { ROLLUP_FILE } = await import('../src/runtime/paths.js');
+const { writeJson, removeJson } = await import('../src/runtime/store.js');
+
+test('启动时磁盘上是未完成索引，立即续扫而不是等待普通周期', async () => {
+  writeJson(ROLLUP_FILE, {
+    v: 4, days: {}, slots: {}, sessions: {},
+    collection: { complete: false, deferredFiles: 891, sources: {} },
+  });
+  let calls = 0;
+  const collector = createCollector({
+    scan: async () => {
+      calls++;
+      return {
+        records: [], sessionsBySource: {}, projectPaths: {}, warnings: [], elapsedMs: 1,
+        stats: { reused: 0, appended: 0, full: 0, deferred: 0, bytesRead: 0 },
+        sourceStatus: {}, indexing: null,
+      };
+    },
+    catchUpIntervalMs: 5,
+    scanIntervalMs: 60_000,
+    tailIntervalMs: 60_000,
+  });
+  try {
+    await collector.start({ scanNow: false });
+    const deadline = Date.now() + 100;
+    while (calls < 1 && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+    assert.equal(calls, 1, '持久化的不完整索引必须触发短间隔续扫');
+  } finally {
+    collector.stop();
+    removeJson(ROLLUP_FILE);
+  }
+});
+
+test('运行期间外部写入未完成 rollup，也会把远期扫描提前', async () => {
+  writeJson(ROLLUP_FILE, {
+    v: 4, days: {}, slots: {}, sessions: {},
+    collection: { complete: true, deferredFiles: 0, sources: {} },
+  });
+  let calls = 0;
+  const collector = createCollector({
+    scan: async () => {
+      calls++;
+      return {
+        records: [], sessionsBySource: {}, projectPaths: {}, warnings: [], elapsedMs: 1,
+        stats: { reused: 0, appended: 0, full: 0, deferred: 0, bytesRead: 0 },
+        sourceStatus: {}, indexing: null,
+      };
+    },
+    catchUpIntervalMs: 5,
+    scanIntervalMs: 60_000,
+    tailIntervalMs: 60_000,
+  });
+  try {
+    await collector.start({ scanNow: false });
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    writeJson(ROLLUP_FILE, {
+      v: 4, days: {}, slots: {}, sessions: {},
+      collection: { complete: false, deferredFiles: 800, sources: {} },
+    });
+    const deadline = Date.now() + 100;
+    while (calls < 1 && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+    assert.equal(calls, 1, '外部未完成结果不能让常驻服务误等普通扫描周期');
+  } finally {
+    collector.stop();
+    removeJson(ROLLUP_FILE);
+  }
+});
+
+test('只有永久来源错误而没有 deferred 时不做高频续扫', async () => {
+  writeJson(ROLLUP_FILE, {
+    v: 4, days: {}, slots: {}, sessions: {},
+    collection: {
+      complete: false,
+      deferredFiles: 0,
+      sources: { codex: { complete: false, failedFiles: 1, deferredFiles: 0 } },
+    },
+  });
+  let calls = 0;
+  const collector = createCollector({
+    scan: async () => {
+      calls++;
+      return {
+        records: [], sessionsBySource: {}, projectPaths: {}, warnings: [], elapsedMs: 1,
+        stats: { reused: 0, appended: 0, full: 0, deferred: 0, bytesRead: 0 },
+        sourceStatus: {}, indexing: null,
+      };
+    },
+    catchUpIntervalMs: 5,
+    scanIntervalMs: 60_000,
+    tailIntervalMs: 60_000,
+  });
+  try {
+    await collector.start({ scanNow: false });
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    assert.equal(calls, 0, '权限或解析错误应走普通周期，不能每 5 秒重扫');
+  } finally {
+    collector.stop();
+    removeJson(ROLLUP_FILE);
+  }
+});
 
 test('冷启动有待处理文件时短间隔续扫，完成后恢复普通周期', async () => {
   let calls = 0;

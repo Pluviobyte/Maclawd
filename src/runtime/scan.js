@@ -4,7 +4,9 @@ import { dedupe } from './dedupe.js';
 import { parsers as allParsers } from './parsers/index.js';
 import { readJson, writeJson } from './store.js';
 import { SCAN_CACHE_FILE } from './paths.js';
-import { lastNewlineBoundary, readLines, tailFingerprint } from './read-lines.js';
+import {
+  lastNewlineBoundary, nextNewlineBoundary, readLines, tailFingerprint,
+} from './read-lines.js';
 import { usageEnabled } from './settings.js';
 
 /**
@@ -216,6 +218,9 @@ export async function scanAll({
   parsers = allParsers,
   onProgress,
   budgetMs = budgetFromEnv(),
+  // 时间预算只能在文件之间检查；再给单文件一个字节上限，避免一个数百 MB
+  // 的 JSONL 独占事件循环几分钟。后续轮次沿已有 offset 继续。
+  maxFileBytes = 16 * 1024 * 1024,
   // 只有测试与「用户主动点重新扫描」之外的路径才需要绕过；默认必须尊重开关。
   ignoreSettings = false,
 } = {}) {
@@ -326,7 +331,13 @@ export async function scanAll({
     const records = [];
     const sessions = [];
     status.discoveredFiles = groups.size;
-    for (const candidate of groups.values()) {
+    // 冷索引的第一屏服务于“今天用了多少”，不是历史考古。目录自然遍历通常
+    // 从最旧年份开始，有限预算会让最近日志排在几百个旧文件之后，长时间显示
+    // 假的今日 0。按修改时间倒序后，先产出今天，再在后续 catch-up 补历史。
+    const orderedCandidates = [...groups.values()].sort((a, b) => (
+      b.mtimeMs - a.mtimeMs || b.size - a.size || a.path.localeCompare(b.path)
+    ));
+    for (const candidate of orderedCandidates) {
       livePaths.add(candidate.path);
       const entry = cache.files[candidate.path];
       const sig = `${candidate.mtimeMs}:${candidate.size}`;
@@ -370,7 +381,15 @@ export async function scanAll({
       ) {
         const fingerprint = await tailFingerprint(candidate.path, entry.offset);
         if (fingerprint && fingerprint === entry.tail) {
-          const boundary = await lastNewlineBoundary(candidate.path, candidate.size);
+          const fullBoundary = await lastNewlineBoundary(candidate.path, candidate.size);
+          const cappedSize = Math.min(candidate.size, entry.offset + maxFileBytes);
+          let boundary = fullBoundary;
+          if (cappedSize < candidate.size) {
+            const previousBoundary = await lastNewlineBoundary(candidate.path, cappedSize);
+            boundary = previousBoundary > entry.offset
+              ? previousBoundary
+              : await nextNewlineBoundary(candidate.path, cappedSize, candidate.size) ?? fullBoundary;
+          }
           if (boundary > entry.offset) {
             try {
               const result = await runParser(parser, candidate, {
@@ -388,9 +407,10 @@ export async function scanAll({
               const merged = result.resetRecords
                 ? result.records
                 : unpackRecords(entry.packed, parser.id, project).concat(result.records);
+              const partial = boundary < fullBoundary;
               cache.files[candidate.path] = {
                 source: parser.id,
-                sig,
+                sig: partial ? `partial:${candidate.mtimeMs}:${boundary}` : sig,
                 ino: candidate.ino,
                 offset: boundary,
                 tail: await tailFingerprint(candidate.path, boundary),
@@ -402,7 +422,13 @@ export async function scanAll({
               };
               cacheChanged = true;
               stats.appended++;
-              status.indexedFiles++;
+              if (partial) {
+                stats.deferred++;
+                status.deferredFiles++;
+                status.complete = false;
+              } else {
+                status.indexedFiles++;
+              }
               stats.bytesRead += boundary - entry.offset;
               for (const record of merged) records.push(record);
               if (result.session) sessions.push({ ...result.session, project });
@@ -427,7 +453,16 @@ export async function scanAll({
 
       // ---- 第 3 级：全量重读 ----
       try {
-        const boundary = await lastNewlineBoundary(candidate.path, candidate.size);
+        const fullBoundary = await lastNewlineBoundary(candidate.path, candidate.size);
+        const chunkable = (parser.readMode ?? 'lines') === 'lines';
+        const cappedSize = chunkable ? Math.min(candidate.size, maxFileBytes) : candidate.size;
+        let boundary = fullBoundary;
+        if (cappedSize < candidate.size) {
+          const previousBoundary = await lastNewlineBoundary(candidate.path, cappedSize);
+          boundary = previousBoundary > 0
+            ? previousBoundary
+            : await nextNewlineBoundary(candidate.path, cappedSize, candidate.size) ?? fullBoundary;
+        }
         const result = await runParser(parser, candidate, {
           start: 0,
           end: boundary,
@@ -440,9 +475,10 @@ export async function scanAll({
           record.project = project;
           delete record.cwd;
         }
+        const partial = chunkable && boundary < fullBoundary;
         cache.files[candidate.path] = {
           source: parser.id,
-          sig,
+          sig: partial ? `partial:${candidate.mtimeMs}:${boundary}` : sig,
           ino: candidate.ino,
           offset: boundary,
           tail: await tailFingerprint(candidate.path, boundary),
@@ -454,7 +490,13 @@ export async function scanAll({
         };
         cacheChanged = true;
         stats.full++;
-        status.indexedFiles++;
+        if (partial) {
+          stats.deferred++;
+          status.deferredFiles++;
+          status.complete = false;
+        } else {
+          status.indexedFiles++;
+        }
         stats.bytesRead += boundary;
         for (const record of result.records) records.push(record);
         if (result.session) sessions.push({ ...result.session, project });

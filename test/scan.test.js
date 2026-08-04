@@ -209,6 +209,187 @@ test('预算耗尽后下次扫描从被饿死的来源开始，并公开每来�
   }
 });
 
+test('冷索引预算有限时优先处理最近文件，让今天用量先可见', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'maclawd-recent-first-'));
+  const previous = process.env.MACLAWD_DATA_DIR;
+  process.env.MACLAWD_DATA_DIR = join(root, 'data');
+  const oldFile = join(root, 'old.jsonl');
+  const newFile = join(root, 'new.jsonl');
+  writeFileSync(oldFile, '{"value":1,"ts":100}\n');
+  writeFileSync(newFile, '{"value":2,"ts":200}\n');
+
+  let firstParsed = true;
+  const parser = {
+    id: 'recent-first',
+    // 刻意把旧文件放前面，模拟按年份/目录自然遍历得到的顺序。
+    discover: () => [
+      { path: oldFile, size: statSync(oldFile).size, mtimeMs: 100, ino: statSync(oldFile).ino,
+        sessionId: 'old' },
+      { path: newFile, size: statSync(newFile).size, mtimeMs: 200, ino: statSync(newFile).ino,
+        sessionId: 'new' },
+    ],
+    createFileParser: () => {
+      const records = [];
+      return {
+        onObject(obj) {
+          if (firstParsed) {
+            firstParsed = false;
+            const until = Date.now() + 8;
+            while (Date.now() < until) { /* consume this round's budget */ }
+          }
+          records.push({ source: 'recent-first', model: 'm', project: 'p', ts: obj.ts,
+            input: obj.value, output: 0, cacheRead: 0, write5m: 0, write1h: 0,
+            reasoning: 0, messageId: String(obj.ts), requestId: null,
+            uuid: null, sidechain: false });
+        },
+        finish: () => ({ records }),
+      };
+    },
+  };
+  const { scanAll } = await import('../src/runtime/scan.js');
+  try {
+    const result = await scanAll({ parsers: [parser], budgetMs: 2, ignoreSettings: true });
+    assert.equal(result.bySource['recent-first'][0]?.ts, 200,
+      '首轮有限预算应先产出最近文件，而不是从最旧历史开始');
+    assert.equal(result.sourceStatus['recent-first'].deferredFiles, 1);
+  } finally {
+    if (previous === undefined) delete process.env.MACLAWD_DATA_DIR;
+    else process.env.MACLAWD_DATA_DIR = previous;
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('单个超大行日志分块续读，不让一个文件突破整轮预算', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'maclawd-chunked-file-'));
+  const previous = process.env.MACLAWD_DATA_DIR;
+  process.env.MACLAWD_DATA_DIR = join(root, 'data');
+  const log = join(root, 'large.jsonl');
+  const first = '{"value":1,"ts":100}\n';
+  const second = '{"value":2,"ts":200}\n';
+  writeFileSync(log, first + second);
+  const parser = {
+    id: 'chunked-file',
+    discover: () => [{
+      path: log, size: statSync(log).size, mtimeMs: statSync(log).mtimeMs,
+      ino: statSync(log).ino, sessionId: 'one',
+    }],
+    createFileParser: () => {
+      const records = [];
+      return {
+        onObject(obj) {
+          records.push({ source: 'chunked-file', model: 'm', project: 'p', ts: obj.ts,
+            input: obj.value, output: 0, cacheRead: 0, write5m: 0, write1h: 0,
+            reasoning: 0, messageId: String(obj.ts), requestId: null,
+            uuid: null, sidechain: false });
+        },
+        finish: () => ({ records }),
+      };
+    },
+  };
+  const { scanAll } = await import('../src/runtime/scan.js');
+  try {
+    const partial = await scanAll({
+      parsers: [parser], budgetMs: 1_000, maxFileBytes: first.length, ignoreSettings: true,
+    });
+    assert.deepEqual(partial.bySource['chunked-file'].map((r) => r.ts), [100]);
+    assert.equal(partial.sourceStatus['chunked-file'].deferredFiles, 1);
+    assert.equal(partial.sourceStatus['chunked-file'].complete, false);
+
+    const complete = await scanAll({
+      parsers: [parser], budgetMs: 1_000, maxFileBytes: first.length, ignoreSettings: true,
+    });
+    assert.deepEqual(complete.bySource['chunked-file'].map((r) => r.ts), [100, 200]);
+    assert.equal(complete.sourceStatus['chunked-file'].complete, true);
+  } finally {
+    if (previous === undefined) delete process.env.MACLAWD_DATA_DIR;
+    else process.env.MACLAWD_DATA_DIR = previous;
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('分块点落在长行中间时只读到该行结尾，不退回整个文件', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'maclawd-long-line-boundary-'));
+  const previous = process.env.MACLAWD_DATA_DIR;
+  process.env.MACLAWD_DATA_DIR = join(root, 'data');
+  const log = join(root, 'long.jsonl');
+  const first = `${JSON.stringify({ value: 1, ts: 100, padding: 'x'.repeat(10_000) })}\n`;
+  const second = `${JSON.stringify({ value: 2, ts: 200 })}\n`;
+  writeFileSync(log, first + second);
+  const parser = {
+    id: 'long-line-boundary',
+    discover: () => [{ path: log, size: statSync(log).size, mtimeMs: statSync(log).mtimeMs,
+      ino: statSync(log).ino, sessionId: 'one' }],
+    createFileParser: () => {
+      const records = [];
+      return {
+        onObject(obj) {
+          records.push({ source: 'long-line-boundary', model: 'm', project: 'p', ts: obj.ts,
+            input: obj.value, output: 0, cacheRead: 0, write5m: 0, write1h: 0,
+            reasoning: 0, messageId: String(obj.ts), requestId: null,
+            uuid: null, sidechain: false });
+        },
+        finish: () => ({ records }),
+      };
+    },
+  };
+  const { scanAll } = await import('../src/runtime/scan.js');
+  try {
+    const partial = await scanAll({
+      parsers: [parser], budgetMs: 1_000, maxFileBytes: 100, ignoreSettings: true,
+    });
+    assert.deepEqual(partial.bySource['long-line-boundary'].map((r) => r.ts), [100]);
+    assert.equal(partial.stats.bytesRead, first.length);
+    assert.equal(partial.sourceStatus['long-line-boundary'].deferredFiles, 1);
+  } finally {
+    if (previous === undefined) delete process.env.MACLAWD_DATA_DIR;
+    else process.env.MACLAWD_DATA_DIR = previous;
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('整份 JSON 和数据库模式不分块，不会永久停在 deferred', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'maclawd-non-line-mode-'));
+  const previous = process.env.MACLAWD_DATA_DIR;
+  process.env.MACLAWD_DATA_DIR = join(root, 'data');
+  const whole = join(root, 'thread.json');
+  const database = join(root, 'usage.sqlite');
+  writeFileSync(whole, JSON.stringify({ value: 7, padding: 'x'.repeat(1_000) }) + '\n');
+  writeFileSync(database, 'not-a-real-db-but-the-parser-owns-reading-it');
+  const candidate = (path) => ({ path, size: statSync(path).size,
+    mtimeMs: statSync(path).mtimeMs, ino: statSync(path).ino, sessionId: path });
+  const makeRecord = (source, value) => ({ source, model: 'm', project: 'p', ts: 100,
+    input: value, output: 0, cacheRead: 0, write5m: 0, write1h: 0, reasoning: 0,
+    messageId: source, requestId: null, uuid: null, sidechain: false });
+  const parsers = [
+    {
+      id: 'whole-mode', readMode: 'whole', discover: () => [candidate(whole)],
+      createFileParser: () => {
+        const records = [];
+        return { onObject: (obj) => records.push(makeRecord('whole-mode', obj.value)),
+          finish: () => ({ records }) };
+      },
+    },
+    {
+      id: 'none-mode', readMode: 'none', discover: () => [candidate(database)],
+      createFileParser: () => ({ finish: () => ({ records: [makeRecord('none-mode', 9)] }) }),
+    },
+  ];
+  const { scanAll } = await import('../src/runtime/scan.js');
+  try {
+    const result = await scanAll({
+      parsers, budgetMs: 1_000, maxFileBytes: 10, ignoreSettings: true,
+    });
+    assert.equal(result.bySource['whole-mode'][0]?.input, 7);
+    assert.equal(result.bySource['none-mode'][0]?.input, 9);
+    assert.equal(result.sourceStatus['whole-mode'].complete, true);
+    assert.equal(result.sourceStatus['none-mode'].complete, true);
+  } finally {
+    if (previous === undefined) delete process.env.MACLAWD_DATA_DIR;
+    else process.env.MACLAWD_DATA_DIR = previous;
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('来源目录读取失败时标为不完整，不能把权限错误当成精确零值', async () => {
   const root = mkdtempSync(join(tmpdir(), 'maclawd-discovery-error-'));
   const previous = process.env.MACLAWD_DATA_DIR;

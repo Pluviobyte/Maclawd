@@ -480,6 +480,10 @@ async function runServe(args) {
   // 退出时把端点文件清掉，免得下一次启动的 hook 去连一个已经死了的端口。
   const cleanup = () => { clearEndpoint({ instanceId: identity.instanceId }); };
   process.on('exit', cleanup);
+  // 管理端点用于新版 App 接替旧 runtime。server.close() 只撤掉监听端口，
+  // 正在进行的历史扫描仍可能持有异步文件句柄；不显式退出就会留下一个
+  // 无端口、满 CPU 的孤儿进程，与新 runtime 同时扫同一批日志。
+  started.server.once('close', () => process.exit(0));
 
   console.log(bold('Maclawd 本地面板'));
   console.log(`  宠物管理   http://${host}:${port}/`);

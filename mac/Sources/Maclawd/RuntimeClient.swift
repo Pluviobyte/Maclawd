@@ -58,6 +58,8 @@ struct RuntimeState {
 struct UsageSnapshot {
     var billable: Int = 0
     var throughput: Int = 0
+    /// false 表示今天的记录尚未被索引到；此时 throughput=0 只是占位值。
+    var throughputAvailable: Bool = false
     var cost: Double?
     var coverage: Double = 1
     var hitRate: Double = 0
@@ -663,6 +665,10 @@ final class RuntimeClient: ObservableObject {
                 snapshot.throughput = s["throughput"] as? Int ?? 0
                 snapshot.cost = s["cost"] as? Double
                 snapshot.hitRate = s["hitRate"] as? Double ?? 0
+            }
+            if let collection = json["collection"] as? [String: Any] {
+                let complete = collection["complete"] as? Bool ?? false
+                snapshot.throughputAvailable = complete || snapshot.throughput > 0
             }
             snapshot.coverage = json["coverage"] as? Double ?? 1
             if let sessions = json["sessions"] as? [String: Any] {

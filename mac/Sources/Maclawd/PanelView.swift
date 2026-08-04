@@ -174,6 +174,8 @@ private struct OverviewPage: View {
                 disabledNotice
             } else if store.summary.empty {
                 emptyNotice
+            } else if !store.summary.primaryAvailable {
+                indexingTodayNotice
             } else {
                 todayBlock
                 projectsBlock
@@ -207,6 +209,30 @@ private struct OverviewPage: View {
                      ? "Maclawd 会在你使用 AI 编程工具后自动开始记录"
                      : "当前尚无已索引记录 · 待处理 \(store.summary.deferredFiles) 个文件")
                     .font(.system(size: 11)).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    /// 历史索引里已有记录，并不代表它已经走到今天。此时 throughput 的 0
+    /// 是解码默认值，不是准确的「今天没用过」，所以只展示当前索引状态。
+    private var indexingTodayNotice: some View {
+        SectionCard(title: "今日") {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("正在索引今天的用量")
+                    .font(.system(size: 12, weight: .medium))
+                if let progress = store.summary.collectionProgress {
+                    ProgressView(value: progress)
+                        .progressViewStyle(.linear)
+                        .accessibilityLabel("历史索引进度")
+                        .accessibilityValue(Fmt.percent(progress))
+                }
+                Text(indexingProgressTitle)
+                    .font(.system(size: 10.5, weight: .medium))
+                    .foregroundStyle(.orange)
+                Text("还剩 \(store.summary.deferredFiles) 个文件，正在自动继续处理。找到今天的记录后会显示准确 Token。")
+                    .font(.system(size: 9.5))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
