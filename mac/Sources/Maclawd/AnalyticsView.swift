@@ -124,20 +124,29 @@ struct StatsPage: View {
             VStack(alignment: .leading, spacing: 9) {
                 HStack(alignment: .firstTextBaseline) {
                     VStack(alignment: .leading, spacing: 1) {
-                        Text((store.analytics.collection.complete ? "" : "≥ ")
-                             + Fmt.tokens(store.analytics.totals.totalTokens))
+                        Text(Fmt.tokens(store.analytics.totals.totalTokens))
                             .font(.system(size: 27, weight: .bold, design: .rounded))
-                        comparisonLabel(key: "totalTokens", fallback: "总 Token")
+                        comparisonLabel(
+                            key: "totalTokens",
+                            fallback: "总 Token",
+                            partial: "当前已统计 Token"
+                        )
                     }
                     Spacer()
                     VStack(alignment: .trailing, spacing: 1) {
                         Text(store.analytics.cost.estimated.map {
-                            (store.analytics.collection.complete ? "" : "≥ ")
-                                + String(format: "$%.2f", $0)
+                            String(format: "$%.2f", $0)
                         } ?? "—")
                             .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        comparisonLabel(key: "estimatedCost", fallback: "估算费用")
+                        comparisonLabel(
+                            key: "estimatedCost",
+                            fallback: "估算费用",
+                            partial: "当前估算费用"
+                        )
                     }
+                }
+                if !store.analytics.collection.complete {
+                    indexingProgress
                 }
                 DisclosureGroup(isExpanded: $detailsExpanded) {
                     VStack(spacing: 5) {
@@ -152,10 +161,6 @@ struct StatsPage: View {
                                  + (store.analytics.cost.unpricedModels.isEmpty ? "" : " · 有未定价模型"))
                                 .font(.system(size: 10)).foregroundStyle(.orange)
                         }
-                        if !store.analytics.collection.complete {
-                            Text("采集索引未完成 · 待处理 \(store.analytics.collection.deferredFiles) 个文件，当前总额会偏低")
-                                .font(.system(size: 10)).foregroundStyle(.orange)
-                        }
                     }.padding(.top, 6)
                 } label: {
                     Text(detailsExpanded ? "收起明细" : "查看 Token 与会话明细")
@@ -167,17 +172,16 @@ struct StatsPage: View {
 
     @ViewBuilder private var sessionSummary: some View {
         if store.analytics.sessions.available {
-            let lowerBound = store.analytics.collection.complete ? "" : "≥ "
             VStack(spacing: 4) {
                 HStack {
-                    Label("活跃 \(lowerBound)\(Fmt.duration(store.analytics.sessions.totals.activeSeconds))", systemImage: "clock")
+                    Label("活跃 \(Fmt.duration(store.analytics.sessions.totals.activeSeconds))", systemImage: "clock")
                     Spacer()
-                    Text("墙钟 \(lowerBound)\(Fmt.duration(store.analytics.sessions.totals.durationSeconds))")
+                    Text("墙钟 \(Fmt.duration(store.analytics.sessions.totals.durationSeconds))")
                 }
                 HStack {
-                    Text("\(lowerBound)\(store.analytics.sessions.totals.sessions) 会话 · \(lowerBound)\(store.analytics.sessions.totals.messageCount) 消息")
+                    Text("\(store.analytics.sessions.totals.sessions) 会话 · \(store.analytics.sessions.totals.messageCount) 消息")
                     Spacer()
-                    Text("\(lowerBound)\(store.analytics.sessions.totals.userMessageCount) 条用户消息")
+                    Text("\(store.analytics.sessions.totals.userMessageCount) 条用户消息")
                 }
             }.font(.system(size: 10.5)).foregroundStyle(.secondary)
         } else {
@@ -186,11 +190,34 @@ struct StatsPage: View {
         }
     }
 
-    private func comparisonLabel(key: String, fallback: String) -> some View {
+    private var indexingProgress: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack {
+                Text("历史索引进度")
+                Spacer()
+                Text(store.analytics.collection.progress.map(Fmt.percent) ?? "处理中")
+                    .fontWeight(.semibold)
+            }
+            .font(.system(size: 10.5))
+            if let progress = store.analytics.collection.progress {
+                ProgressView(value: progress)
+                    .progressViewStyle(.linear)
+                    .tint(PanelTheme.accent)
+                    .accessibilityLabel("历史索引进度")
+                    .accessibilityValue(Fmt.percent(progress))
+            }
+            Text("当前显示已完成索引记录的准确值；索引完成后自动更新为区间总额")
+                .font(.system(size: 9.5))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 3)
+    }
+
+    private func comparisonLabel(key: String, fallback: String, partial: String) -> some View {
         Group {
             if store.analytics.collection.complete, let delta = store.analytics.comparison[key] {
                 Text("较上期 \(delta >= 0 ? "+" : "−")\(Fmt.percent(abs(delta)))")
-            } else { Text(fallback) }
+            } else { Text(store.analytics.collection.complete ? fallback : partial) }
         }.font(.system(size: 9.5)).foregroundStyle(.secondary)
     }
 
@@ -198,7 +225,7 @@ struct StatsPage: View {
         HStack {
             Text(label)
             Spacer()
-            Text((store.analytics.collection.complete ? "" : "≥ ") + Fmt.tokens(value))
+            Text(Fmt.tokens(value))
                 .fontDesign(.rounded)
         }
             .font(.system(size: 10.5))

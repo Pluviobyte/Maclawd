@@ -390,6 +390,19 @@ struct AnalyticsCollection: Equatable {
     var deferredFiles = 0
     var sources: [String: AnalyticsSourceStatus] = [:]
 
+    /// 文件级索引进度。它描述“多少日志文件已经进入统计”，不是对 Token
+    /// 总量的猜测，因此可以作为准确百分比展示。
+    var progress: Double? {
+        let total = sources.values.reduce(0) { $0 + $1.discoveredFiles }
+        guard total > 0 else { return nil }
+        let deferred = sources.values.reduce(0) { $0 + $1.deferredFiles }
+        let value = min(1, max(0, Double(total - deferred) / Double(total)))
+        // “未完成但没有待处理文件”通常表示来源发现失败，分母本身不完整。
+        // 这种情况下没有可信百分比，宁可显示“处理中”也不显示假的 100%。
+        if !complete && value >= 1 { return nil }
+        return value
+    }
+
     init() {}
     init(_ raw: Any?) {
         let d = raw as? [String: Any] ?? [:]

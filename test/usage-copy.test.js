@@ -37,7 +37,22 @@ test('部分空态不伪装成暂无数据，且不完整时隐藏比较并标�
   assert.match(analyticsSwift, /collection\.complete, let delta/);
   assert.match(panelSwift, /collectionComplete, let delta/);
   assert.match(usage, /lowerBound.*activeSeconds/s);
-  assert.match(analyticsSwift, /lowerBound.*activeSeconds/s);
+  assert.doesNotMatch(analyticsSwift, /lowerBound.*activeSeconds/s);
+});
+
+test('原生区间总览显示已统计的准确值和索引百分比，不使用大于等于号', () => {
+  const source = readFileSync(
+    new URL('../mac/Sources/Maclawd/AnalyticsView.swift', import.meta.url), 'utf8',
+  );
+  const headline = source.slice(
+    source.indexOf('private var headline'),
+    source.indexOf('private var trendCard'),
+  );
+  assert.match(headline, /当前已统计/);
+  assert.match(headline, /历史索引进度/);
+  assert.match(headline, /ProgressView\(value:/);
+  assert.match(headline, /准确值/);
+  assert.doesNotMatch(headline, /≥|lowerBound/);
 });
 
 test('原生概览用普通语言解释首次索引，不用数学符号要求用户猜', () => {

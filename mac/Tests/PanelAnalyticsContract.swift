@@ -50,8 +50,16 @@ struct PanelAnalyticsContract {
         precondition(snapshot.dimensions.projects == ["Maclawd"])
         precondition(snapshot.collection.complete == false)
         precondition(snapshot.collection.sources["codex"]?.deferredFiles == 3)
+        precondition(snapshot.collection.progress == 0.7)
         precondition(snapshot.records.items.first?.source == "codex")
         precondition(snapshot.records.nextCursor == "cursor-1")
+        let unknownProgress = AnalyticsCollection([
+            "complete": false,
+            "sources": ["codex": [
+                "discoveredFiles": 10, "deferredFiles": 0, "complete": false,
+            ]],
+        ])
+        precondition(unknownProgress.progress == nil)
         let unpriced = AnalyticsSnapshot.decode([
             "cost": ["estimated": NSNull(), "coverage": 0.0],
         ])
