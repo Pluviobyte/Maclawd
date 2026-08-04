@@ -54,7 +54,7 @@ enum PanelTheme {
      所以三段全部定高：台头、内容视口、页签栏。内容短就留白，
      内容长就在视口内滚。留白不好看，但面板乱跳是**不可用**。
      */
-    static let headerHeight: CGFloat = 152
+    static let headerHeight: CGFloat = 120
     static let contentHeight: CGFloat = 420
 }
 
@@ -116,7 +116,9 @@ struct PanelView: View {
                 motion: client.state.motion,
                 variant: client.state.variant
             )
-            .frame(width: 104, height: 104)
+            // SVG 的 45×45 viewBox 自带大量透明留白。104pt 画布会把顶部
+            // 撑成一整块空区域；76pt 仍能看清动作，同时让数据更快进入视线。
+            .frame(width: 76, height: 76)
             .allowsHitTesting(false)
 
             // 「它在干什么」——这一行比下面所有数字加起来都值钱，
