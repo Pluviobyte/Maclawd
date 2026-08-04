@@ -9,7 +9,7 @@ enum AnalyticsMetric: String, CaseIterable, Identifiable {
 }
 
 enum DistributionKind: String, CaseIterable, Identifiable {
-    case tools, models, projects
+    case tools, projects, models
     var id: String { rawValue }
     var title: String {
         switch self { case .tools: "工具"; case .models: "模型"; case .projects: "项目" }

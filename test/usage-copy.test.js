@@ -109,6 +109,13 @@ test('分布维度和数值选择器之间保留清晰间距，不插入竖线',
   assert.doesNotMatch(card, /Rectangle\(\)/);
 });
 
+test('分布维度按工具、项目、模型排列', () => {
+  const source = readFileSync(
+    new URL('../mac/Sources/Maclawd/AnalyticsView.swift', import.meta.url), 'utf8',
+  );
+  assert.match(source, /enum DistributionKind[\s\S]*case tools, projects, models/);
+});
+
 test('额度设置把 Claude HUD 兼容作为自动行为，不暴露接管和槽位术语', () => {
   const source = readFileSync(
     new URL('../mac/Sources/Maclawd/PanelSettings.swift', import.meta.url), 'utf8',
