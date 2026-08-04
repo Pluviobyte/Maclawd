@@ -76,6 +76,20 @@ cp -R "$REPO_ROOT/assets/codex-pet" "$RUNTIME/assets/"
 # 解析缓存与聚合数据是用户数据，绝不打进包里
 rm -rf "$RUNTIME/node_modules"
 
+# App 与 Node runtime 用内容指纹做版本握手。不能只用 package.json
+# 的语义版本：开发期间同一个 0.1.0 会重建很多次，而旧进程问题
+# 正是发生在这种“版本号没变、代码已变”的场景。
+RUNTIME_BUILD_ID="$(
+  (
+  cd "$RUNTIME"
+  find bin src hooks web -type f -print | LC_ALL=C sort | while IFS= read -r file; do
+    shasum -a 256 "$file"
+  done
+  shasum -a 256 package.json
+  ) | shasum -a 256 | awk '{print $1}'
+)"
+printf '{"protocolVersion":1,"buildId":"%s"}\n' "$RUNTIME_BUILD_ID" > "$RUNTIME/runtime-build.json"
+
 # 自包含的 Node 运行时。按架构分目录，应用在运行时挑自己那一份
 # （通用二进制里 #if arch 是按切片解析的，正好选对）。
 # 应用优先用随包的，找不到才回落到系统 node（开发时方便，分发时用不到）。

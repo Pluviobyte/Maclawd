@@ -21,6 +21,7 @@ process.env.MACLAWD_KIMI_CODE_DIR = join(root, 'empty-kimi');
 process.env.MACLAWD_KIMI_LEGACY_DIR = join(root, 'empty-kimi2');
 process.env.MACLAWD_QWEN_DIR = join(root, 'empty-qwen');
 process.env.MACLAWD_GROK_DIR = join(root, 'empty-grok');
+process.env.MACLAWD_RUNTIME_BUILD_ID = 'test-build';
 
 const { createUsageServer } = await import('../src/runtime/server.js');
 const { buildRollup } = await import('../src/runtime/rollup.js');
@@ -69,6 +70,17 @@ test('页面与静态资源可访问', async () => {
     assert.match(await res.text(), /Maclawd/);
   }
   assert.equal((await get('/src/animations/calm-calibration.svg')).status, 200);
+});
+
+test('/api/ping 暴露可校验的运行时身份与协议版本', async () => {
+  const ping = await json('/api/ping');
+  assert.equal(ping.maclawd, true);
+  assert.equal(ping.protocolVersion, 1);
+  assert.equal(ping.buildId, 'test-build');
+  assert.equal(ping.pid, process.pid);
+  assert.ok(Number.isInteger(ping.port) && ping.port > 0);
+  assert.match(ping.instanceId, /^[a-f0-9]{32}$/);
+  assert.ok(Number.isFinite(ping.startedAt) && ping.startedAt <= Date.now());
 });
 
 test('静态路径不得穿越出仓库', async () => {

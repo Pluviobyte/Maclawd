@@ -387,6 +387,10 @@ test('分发包必须是通用二进制——DMG 不允许出单架构', () => {
   assert.match(sh, /lipo -create/, '缺少 lipo 拼接，通用二进制无从产生');
   // 两个架构的 Node 也都要带：Swift 是通用的但运行时不是，一样起不来
   assert.match(sh, /vendor-node\.sh --all/, '通用包没有取两个架构的 Node 运行时');
+  assert.match(sh, /runtime-build\.json/,
+    '分发包没有生成运行时内容指纹，App 无法识别旧进程');
+  assert.match(sh, /shasum -a 256/,
+    '运行时构建 ID 不是内容指纹，同语义版本重建时会误复用');
 
   // 运行时选择必须按编译期切片，不能在运行时判断——
   // 通用二进制里 #if arch 是按切片解析的，每份跑起来自然挑到自己那个

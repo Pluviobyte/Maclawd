@@ -36,6 +36,9 @@ import { classify, createCoverage } from './coverage.js';
 import { clearEndpoint, writeEndpoint } from './endpoint.js';
 import { readLeases } from './session-lease.js';
 import { watchHooks } from './hook-health.js';
+import {
+  createRuntimeIdentity, managementTokenMatches, publicRuntimeIdentity,
+} from './runtime-identity.js';
 
 /**
  * 本地前端服务。零依赖，只绑 127.0.0.1。
@@ -384,7 +387,7 @@ function openProject(action, path) {
 
 // ---------- 服务 ----------
 
-export function createUsageServer({ collector = null } = {}) {
+export function createUsageServer({ collector = null, identity = createRuntimeIdentity() } = {}) {
   // 面板不该要求用户手动点刷新，所以服务端自带后台采集循环。
   const worker = collector ?? createCollector();
 
@@ -801,7 +804,30 @@ export function createUsageServer({ collector = null } = {}) {
       // 身份探针：端口被占时用来分辨「占位的是另一个 Maclawd」还是「别人」。
       // 刻意做成最轻的一条路由——它会被启动路径同步等待。
       if (pathname === '/api/ping') {
-        sendJson(res, 200, { maclawd: true, pid: process.pid, port: currentPort });
+        sendJson(res, 200, {
+          maclawd: true,
+          ...publicRuntimeIdentity(identity),
+          pid: process.pid,
+          port: currentPort,
+        });
+        return;
+      }
+
+      if (pathname === '/api/runtime/shutdown' && req.method === 'POST') {
+        const candidate = req.headers.authorization?.replace(/^Bearer\s+/i, '') ?? '';
+        if (!managementTokenMatches(identity, candidate)) {
+          sendJson(res, 403, { error: '管理令牌无效' });
+          return;
+        }
+        sendJson(res, 202, { accepted: true, instanceId: identity.instanceId });
+        setImmediate(() => {
+          clearEndpoint({ instanceId: identity.instanceId });
+          worker.stop?.();
+          for (const resolve of waiters) resolve();
+          waiters.clear();
+          server.close();
+          server.closeIdleConnections?.();
+        });
         return;
       }
 
@@ -998,7 +1024,7 @@ export function createUsageServer({ collector = null } = {}) {
     waiters.clear();
   });
 
-  return { server, worker };
+  return { server, worker, identity };
 }
 
 /** 端口被占时最多往后试几个。够覆盖「同机开了几个 Vite」，又不会无限游走。 */
@@ -1037,7 +1063,7 @@ async function probeMaclawd(port, timeoutMs = 400) {
  * 拿到端口后写端点文件，hook 与外壳靠它找到我们，谁都不用写死常量。
  */
 export function serve({ port = 4173, host = null, collector = null } = {}) {
-  const { server, worker } = createUsageServer({ collector });
+  const { server, worker, identity } = createUsageServer({ collector });
   // 只有显式开启局域网镜像才监听外部地址；否则严格绑回环。
   const bind = host ?? (loadSettings().lanMirror === true ? '0.0.0.0' : '127.0.0.1');
 
@@ -1078,10 +1104,10 @@ export function serve({ port = 4173, host = null, collector = null } = {}) {
     server.listen(port, bind, () => {
       server.removeListener('error', onError);
       const actual = server.address()?.port ?? port;
-      writeEndpoint({ port: actual });
+      writeEndpoint({ port: actual, identity });
       // 后台开始采集，页面打开即有数据。
       worker.start().catch(() => {});
-      resolvePromise({ server, worker, port: actual, host: bind });
+      resolvePromise({ server, worker, identity, port: actual, host: bind });
     });
   });
 }

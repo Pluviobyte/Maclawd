@@ -1,9 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  mkdtempSync, readFileSync, rmSync, statSync, writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer } from 'node:http';
+import { once } from 'node:events';
 
 /**
  * 端口发现与冲突回退。
@@ -30,10 +33,10 @@ function withDataDir(fn) {
 }
 
 /** 占住一个端口，返回它。 */
-function occupy() {
+function occupy(port = 0) {
   return new Promise((resolve) => {
     const s = createServer(() => {});
-    s.listen(0, '127.0.0.1', () => resolve({ server: s, port: s.address().port }));
+    s.listen(port, '127.0.0.1', () => resolve({ server: s, port: s.address().port }));
   });
 }
 
@@ -45,7 +48,7 @@ test('端点文件写进去能读回来', () => withDataDir(async () => {
   assert.equal(back.port, 4321);
   // 必须是完整 JSON——hook 可能正好在读，写了一半会让它拿到默认端口。
   const raw = JSON.parse(readFileSync(endpointPath(), 'utf8'));
-  assert.equal(raw.version, 1);
+  assert.equal(raw.version, 2);
 }));
 
 test('端点文件损坏时退回默认端口，不抛异常', () => withDataDir(async (dir) => {
@@ -84,7 +87,9 @@ test('MACLAWD_PORT 优先于端点文件', () => withDataDir(async () => {
 test('首选端口被别人占用时顺次往后找，不再崩溃', () => withDataDir(async () => {
   const { serve } = await import(`../src/runtime/server.js?case=fallback`);
   const { readEndpoint } = await import(`../src/runtime/endpoint.js?case=fallback`);
-  const blocker = await occupy();
+  // Node 会并行跑不同测试文件，而 macOS 分配的临时端口常连号。
+  // 用按进程分段的明确端口，避免恰好撞上另一个测试的 Maclawd。
+  const blocker = await occupy(20_000 + (process.pid % 1_000) * 20);
   try {
     const started = await serve({ port: blocker.port });
     try {
@@ -117,5 +122,40 @@ test('占位的是另一个 Maclawd 时拒绝启动第二份', () => withDataDir
   } finally {
     first.worker.stop?.();
     await new Promise((r) => first.server.close(r));
+  }
+}));
+
+test('只有持有端点管理令牌才能让当前运行时优雅退出', () => withDataDir(async () => {
+  const { serve } = await import(`../src/runtime/server.js?case=managed-shutdown`);
+  const { readEndpoint } = await import(`../src/runtime/endpoint.js?case=managed-shutdown`);
+  const started = await serve({ port: 0 });
+  const base = `http://127.0.0.1:${started.port}`;
+  try {
+    const endpoint = readEndpoint();
+    assert.match(endpoint.managementToken, /^[A-Za-z0-9_-]{40,}$/);
+    assert.equal(endpoint.instanceId, started.identity.instanceId);
+    assert.equal(statSync((await import('../src/runtime/endpoint.js')).endpointPath()).mode & 0o777, 0o600);
+
+    const publicPing = await (await fetch(`${base}/api/ping`)).json();
+    assert.equal('managementToken' in publicPing, false, '管理令牌不得出现在公开探针');
+
+    const denied = await fetch(`${base}/api/runtime/shutdown`, {
+      method: 'POST',
+      headers: { authorization: 'Bearer definitely-wrong' },
+    });
+    assert.equal(denied.status, 403);
+    assert.equal((await fetch(`${base}/api/ping`)).status, 200, '错误令牌不应影响服务');
+
+    const closed = once(started.server, 'close');
+    const accepted = await fetch(`${base}/api/runtime/shutdown`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${endpoint.managementToken}` },
+    });
+    assert.equal(accepted.status, 202);
+    assert.deepEqual(await accepted.json(), { accepted: true, instanceId: endpoint.instanceId });
+    await closed;
+  } finally {
+    started.worker.stop?.();
+    if (started.server.listening) await new Promise((r) => started.server.close(r));
   }
 }));

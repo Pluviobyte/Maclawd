@@ -476,9 +476,9 @@ async function runServe(args) {
     throw err;
   }
 
-  const { host, port } = started;
+  const { host, port, identity } = started;
   // 退出时把端点文件清掉，免得下一次启动的 hook 去连一个已经死了的端口。
-  const cleanup = () => { clearEndpoint(); };
+  const cleanup = () => { clearEndpoint({ instanceId: identity.instanceId }); };
   process.on('exit', cleanup);
 
   console.log(bold('Maclawd 本地面板'));

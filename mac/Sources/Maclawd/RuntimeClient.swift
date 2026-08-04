@@ -1,4 +1,5 @@
 import CoreGraphics
+import Darwin
 import Foundation
 
 /// 运行时状态快照，对应 Node 端 `/api/state` 的返回。
@@ -97,6 +98,9 @@ final class RuntimeClient: ObservableObject {
     private var streamBackoff: TimeInterval = 0
     private let session: URLSession
     private let repoRoot: URL
+    private var startupInProgress = false
+    private var runtimeReady = false
+    private let expectedProtocolVersion = 1
 
     // @Published 让 SwiftUI 面板直接观察同一份状态，不用再复制一套。
     // 全部赋值都收敛到主线程（见 refresh），此前它们是在 URLSession 的
@@ -205,7 +209,7 @@ final class RuntimeClient: ObservableObject {
     }
 
     func startRuntime() {
-        guard process == nil else { return }
+        guard process == nil, !startupInProgress, !runtimeReady else { return }
         guard let node = findNode() else {
             lastError = "未找到 node。Maclawd 的采集运行时需要 Node ≥ 20。"
             return
@@ -216,34 +220,75 @@ final class RuntimeClient: ObservableObject {
             return
         }
 
+        startupInProgress = true
+        guard let endpoint = readRuntimeEndpoint() else {
+            launchRuntime(node: node, script: script)
+            return
+        }
+        probeRuntime(endpoint: endpoint) { [weak self] ping in
+            guard let self else { return }
+            let legacyProcess = RuntimeProcessInspector.inspect(pid: endpoint.pid)
+            let decision = RuntimeStartupCoordinator.decide(
+                endpoint: endpoint,
+                ping: ping,
+                expectedProtocolVersion: self.expectedProtocolVersion,
+                expectedBuildId: self.expectedBuildId(),
+                endpointProcessAlive: self.processExists(endpoint.pid),
+                legacyProcess: legacyProcess,
+                expectedNodePath: node,
+                expectedScriptPath: script.path,
+                expectedPreferredPort: self.preferredPort
+            )
+            self.applyStartupDecision(decision, node: node, script: script)
+        }
+    }
+
+    private func launchRuntime(node: String, script: URL) {
+        startupInProgress = true
+
         let task = Process()
         task.executableURL = URL(fileURLWithPath: node)
         task.arguments = [script.path, "serve", String(preferredPort)]
         task.currentDirectoryURL = repoRoot
+        var environment = ProcessInfo.processInfo.environment
+        environment["MACLAWD_RUNTIME_BUILD_ID"] = expectedBuildId()
+        task.environment = environment
         if let log = openLogHandle() {
             task.standardOutput = log
             task.standardError = log
         }
         // 运行时自己会挑一个空闲端口并写进端点文件；退出码告诉我们它为什么没起来。
         task.terminationHandler = { [weak self] proc in
-            guard let self, proc.terminationStatus != 0 else { return }
-            let hint: String
-            switch proc.terminationStatus {
-            case 3: hint = "已有另一个 Maclawd 在运行"
-            case 4: hint = "端口全被占用"
-            default: hint = "退出码 \(proc.terminationStatus)"
-            }
+            guard let self else { return }
             DispatchQueue.main.async {
-                self.lastError = "采集运行时已退出（\(hint)）。详见 runtime.log"
+                MainActor.assumeIsolated {
+                    guard self.process === proc else { return }
+                    self.process = nil
+                    self.runtimeReady = false
+                    self.startupInProgress = false
+                    guard proc.terminationStatus != 0 else { return }
+                    let hint: String
+                    switch proc.terminationStatus {
+                    case 3: hint = "已有另一个 Maclawd 在运行"
+                    case 4: hint = "端口全被占用"
+                    default: hint = "退出码 \(proc.terminationStatus)"
+                    }
+                    self.lastError = "采集运行时已退出（\(hint)）。详见 runtime.log"
+                }
             }
         }
         do {
             try task.run()
             process = task
+            runtimeReady = true
+            startupInProgress = false
+            lastError = nil
             // 状态流跟着运行时一起起。头一两次必然连不上（node 还在启动），
             // 退避重连正是为这一段准备的——不需要在外面猜一个"等多久"。
             startStateStream()
         } catch {
+            startupInProgress = false
+            runtimeReady = false
             lastError = "启动运行时失败: \(error.localizedDescription)"
         }
     }
@@ -252,6 +297,168 @@ final class RuntimeClient: ObservableObject {
         stopStateStream()
         process?.terminate()
         process = nil
+        runtimeReady = false
+        startupInProgress = false
+    }
+
+    private func expectedBuildId() -> String {
+        let manifest = repoRoot.appendingPathComponent("runtime-build.json")
+        if let data = try? Data(contentsOf: manifest),
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let build = json["buildId"] as? String, !build.isEmpty {
+            return build
+        }
+        let package = repoRoot.appendingPathComponent("package.json")
+        if let data = try? Data(contentsOf: package),
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let version = json["version"] as? String {
+            return "dev-\(version)"
+        }
+        return "dev-unknown"
+    }
+
+    private func readRuntimeEndpoint() -> RuntimeEndpoint? {
+        let url = FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
+            .appendingPathComponent("Maclawd/runtime-endpoint.json")
+        guard let url,
+              let data = try? Data(contentsOf: url),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let port = (json["port"] as? NSNumber)?.intValue, port > 0,
+              let pid = (json["pid"] as? NSNumber)?.int32Value, pid > 1
+        else { return nil }
+        return RuntimeEndpoint(
+            port: port,
+            pid: pid,
+            protocolVersion: (json["protocolVersion"] as? NSNumber)?.intValue,
+            buildId: json["buildId"] as? String,
+            instanceId: json["instanceId"] as? String,
+            managementToken: json["managementToken"] as? String
+        )
+    }
+
+    private func processExists(_ pid: Int32) -> Bool {
+        guard pid > 1 else { return false }
+        if kill(pid, 0) == 0 { return true }
+        return errno == EPERM
+    }
+
+    private func probeRuntime(endpoint: RuntimeEndpoint, done: @escaping (RuntimePing?) -> Void) {
+        guard let url = URL(string: "http://127.0.0.1:\(endpoint.port)/api/ping") else {
+            done(nil); return
+        }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 1
+        session.dataTask(with: request) { data, _, _ in
+            let ping: RuntimePing? = data.flatMap { data in
+                guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                      json["maclawd"] as? Bool == true,
+                      let pid = (json["pid"] as? NSNumber)?.int32Value,
+                      let port = (json["port"] as? NSNumber)?.intValue
+                else { return nil }
+                return RuntimePing(
+                    pid: pid,
+                    port: port,
+                    protocolVersion: (json["protocolVersion"] as? NSNumber)?.intValue,
+                    buildId: json["buildId"] as? String,
+                    instanceId: json["instanceId"] as? String
+                )
+            }
+            DispatchQueue.main.async { MainActor.assumeIsolated { done(ping) } }
+        }.resume()
+    }
+
+    private func applyStartupDecision(_ decision: RuntimeStartupDecision, node: String, script: URL) {
+        switch decision {
+        case .launch:
+            launchRuntime(node: node, script: script)
+        case .reuse(let actualPort):
+            port = actualPort
+            runtimeReady = true
+            startupInProgress = false
+            lastError = nil
+            startStateStream()
+        case .replaceManaged(let oldPort, let pid, let instanceId, let token):
+            requestManagedShutdown(port: oldPort, instanceId: instanceId, token: token) { [weak self] accepted in
+                guard let self else { return }
+                guard accepted else {
+                    self.startupInProgress = false
+                    self.lastError = "旧运行时拒绝了已验证的替换请求，未强制终止。"
+                    return
+                }
+                self.waitForRuntimeExit(port: oldPort, pid: pid, node: node, script: script)
+            }
+        case .replaceLegacy(let oldPort, let pid):
+            guard kill(pid, SIGTERM) == 0 || errno == ESRCH else {
+                startupInProgress = false
+                lastError = "旧运行时身份已验证，但无法停止（errno \(errno)）。"
+                return
+            }
+            waitForRuntimeExit(port: oldPort, pid: pid, node: node, script: script)
+        case .untrusted(let reason):
+            startupInProgress = false
+            lastError = "发现无法安全接管的本地运行时：\(reason)。未终止该进程。"
+        }
+    }
+
+    private func requestManagedShutdown(
+        port: Int,
+        instanceId: String,
+        token: String,
+        done: @escaping (Bool) -> Void
+    ) {
+        guard let url = URL(string: "http://127.0.0.1:\(port)/api/runtime/shutdown") else {
+            done(false); return
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 2
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "authorization")
+        session.dataTask(with: request) { data, response, _ in
+            let status = (response as? HTTPURLResponse)?.statusCode
+            let returnedId = data.flatMap {
+                (try? JSONSerialization.jsonObject(with: $0) as? [String: Any])?["instanceId"] as? String
+            }
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated { done(status == 202 && returnedId == instanceId) }
+            }
+        }.resume()
+    }
+
+    private func waitForRuntimeExit(
+        port oldPort: Int,
+        pid: Int32,
+        node: String,
+        script: URL,
+        attemptsRemaining: Int = 30
+    ) {
+        let endpoint = RuntimeEndpoint(port: oldPort, pid: pid)
+        probeRuntime(endpoint: endpoint) { [weak self] ping in
+            guard let self else { return }
+            if ping == nil {
+                self.launchRuntime(node: node, script: script)
+                return
+            }
+            guard ping?.pid == pid else {
+                self.startupInProgress = false
+                self.lastError = "替换旧运行时时端口被另一个进程接管，已停止操作。"
+                return
+            }
+            guard attemptsRemaining > 0 else {
+                self.startupInProgress = false
+                self.lastError = "旧运行时在 3 秒内未退出，已停止替换。"
+                return
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                self.waitForRuntimeExit(
+                    port: oldPort,
+                    pid: pid,
+                    node: node,
+                    script: script,
+                    attemptsRemaining: attemptsRemaining - 1
+                )
+            }
+        }
     }
 
     // MARK: - 轮询
