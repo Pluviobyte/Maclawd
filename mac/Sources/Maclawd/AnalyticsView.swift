@@ -282,15 +282,10 @@ struct StatsPage: View {
     private var distributionCard: some View {
         SectionCard(title: "分布") {
             VStack(spacing: 8) {
-                HStack(spacing: 8) {
+                HStack(spacing: 16) {
                     Picker("维度", selection: $distribution) {
                         ForEach(DistributionKind.allCases) { Text($0.title).tag($0) }
                     }.pickerStyle(.segmented).labelsHidden()
-                    Rectangle()
-                        .fill(Color.secondary.opacity(0.28))
-                        .frame(width: 1, height: 18)
-                        .padding(.horizontal, 2)
-                        .accessibilityHidden(true)
                     Picker("值", selection: $distributionCost) {
                         Text("Token").tag(false); Text("估算费用").tag(true)
                     }.pickerStyle(.segmented).labelsHidden().frame(width: 112)

@@ -97,7 +97,7 @@ test('原生每日趋势在图表内显示悬浮读数，不叠加系统提示',
   assert.doesNotMatch(chart, /\.overlay\(/);
 });
 
-test('分布维度和数值选择器之间有明确的视觉分隔', () => {
+test('分布维度和数值选择器之间保留清晰间距，不插入竖线', () => {
   const source = readFileSync(
     new URL('../mac/Sources/Maclawd/AnalyticsView.swift', import.meta.url), 'utf8',
   );
@@ -105,8 +105,8 @@ test('分布维度和数值选择器之间有明确的视觉分隔', () => {
     source.indexOf('private var distributionCard'),
     source.indexOf('private var detailCard'),
   );
-  assert.match(card, /Rectangle\(\)[\s\S]*frame\(width: 1, height: 18\)/);
-  assert.match(card, /accessibilityHidden\(true\)/);
+  assert.match(card, /HStack\(spacing: 16\)/);
+  assert.doesNotMatch(card, /Rectangle\(\)/);
 });
 
 test('额度设置把 Claude HUD 兼容作为自动行为，不暴露接管和槽位术语', () => {
