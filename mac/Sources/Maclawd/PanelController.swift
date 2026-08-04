@@ -149,7 +149,10 @@ final class PanelController {
             let clickedOutside = MainActor.assumeIsolated { () -> Bool in
                 guard let self, self.popover.isShown else { return false }
                 // 面板自己窗口里的点击不算「点外面」
-                return event.window !== self.popover.contentViewController?.view.window
+                return !PanelWindowScope.contains(
+                    clicked: event.window,
+                    root: self.popover.contentViewController?.view.window
+                )
             }
             if clickedOutside {
                 MainActor.assumeIsolated { self?.close() }
