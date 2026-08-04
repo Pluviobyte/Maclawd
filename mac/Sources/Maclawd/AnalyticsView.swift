@@ -19,6 +19,7 @@ enum DistributionKind: String, CaseIterable, Identifiable {
 struct StatsPage: View {
     @ObservedObject var store: PanelStore
     let disabled: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var metric: AnalyticsMetric = .tokens
     @State private var distribution: DistributionKind = .tools
     @State private var distributionCost = false
@@ -148,7 +149,30 @@ struct StatsPage: View {
                 if !store.analytics.collection.complete {
                     indexingProgress
                 }
-                DisclosureGroup(isExpanded: $detailsExpanded) {
+                Button {
+                    withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) {
+                        detailsExpanded.toggle()
+                    }
+                } label: {
+                    HStack(spacing: 5) {
+                        Text(detailsExpanded ? "收起明细" : "查看 Token 与会话明细")
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 8.5, weight: .semibold))
+                            .rotationEffect(.degrees(detailsExpanded ? 90 : 0))
+                    }
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(detailsExpanded
+                                    ? "收起 Token 与会话明细"
+                                    : "查看 Token 与会话明细")
+                .accessibilityValue(detailsExpanded ? "已展开" : "已收起")
+
+                if detailsExpanded {
                     VStack(spacing: 5) {
                         metricRow("输入", store.analytics.totals.inputTokens)
                         metricRow("输出", store.analytics.totals.outputTokens)
@@ -161,10 +185,9 @@ struct StatsPage: View {
                                  + (store.analytics.cost.unpricedModels.isEmpty ? "" : " · 有未定价模型"))
                                 .font(.system(size: 10)).foregroundStyle(.orange)
                         }
-                    }.padding(.top, 6)
-                } label: {
-                    Text(detailsExpanded ? "收起明细" : "查看 Token 与会话明细")
-                        .font(.system(size: 10.5)).foregroundStyle(.secondary)
+                    }
+                    .padding(.top, 1)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
         }
