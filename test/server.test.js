@@ -1,6 +1,6 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -11,6 +11,8 @@ import { join } from 'node:path';
 
 const root = mkdtempSync(join(tmpdir(), 'maclawd-server-'));
 process.env.MACLAWD_DATA_DIR = join(root, 'data');
+const CLAUDE_SETTINGS = join(root, 'claude-settings.json');
+process.env.MACLAWD_CLAUDE_SETTINGS = CLAUDE_SETTINGS;
 // 不让测试碰到真实工具目录。
 process.env.MACLAWD_CLAUDE_DIRS = join(root, 'empty-claude');
 process.env.MACLAWD_CODEX_HOME = join(root, 'empty-codex');
@@ -153,6 +155,41 @@ test('/api/settings 只接受已知键，未知键被丢弃', async () => {
   // 默认值仍然在
   assert.equal(settings.recordUsage, true);
   assert.equal(settings.hookEnhancement, false, 'hook 增强必须默认关闭');
+});
+
+test('开启额度读取时自动兼容 Claude HUD，关闭后完整恢复', async () => {
+  const claudeHud = {
+    type: 'command',
+    command: 'bash -c \'exec "$HOME/.claude/plugins/cache/claude-hud/claude-hud/0.0.1/src/index.ts"\'',
+    padding: 0,
+  };
+  writeFileSync(CLAUDE_SETTINGS, `${JSON.stringify({ statusLine: claudeHud }, null, 2)}\n`);
+
+  const enabled = await post('/api/settings', { quotaStatusline: true });
+  assert.equal(enabled.settings.quotaStatusline, true);
+  assert.match(enabled.effects.join(' '), /Claude HUD|串联|兼容/);
+
+  const active = await json('/api/statusline');
+  assert.equal(active.state, 'chained');
+  assert.equal(active.foreignCommand, claudeHud.command);
+
+  const disabled = await post('/api/settings', { quotaStatusline: false });
+  assert.equal(disabled.settings.quotaStatusline, false);
+  assert.deepEqual(JSON.parse(readFileSync(CLAUDE_SETTINGS, 'utf-8')).statusLine, claudeHud);
+});
+
+test('设置开关不能借隐藏参数自动修改未知状态行', async () => {
+  const custom = { type: 'command', command: '/usr/local/bin/my-statusline' };
+  writeFileSync(CLAUDE_SETTINGS, `${JSON.stringify({ statusLine: custom }, null, 2)}\n`);
+
+  const result = await post('/api/settings', {
+    quotaStatusline: true,
+    chainExisting: true,
+  });
+
+  assert.equal(result.settings.quotaStatusline, false);
+  assert.equal(result.blocked, 'statusline');
+  assert.deepEqual(JSON.parse(readFileSync(CLAUDE_SETTINGS, 'utf-8')).statusLine, custom);
 });
 
 test('/api/open 拒绝未知动作与未知路径', async () => {

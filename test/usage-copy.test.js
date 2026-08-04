@@ -94,6 +94,20 @@ test('分布维度和数值选择器之间有明确的视觉分隔', () => {
   assert.match(card, /accessibilityHidden\(true\)/);
 });
 
+test('额度设置把 Claude HUD 兼容作为自动行为，不暴露接管和槽位术语', () => {
+  const source = readFileSync(
+    new URL('../mac/Sources/Maclawd/PanelSettings.swift', import.meta.url), 'utf8',
+  );
+  const quota = source.slice(
+    source.indexOf('// MARK: 订阅额度'),
+    source.indexOf('// MARK: 提醒'),
+  );
+  assert.match(quota, /自动兼容 Claude HUD/);
+  assert.match(quota, /保持它原有的显示/);
+  assert.match(quota, /保留原显示并读取额度/);
+  assert.doesNotMatch(quota, /接管并保留原有|状态行槽位|foreignBanner/);
+});
+
 test('网页从非空筛选切到空结果时清除上一轮统计', () => {
   const html = readFileSync(new URL('../web/usage.html', import.meta.url), 'utf8');
   const match = html.match(/function clearUsageData\(\)\{([\s\S]*?)\n\}/);

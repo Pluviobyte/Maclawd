@@ -15,7 +15,6 @@ struct SettingsPage: View {
     var onQuit: () -> Void
 
     @State private var statuslineBusy = false
-    @State private var statuslineNote: String?
     @State private var confirmingReset = false
     @State private var rescanNote: String?
     @State private var codexPetState: CodexPetInstallationState = .ready
@@ -75,35 +74,26 @@ struct SettingsPage: View {
             VStack(alignment: .leading, spacing: 10) {
                 SwitchRow(
                     title: "读取订阅额度",
-                    detail: "占用 ~/.claude/settings.json 的状态行槽位。"
-                          + "状态行**只有一个位置**——如果你已经配过，Maclawd 不会碰它。",
+                    detail: "开启后读取 Claude Code 的订阅额度；Maclawd 会自动兼容 Claude HUD，"
+                          + "保持它原有的显示。",
                     isOn: store.bool("quotaStatusline"),
                     enabled: !statuslineBusy
                 ) { want in
                     statuslineBusy = true
-                    statuslineNote = nil
-                    store.setSetting("quotaStatusline", want) { json in
+                    store.setSetting("quotaStatusline", want) { _ in
                         statuslineBusy = false
-                        if json?["blocked"] as? String == "statusline" {
-                            statuslineNote = "检测到你已经配置了状态行，Maclawd 没有覆盖它。"
-                        }
                         store.loadSettings()
                     }
                 }
 
-                // 槽位被占：不自作主张，把对方的命令摆出来让用户自己决定。
                 if store.quota.statusline == .foreign {
-                    foreignBanner
+                    customStatuslineNotice
                 }
                 if store.quota.statusline == .chained {
-                    Text("已接管，你原来的状态行仍在渲染")
+                    Text("已兼容 · 原有状态行继续正常显示")
                         .font(.system(size: 10.5))
                         .foregroundStyle(PanelTheme.accent)
                 }
-                if let note = statuslineNote {
-                    Text(note).font(.system(size: 10.5)).foregroundStyle(.orange)
-                }
-
                 // 这条盲区必须写在界面上，不能只写在文档里：
                 // 用户看到一个 3 小时没动的数字，第一反应是「坏了」。
                 Text("状态行只在交互式界面刷新。`claude -p`、CI 与后台任务同样消耗额度，"
@@ -115,26 +105,16 @@ struct SettingsPage: View {
         }
     }
 
-    private var foreignBanner: some View {
+    private var customStatuslineNotice: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("当前状态行是别的程序的：")
-                .font(.system(size: 10.5)).foregroundStyle(.secondary)
-            Text(store.quota.foreignCommand ?? "")
-                .font(.system(size: 9.5, design: .monospaced))
-                .lineLimit(2)
-                .truncationMode(.middle)
-                .padding(6)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: 5).fill(Color.secondary.opacity(0.1)))
-            Button {
+            Text("检测到自定义状态行，尚未修改它。确认兼容后，原有显示会继续保留。")
+                .font(.system(size: 10.5))
+                .foregroundStyle(.orange)
+            Button("保留原显示并读取额度") {
                 statuslineBusy = true
-                store.statuslineAction("chain") { _ in
-                    statuslineBusy = false
-                    statuslineNote = nil
-                }
-            } label: {
-                Text("接管并保留原有").font(.system(size: 11))
+                store.statuslineAction("chain") { _ in statuslineBusy = false }
             }
+            .font(.system(size: 11))
             .disabled(statuslineBusy)
         }
     }

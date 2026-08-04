@@ -9,7 +9,8 @@ import { join } from 'node:path';
  * hooks 往数组里追加一条谁也不影响，statusLine 占了就把用户原来的挤掉。
  *
  * 所以测试重点只有一个：**不越界**。
- * 用户没让我们接管就绝不接管；接管了必须能一字不差地还回去。
+ * 已验证的 Claude HUD 可以自动串联；未知对象没有确认就绝不修改。
+ * 串联之后必须能一字不差地还回去。
  */
 
 const root = mkdtempSync(join(tmpdir(), 'maclawd-sl-'));
@@ -38,6 +39,11 @@ const FOREIGN = {
   command: `bash -c 'plugin_dir=$(ls -d "\${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/plugins/cache/claude-hud/claude-hud/*/ 2>/dev/null | awk -F/ '"'"'{ print $(NF-1) "\\t" $(0) }'"'"' | sort -t. -k1,1n | tail -1 | cut -f2-); exec "/Users/rain/.bun/bin/bun" --env-file /dev/null "\${plugin_dir}src/index.ts"'`,
 };
 
+const UNKNOWN_STATUSLINE = {
+  type: 'command',
+  command: '/usr/local/bin/my-claude-hud-wrapper --compact',
+};
+
 beforeEach(() => {
   rmSync(SETTINGS, { force: true });
   rmSync(`${SETTINGS}.maclawd-backup`, { force: true });
@@ -62,6 +68,18 @@ test('被挡下时连备份文件都不该产生——我们根本没打算写',
   write({ statusLine: FOREIGN });
   installStatusline({ nodePath: '/usr/bin/node' });
   assert.equal(existsSync(`${SETTINGS}.maclawd-backup`), false);
+});
+
+test('自动兼容只认 Claude HUD，未知自定义状态行仍然不动', () => {
+  write({ statusLine: UNKNOWN_STATUSLINE, model: 'opus' });
+  const before = raw();
+
+  const result = installStatusline({ nodePath: '/usr/bin/node', autoChainKnown: true });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.blocked, true);
+  assert.equal(raw(), before);
+  assert.equal(existsSync(chainSidecarPath()), false);
 });
 
 test('空槽位 → 直接装', () => {

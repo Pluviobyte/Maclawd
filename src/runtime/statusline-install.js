@@ -18,8 +18,8 @@ import {
  * `settings.statusLine` 只有一个位置，占了就把用户原来的挤掉了。
  * 所以这里的规则比 hook-install.js 更严：
  *
- * 1. **发现不是自己的状态行，默认什么都不做。** 只有显式 `chainExisting`
- *    才接管。
+ * 1. **已验证的 Claude HUD 可以自动串联；未知状态行默认什么都不做。**
+ *    未知对象只有显式 `chainExisting` 才接管。
  * 2. **接管时把原对象原样存进 sidecar。** 不解析、不重写、不规范化。
  * 3. **sidecar 是文件，不是命令行参数。** 真实的状态行命令是任意引号的
  *    shell 单行——本机 claude-hud 那条就嵌套了三层引号
@@ -53,6 +53,12 @@ function isOurs(entry, script = statuslineScriptPath()) {
     && !Array.isArray(entry)
     && typeof entry.command === 'string'
     && entry.command.includes(script);
+}
+
+function isClaudeHud(entry) {
+  return typeof entry?.command === 'string'
+    && /(?:^|[/\\])plugins[/\\]cache[/\\]claude-hud[/\\]claude-hud(?:[/\\]|$)/i
+      .test(entry.command);
 }
 
 function ourEntry({ nodePath, script, chained }) {
@@ -101,7 +107,7 @@ function removeSidecar() {
  * - `none`     槽位空着，可以直接装
  * - `ours`     已经是我们的
  * - `chained`  是我们的，且身下压着用户原来的（sidecar 有内容）
- * - `foreign`  别人的状态行，**默认不动**
+ * - `foreign`  未知或尚未串联的状态行，**默认不动**
  */
 export function statuslineStatus() {
   const path = settingsPath();
@@ -142,14 +148,19 @@ export function statuslineStatus() {
  * @param {object}  opts
  * @param {string}  opts.nodePath        用哪个 node 跑脚本
  * @param {boolean} opts.chainExisting   槽位被别人占着时是否接管（默认 false）
+ * @param {boolean} opts.autoChainKnown  自动串联已知兼容状态行（当前为 Claude HUD）
  *
  * @returns {{ok: boolean, state: string, blocked?: boolean, path: string,
  *            chained: boolean, foreignCommand?: string}}
  *
- * `blocked: true` 表示**什么都没做**——槽位是别人的，而调用方没有明确
- * 要求接管。这不是错误，是规则 1。
+ * `blocked: true` 表示**什么都没做**——槽位里不是已知兼容对象，且调用方
+ * 没有明确要求接管。这不是错误，是规则 1。
  */
-export function installStatusline({ nodePath = process.execPath, chainExisting = false } = {}) {
+export function installStatusline({
+  nodePath = process.execPath,
+  chainExisting = false,
+  autoChainKnown = false,
+} = {}) {
   const path = settingsPath();
   const script = statuslineScriptPath();
   const settings = readSettings(path);
@@ -161,8 +172,10 @@ export function installStatusline({ nodePath = process.execPath, chainExisting =
     && typeof existing.command === 'string'
     && existing.command.trim()
     && !existingIsOurs;
+  const automaticallyCompatible = existingIsForeign && autoChainKnown && isClaudeHud(existing);
+  const shouldChain = chainExisting || automaticallyCompatible;
 
-  if (existingIsForeign && !chainExisting) {
+  if (existingIsForeign && !shouldChain) {
     // 规则 1：不问就不碰。连备份都不做——我们根本没打算写。
     return {
       ok: false,
@@ -177,7 +190,7 @@ export function installStatusline({ nodePath = process.execPath, chainExisting =
   backupOnce(path);
 
   let chained = false;
-  if (existingIsForeign && chainExisting) {
+  if (existingIsForeign && shouldChain) {
     // 规则 2：原样存。这里存的是**整个对象**，不只是 command——
     // 用户可能配了 padding 之类我们不认识的字段，还原时必须一起还回去。
     writeSidecar(existing);
@@ -196,6 +209,7 @@ export function installStatusline({ nodePath = process.execPath, chainExisting =
     state: chained ? 'chained' : 'ours',
     path,
     chained,
+    automaticallyCompatible,
     foreignCommand: chained ? readSidecar()?.command ?? null : null,
   };
 }

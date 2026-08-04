@@ -863,10 +863,12 @@ export function createUsageServer({ collector = null } = {}) {
             }
             if (next.quotaStatusline !== before.quotaStatusline) {
               if (next.quotaStatusline) {
-                // 槽位被别人占着时**默认不接管**。这里必须把开关拨回去，
-                // 否则界面显示「已开启」而实际什么都没装——那是在骗用户。
-                // 想接管要走 /api/statusline 的显式 chain 请求。
-                const r = installStatusline({ chainExisting: patch.chainExisting === true });
+                // Claude HUD 是已验证的兼容对象：用户只需表达「读取额度」，
+                // 串联细节由 Maclawd 自动处理。未知状态行仍保持原来的安全边界，
+                // 不经确认绝不修改。
+                const r = installStatusline({
+                  autoChainKnown: true,
+                });
                 if (r.blocked) {
                   saveSettings({ quotaStatusline: false });
                   sendJson(res, 200, {
@@ -877,7 +879,9 @@ export function createUsageServer({ collector = null } = {}) {
                   });
                   return;
                 }
-                effects.push(r.chained ? '已接管状态行并保留原有' : '已注册状态行');
+                effects.push(r.automaticallyCompatible
+                  ? '已与 Claude HUD 自动兼容'
+                  : (r.chained ? '已串联并保留原有状态行' : '已注册状态行'));
               } else {
                 const r = uninstallStatusline();
                 effects.push(r.removed
@@ -928,9 +932,8 @@ export function createUsageServer({ collector = null } = {}) {
       /**
        * 状态行通道的独立管理入口。
        *
-       * 和开关分开是因为「接管别人的状态行」必须是一次**显式**操作：
-       * 设置里那个开关只负责「装到空槽位」，撞上别人的就退回来并如实报告，
-       * 由用户看到对方的命令之后再决定要不要接管。
+       * 设置开关会自动兼容已验证的 Claude HUD。只有未知自定义状态行才需要
+       * 通过这里发出一次**显式**串联操作；普通设置请求没有绕过保护的参数。
        */
       if (pathname === '/api/statusline') {
         if (req.method === 'POST') {
