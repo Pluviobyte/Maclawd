@@ -14,6 +14,9 @@ const menuSource = readFileSync(
 const settingsSource = readFileSync(
   new URL('../mac/Sources/Maclawd/PanelSettings.swift', import.meta.url), 'utf8',
 );
+const alertSource = readFileSync(
+  new URL('../mac/Sources/Maclawd/QuotaAlertHUD.swift', import.meta.url), 'utf8',
+);
 
 test('订阅额度即使只有一个服务商也始终显示来源名称', () => {
   const block = panelSource.slice(
@@ -25,10 +28,20 @@ test('订阅额度即使只有一个服务商也始终显示来源名称', () =>
     '单一来源时也不能隐藏 Claude Code / Codex 标签');
 });
 
-test('菜单栏额度提示保留服务商，不再只显示裸周期和百分比', () => {
+test('面板、菜单栏与额度提醒统一展示剩余百分比', () => {
+  const row = panelSource.slice(
+    panelSource.indexOf('private struct QuotaRow'),
+    panelSource.indexOf('// MARK: - 小图形'),
+  );
   assert.match(runtimeSource, /struct QuotaBrief[\s\S]*sourceLabel: String\?/);
   assert.match(runtimeSource, /brief\.sourceLabel = tightest\?\.0\.label/);
-  assert.match(menuSource, /sourceLabel[\s\S]*windowLabel[\s\S]*已用/);
+  assert.match(row, /remainingPercent/);
+  assert.match(row, /剩余/);
+  assert.doesNotMatch(row, /显示\*\*已用\*\*|Text\([^\n]*已用/);
+  assert.match(menuSource, /remainingPercent/);
+  assert.match(menuSource, /sourceLabel[\s\S]*windowLabel[\s\S]*剩余/);
+  assert.match(alertSource, /剩余/);
+  assert.match(alertSource, /remainingPercent/);
 });
 
 test('额度主开关同时说明 Codex 与 Claude Code，不再冒充为 Claude 专用开关', () => {

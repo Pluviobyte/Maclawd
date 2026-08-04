@@ -28,12 +28,13 @@ enum QuotaAlertHUD {
     static func show(_ alerts: [QuotaAlert]) {
         guard let first = alerts.first else { return }
         let title = "\(first.sourceLabel) \(first.windowLabel)额度"
-        var body = "已用 \(Int(first.usedPercent))%"
+        let remainingPercent = max(0, min(100, 100 - first.usedPercent))
+        var body = "剩余 \(Int(remainingPercent.rounded()))%"
         if let until = Fmt.until(first.resetAt) { body += " · \(until)" }
         // 多个窗口同时越线时只弹一条，剩下的折成一句。
         // 连弹两三个浮窗比不提醒更烦。
         if alerts.count > 1 { body += "（另有 \(alerts.count - 1) 项）" }
-        present(title: title, body: body, warn: first.usedPercent >= 90)
+        present(title: title, body: body, warn: remainingPercent <= 10)
     }
 
     static func showTest() {

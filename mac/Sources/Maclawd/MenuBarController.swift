@@ -146,9 +146,8 @@ final class MenuBarController {
         case .liveRate:
             item.button?.title = " \(fmt(client.state.tokensPerMin))/min"
         case .quota:
-            // 显示**已用**，和 Claude Code 给的口径一致，不做翻转。
-            if let used = client.quota.usedPercent {
-                item.button?.title = " \(Int(used))%"
+            if let remaining = client.quota.remainingPercent {
+                item.button?.title = " \(Int(remaining.rounded()))%"
             } else {
                 // 通道没装、或还没等到第一次 API 响应。显示 0% 会是假的。
                 item.button?.title = " —"
@@ -171,8 +170,8 @@ final class MenuBarController {
         if !client.state.name.isEmpty { parts.append(client.state.name) }
         if let source = client.quota.sourceLabel,
            let label = client.quota.windowLabel,
-           let used = client.quota.usedPercent {
-            parts.append("\(source) · \(label) 已用 \(Int(used))%")
+           let remaining = client.quota.remainingPercent {
+            parts.append("\(source) · \(label) 剩余 \(Int(remaining.rounded()))%")
         }
         parts.append(client.state.actionId)
         return parts.joined(separator: " · ")

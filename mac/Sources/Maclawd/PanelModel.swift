@@ -29,6 +29,9 @@ struct QuotaWindow: Identifiable, Equatable {
 
     var isReset: Bool { state == "reset" }
     var isQuiet: Bool { state == "quiet" }
+    var remainingPercent: Double? {
+        usedPercent.map { max(0, min(100, 100 - $0)) }
+    }
 
     init?(_ raw: [String: Any]) {
         guard let id = raw["id"] as? String else { return nil }
@@ -44,6 +47,8 @@ struct QuotaWindow: Identifiable, Equatable {
 struct QuotaContext: Equatable {
     let usedPercent: Double
     let windowSize: Double?
+
+    var remainingPercent: Double { max(0, min(100, 100 - usedPercent)) }
 
     init?(_ raw: Any?) {
         guard let d = raw as? [String: Any], let used = d["usedPercent"] as? Double else { return nil }

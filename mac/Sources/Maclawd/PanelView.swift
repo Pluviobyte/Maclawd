@@ -321,7 +321,7 @@ private struct QuotaBlock: View {
                                 QuotaRow(window: window)
                             }
                             if let context = source.context {
-                                Text("上下文已用 \(Int(context.usedPercent))%"
+                                Text("上下文剩余 \(Int(context.remainingPercent.rounded()))%"
                                      + (context.windowSize.map { "（窗口 \(Int($0 / 1000))K）" } ?? ""))
                                     .font(.system(size: 10))
                                     .foregroundStyle(.secondary)
@@ -368,9 +368,9 @@ private struct QuotaRow: View {
     /// 健康档用角色主色而不是绿色：绿色是仪表盘语言，主色让这一条
     /// 看起来是「桌宠身边的东西」而不是一个通用监控部件。
     private var tint: Color {
-        guard let used = window.usedPercent else { return .secondary }
-        if used >= 90 { return .orange }
-        if used >= 70 { return PanelTheme.accent }
+        guard let remaining = window.remainingPercent else { return .secondary }
+        if remaining <= 10 { return .orange }
+        if remaining <= 30 { return PanelTheme.accent }
         return PanelTheme.body
     }
 
@@ -384,20 +384,22 @@ private struct QuotaRow: View {
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         Capsule().fill(Color.secondary.opacity(0.16))
-                        if let used = window.usedPercent {
+                        if let remaining = window.remainingPercent, remaining > 0 {
                             Capsule().fill(tint)
-                                .frame(width: max(2, geo.size.width * used / 100))
+                                .frame(width: max(2, geo.size.width * remaining / 100))
                         }
                     }
                 }
                 .frame(height: 6)
 
-                // 显示**已用**，和 Claude Code 给的口径一致（used_percentage），
-                // 不做翻转——条的填充方向和百分比方向一致，读不反。
-                Text(window.isReset ? "已重置" : "\(Int(window.usedPercent ?? 0))%")
+                // 官方返回 used_percentage；这里翻转为用户真正要决策的“还剩多少”。
+                // 进度条和文字都使用剩余值，避免方向相反。
+                Text(window.isReset
+                     ? "已重置"
+                     : "剩余 \(Int((window.remainingPercent ?? 0).rounded()))%")
                     .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .foregroundStyle(window.isReset ? Color.secondary : .primary)
-                    .frame(width: 42, alignment: .trailing)
+                    .frame(width: 68, alignment: .trailing)
             }
             HStack(spacing: 6) {
                 if let until = Fmt.until(window.resetAt), !window.isReset {

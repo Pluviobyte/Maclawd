@@ -71,6 +71,9 @@ struct QuotaBrief: Equatable {
     var sourceLabel: String?
     var windowLabel: String?
     var resetAt: Date?
+    var remainingPercent: Double? {
+        usedPercent.map { max(0, min(100, 100 - $0)) }
+    }
     /// 通道装没装。菜单栏据此决定「显示 —」还是干脆不显示这一档。
     var available: Bool = false
 }
