@@ -20,6 +20,9 @@ import { usageEnabled } from './settings.js';
 
 const DEFAULT_TAIL_MS = 1_000;
 const DEFAULT_SCAN_MS = 30 * 60 * 1000;
+// 冷建索引时每轮仍受 scan.js 的 20 秒预算保护，但不能因此停 30 分钟。
+// 留 5 秒让出 CPU / 磁盘，再从持久化断点继续。
+const DEFAULT_CATCH_UP_MS = 5_000;
 
 /** scan、daemon 与 CLI 必须用同一份采集完整度语义。 */
 export function collectionFromScan(result, scannedAt = new Date().toISOString()) {
@@ -36,6 +39,8 @@ export function collectionFromScan(result, scannedAt = new Date().toISOString())
 export function createCollector({
   tailIntervalMs = DEFAULT_TAIL_MS,
   scanIntervalMs = DEFAULT_SCAN_MS,
+  catchUpIntervalMs = DEFAULT_CATCH_UP_MS,
+  scan = scanAll,
   onScan = null,
   onTick = null,
   onError = null,
@@ -45,6 +50,7 @@ export function createCollector({
   let scanTimer = null;
   let scanning = false;
   let stopped = true;
+  let lifecycle = 0;
 
   const live = {
     tokensPerMin: 0,
@@ -56,15 +62,26 @@ export function createCollector({
   };
   let lastScan = null;
 
+  function scheduleScan(delayMs) {
+    if (stopped) return;
+    if (scanTimer) clearTimeout(scanTimer);
+    scanTimer = setTimeout(async () => {
+      scanTimer = null;
+      if (!stopped) await runScan();
+    }, delayMs);
+    scanTimer.unref?.();
+  }
+
   async function runScan({ force = false } = {}) {
     if (scanning) return null;
     if (!force && !usageEnabled()) {
       lastScan = { disabled: true, at: new Date().toISOString() };
+      scheduleScan(scanIntervalMs);
       return lastScan;
     }
     scanning = true;
     try {
-      const result = await scanAll({ ignoreSettings: force });
+      const result = await scan({ ignoreSettings: force });
       if (!result.disabled) {
         const collection = collectionFromScan(result);
         const rollup = buildRollup(
@@ -89,6 +106,9 @@ export function createCollector({
       return lastScan;
     } finally {
       scanning = false;
+      const hasBacklog = Boolean(lastScan?.indexing)
+        || (lastScan?.stats?.deferred ?? 0) > 0;
+      scheduleScan(hasBacklog ? catchUpIntervalMs : scanIntervalMs);
     }
   }
 
@@ -111,18 +131,20 @@ export function createCollector({
     async start({ scanNow = true } = {}) {
       if (!stopped) return;
       stopped = false;
+      const currentLifecycle = ++lifecycle;
       if (scanNow) await runScan();
+      else scheduleScan(scanIntervalMs);
+      if (stopped || currentLifecycle !== lifecycle) return;
       tailTimer = setInterval(() => { if (!stopped) tick(); }, tailIntervalMs);
-      scanTimer = setInterval(() => { if (!stopped) runScan(); }, scanIntervalMs);
       // 让定时器不阻止进程退出——CLI 与服务端各自决定生命周期。
       tailTimer.unref?.();
-      scanTimer.unref?.();
     },
 
     stop() {
       stopped = true;
+      lifecycle++;
       if (tailTimer) clearInterval(tailTimer);
-      if (scanTimer) clearInterval(scanTimer);
+      if (scanTimer) clearTimeout(scanTimer);
       tailTimer = null;
       scanTimer = null;
     },
