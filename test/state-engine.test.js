@@ -60,6 +60,22 @@ test('Claude 与 Codex 的同名 session 被隔离并可供会话面板读取', 
   assert.equal(sessions.find((s) => s.agentId === 'codex').pid, 202);
 });
 
+test('WorkBuddy 与其他 Agent 的同名 session 被隔离并保留来源', () => {
+  const e = engine();
+  e.observeEvent({ type: 'UserPromptSubmit', sessionId: 'same', agentId: 'workbuddy' }, SEC);
+  e.observeEvent({ type: 'PreToolUse', sessionId: 'same', agentId: 'claude-code', toolName: 'Read' }, 2 * SEC);
+  const sessions = e.sessions();
+  assert.deepEqual(sessions.map((s) => s.id).sort(), ['claude-code:same', 'workbuddy:same']);
+  assert.equal(sessions.find((s) => s.id === 'workbuddy:same').agentId, 'workbuddy');
+});
+
+test('WorkBuddy 普通通知也会提醒用户关注，但不伪装成权限请求', () => {
+  const e = engine();
+  e.observeEvent({ type: 'Notification', sessionId: 'wb', agentId: 'workbuddy' }, SEC);
+  assert.equal(e.current().actionId, 'needs_owner');
+  assert.equal(e.current().variant, 'unknown');
+});
+
 test('会话静默后退出活跃集，不会永远占着状态', () => {
   const e = engine({ sessionIdleMs: 10 * SEC });
   e.observeEvent({ type: 'Stop', sessionId: 'a' }, 1 * SEC);

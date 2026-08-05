@@ -1,4 +1,7 @@
-import { copyFileSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync, constants, copyFileSync, mkdirSync, readFileSync, renameSync, statSync,
+  writeFileSync,
+} from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -90,17 +93,21 @@ export function readSettings(path = settingsPath()) {
 export function writeSettings(path, value) {
   mkdirSync(dirname(path), { recursive: true });
   const temp = `${path}.maclawd.${process.pid}.tmp`;
-  writeFileSync(temp, `${JSON.stringify(value, null, 2)}\n`, 'utf-8');
+  let mode = 0o600;
+  try { mode = statSync(path).mode & 0o777; } catch { /* 新文件保持 0600。 */ }
+  writeFileSync(temp, `${JSON.stringify(value, null, 2)}\n`, { encoding: 'utf-8', mode });
+  // 同 pid 的异常退出可能留下旧临时文件；显式 chmod 才能保证复用时也正确。
+  chmodSync(temp, mode);
   renameSync(temp, path);
 }
 
 /** 首次修改前留一份备份。已存在就不覆盖——第一份才是「动手之前」的样子。 */
 export function backupOnce(path = settingsPath()) {
   try {
-    copyFileSync(path, `${path}${BACKUP_SUFFIX}`, 0);
+    copyFileSync(path, `${path}${BACKUP_SUFFIX}`, constants.COPYFILE_EXCL);
     return true;
   } catch {
-    // 原文件不存在、或备份已存在（copyFileSync 的 mode 0 表示不覆盖）
+    // 原文件不存在、或备份已存在（COPYFILE_EXCL 保证第一份不被覆盖）
     return false;
   }
 }

@@ -460,7 +460,7 @@ const SYNTHETIC_SESSIONS = new Set(['rate', 'shell']);
   function observeEvent(event, now = 0) {
     const { type, sessionId: externalId = 'default' } = event ?? {};
     if (!type) return;
-    const sourceAgent = event?.agentId === 'claude-code' || event?.agentId === 'codex';
+    const sourceAgent = ['claude-code', 'codex', 'workbuddy'].includes(event?.agentId);
     const sessionId = sourceAgent
       ? `${event.agentId}:${externalId}`
       : externalId;
@@ -595,6 +595,11 @@ const SYNTHETIC_SESSIONS = new Set(['rate', 'shell']);
         } else if (event.matcher === 'idle_prompt') {
           s.state = 'needs_owner';
           s.variant = 'question';
+        } else if (event.agentId === 'workbuddy') {
+          // WorkBuddy 的权限提示通过 Notification 到达，但部分版本不附带
+          // notification_type。只显示“需要关注”的未知变体，不把它伪装成已知权限。
+          s.state = 'needs_owner';
+          s.variant = 'unknown';
         }
         break;
       case 'PermissionResolved':

@@ -137,6 +137,14 @@ struct SettingsPage: View {
                           + "会向 ~/.claude/settings.json 添加 hooks，不覆盖已有配置，也不处理权限。",
                     isOn: store.bool("hookEnhancement")
                 ) { store.setSetting("hookEnhancement", $0) }
+
+                SwitchRow(
+                    title: "启用 WorkBuddy 事件增强",
+                    detail: "让 Maclawd 通过 WorkBuddy 的 Hooks 实时接收运行事件，让桌宠动作和状态判断更加精准。"
+                          + "会向 ~/.workbuddy-ai/settings.json 或 ~/.workbuddy/settings.json 添加 hooks，"
+                          + "不覆盖已有配置，也不处理权限。启用后请新开一个 WorkBuddy 会话。",
+                    isOn: store.bool("workBuddyHookEnhancement")
+                ) { store.setSetting("workBuddyHookEnhancement", $0) }
             }
         }
     }

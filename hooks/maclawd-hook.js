@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Maclawd 的 Claude Code hook 写入器。
+ * Maclawd 的 Claude Code / WorkBuddy hook 写入器。
  *
  * 用法（由 `maclawd-usage hook install` 写进 ~/.claude/settings.json）：
- *   node <repo>/hooks/maclawd-hook.js <EventName>
+ *   node <repo>/hooks/maclawd-hook.js <EventName> [--maclawd-source=workbuddy]
  *
  * 三条硬约束：
  *
@@ -28,6 +28,7 @@ import { loadSettings } from '../src/runtime/settings.js';
 
 const STDIN_TIMEOUT_MS = 800;
 const POST_TIMEOUT_MS = 700;
+const WORKBUDDY_POST_TIMEOUT_MS = 100;
 const MAX_STDIN_BYTES = 1 << 20; // 1 MiB，超过就只用已读到的部分
 
 function exitQuietly() {
@@ -72,11 +73,11 @@ function readStdin() {
  *
  * 白名单而非黑名单：新版本 Claude Code 往载荷里加什么字段都不会意外泄出去。
  */
-function buildEvent(eventName, payload) {
+function buildEvent(eventName, payload, sourceAgent = 'claude-code') {
   const event = {
     type: eventName,
     sessionId: typeof payload.session_id === 'string' ? payload.session_id : 'default',
-    agentId: 'claude-code',
+    agentId: sourceAgent,
     channel: 'hook',
   };
 
@@ -111,9 +112,9 @@ function buildEvent(eventName, payload) {
   return event;
 }
 
-async function post(port, body) {
+async function post(port, body, timeoutMs = POST_TIMEOUT_MS) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), POST_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   timer.unref?.();
   try {
     await fetch(`http://127.0.0.1:${port}/api/event`, {
@@ -155,6 +156,8 @@ async function enrich(eventName, payload, event) {
 async function main() {
   const eventName = process.argv[2];
   if (!eventName) exitQuietly();
+  const sourceAgent = process.argv[3] === '--maclawd-source=workbuddy'
+    ? 'workbuddy' : 'claude-code';
 
   // 端口来自运行时写的端点文件，不再写死——4173 撞上 Vite preview 的概率不低。
   const port = discoverPort();
@@ -170,6 +173,18 @@ async function main() {
     }
   }
 
+  // WorkBuddy 的 command hook 会解析 stdout 作为决策结果。状态通道必须立即
+  // 返回空对象，表示完全不介入它的原生工具与权限流程；空 stdout 会被记为错误。
+  if (sourceAgent === 'workbuddy') process.stdout.write('{}\n');
+
+  // 没有真实会话 id 的 WorkBuddy 事件无法归属。用 "default" 上报会造出一个
+  // 后续事件永远清不掉的幽灵会话，因此只回答 Hook，不进入 Maclawd。
+  if (sourceAgent === 'workbuddy') {
+    const sessionId = payload.session_id == null ? '' : String(payload.session_id).trim();
+    if (!sessionId) return;
+    payload.session_id = sessionId;
+  }
+
   // 开 agent 却没开桌宠是常态。只在会话开始时探一次——这条路要读设置、
   // 查端点文件，不该出现在每个 PreToolUse 上。
   if (eventName === 'SessionStart') {
@@ -180,13 +195,13 @@ async function main() {
     }
   }
 
-  const event = buildEvent(eventName, payload);
+  const event = buildEvent(eventName, payload, sourceAgent);
   await enrich(eventName, payload, event);
   // 租约先写、再 POST。顺序是刻意的：**写租约不依赖服务在线**，
   // 而这正是它存在的理由——桌宠没开的时候，这是唯一留下的痕迹。
   recordLease(eventName, event);
-  await post(port, event);
-  exitQuietly();
+  await post(port, event, sourceAgent === 'workbuddy' ? WORKBUDDY_POST_TIMEOUT_MS : POST_TIMEOUT_MS);
+  process.exitCode = 0;
 }
 
 /**
@@ -200,14 +215,16 @@ function recordLease(eventName, event) {
   try {
     // 会话结束了就把租约撤掉，别让下次启动复活一个已经没了的会话
     if (eventName === 'SessionEnd') {
-      dropLease(event.sessionId, 'claude-code');
+      dropLease(event.sessionId, event.agentId);
       return;
     }
     const state = LEASE_STATES[eventName] === 'byCommand'
       ? (event.commandClass ?? 'working')
       : LEASE_STATES[eventName];
     if (!state) return;
-    writeLease({ sessionId: event.sessionId, state, pid: event.pid, cwd: event.cwd, agentId: 'claude-code' });
+    writeLease({
+      sessionId: event.sessionId, state, pid: event.pid, cwd: event.cwd, agentId: event.agentId,
+    });
   } catch {
     // 租约是尽力而为：写不成也绝不能影响 agent
   }

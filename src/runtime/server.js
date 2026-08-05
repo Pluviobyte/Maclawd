@@ -24,7 +24,13 @@ import {
   installCodexHooks, uninstallCodexHooks,
   installCodexPermissionHook, uninstallCodexPermissionHook,
 } from './codex-hook-install.js';
+import {
+  installWorkBuddyHooks, uninstallWorkBuddyHooks,
+} from './workbuddy-hook-install.js';
 import { agentConnections, runAgentDoctor } from './agent-registry.js';
+import {
+  changeAgentIntegration, supportsAgentIntegration,
+} from './agent-integration-action.js';
 import { createCodexSessionMonitor } from './codex-session-monitor.js';
 import {
   installStatusline, uninstallStatusline, statuslineStatus,
@@ -700,28 +706,18 @@ export function createUsageServer({
         if (req.method === 'POST') {
           const { agentId, action } = JSON.parse((await readBody(req)) || '{}');
           if (!['install', 'repair', 'uninstall'].includes(action)
-            || !['claude-code', 'codex'].includes(agentId)) {
+            || !supportsAgentIntegration(agentId)) {
             sendJson(res, 400, { error: '未知 Agent 或操作' });
             return;
           }
-          if (agentId === 'claude-code') {
-            if (action === 'uninstall') {
-              uninstallHooks();
-              uninstallPermissionHook();
-            } else {
-              installHooks();
-              if (loadSettings().permissionBubble) installPermissionHook({ port: currentPort });
-            }
-            saveSettings({ hookEnhancement: action !== 'uninstall' });
-          } else {
-            if (action === 'uninstall') {
-              uninstallCodexHooks();
-              uninstallCodexPermissionHook();
-            } else {
-              installCodexHooks();
-              if (loadSettings().permissionBubble) installCodexPermissionHook();
-            }
-            saveSettings({ codexHookEnhancement: action !== 'uninstall' });
+          try {
+            changeAgentIntegration(agentId, action, { port: currentPort });
+          } catch (error) {
+            const current = loadSettings();
+            sendJson(res, 200, {
+              agents: agentConnections(), doctor: runAgentDoctor(current), error: error.message,
+            });
+            return;
           }
         }
         const current = loadSettings();
@@ -971,6 +967,15 @@ export function createUsageServer({
                 effects.push(`已移除 ${r.existing.length} 个 Codex 状态事件`);
               }
             }
+            if (next.workBuddyHookEnhancement !== before.workBuddyHookEnhancement) {
+              if (next.workBuddyHookEnhancement) {
+                const r = installWorkBuddyHooks();
+                effects.push(`已安装 ${r.installed.length + r.alreadyInstalled.length} 个 WorkBuddy 状态事件`);
+              } else {
+                const r = uninstallWorkBuddyHooks();
+                effects.push(`已移除 ${r.removed.length} 个 WorkBuddy 状态事件`);
+              }
+            }
             if (next.permissionBubble !== before.permissionBubble) {
               if (next.permissionBubble) {
                 installPermissionHook({ port: currentPort });
@@ -1048,6 +1053,8 @@ export function createUsageServer({
             try {
               if (before.hookEnhancement) installHooks(); else uninstallHooks();
               if (before.codexHookEnhancement) installCodexHooks(); else uninstallCodexHooks();
+              if (before.workBuddyHookEnhancement) installWorkBuddyHooks();
+              else uninstallWorkBuddyHooks();
               if (before.permissionBubble) {
                 installPermissionHook({ port: currentPort });
                 installCodexPermissionHook();

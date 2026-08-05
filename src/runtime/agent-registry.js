@@ -2,15 +2,19 @@ import { existsSync } from 'node:fs';
 import { parsers, VERIFIED_SOURCES } from './parsers/index.js';
 import { hookStatus, permissionHookStatus } from './hook-install.js';
 import { codexHookStatus } from './codex-hook-install.js';
+import { workBuddyHookStatus } from './workbuddy-hook-install.js';
 
-const REALTIME = new Set(['claude-code', 'codex']);
+const REALTIME = new Set(['claude-code', 'codex', 'workbuddy']);
 
 export function agentConnections() {
   const claude = hookStatus();
   const codex = codexHookStatus();
+  const workBuddy = workBuddyHookStatus();
   return parsers.map((parser) => {
     const realtime = REALTIME.has(parser.id);
-    const status = parser.id === 'claude-code' ? claude : parser.id === 'codex' ? codex : null;
+    const status = parser.id === 'claude-code' ? claude
+      : parser.id === 'codex' ? codex
+        : parser.id === 'workbuddy' ? workBuddy : null;
     const ready = status ? status.missing.length === 0 : false;
     return {
       id: parser.id,
@@ -20,15 +24,16 @@ export function agentConnections() {
       capabilities: {
         usage: true,
         realtime,
-        permissions: realtime,
+        permissions: realtime && parser.id !== 'workbuddy',
         terminalFocus: realtime,
-        quota: realtime,
+        // Hooks 只证明实时状态能力；WorkBuddy 积分属于另一条本地数据通道。
+        quota: parser.id === 'claude-code' || parser.id === 'codex',
       },
       integration: realtime ? {
         status: ready ? 'connected' : status.installed?.length ? 'partial' : 'available',
         installedEvents: status.installed?.length ?? 0,
         missingEvents: status.missing?.length ?? 0,
-        permissionInstalled: parser.id === 'claude-code'
+        permissionInstalled: parser.id === 'workbuddy' ? false : parser.id === 'claude-code'
           ? permissionHookStatus().installed
           : status.permissionInstalled,
         trustReviewRequired: status.trustReviewRequired === true,
@@ -42,7 +47,9 @@ export function runAgentDoctor(settings = {}) {
   const agents = agentConnections().filter((a) => a.capabilities.realtime);
   const checks = [];
   for (const agent of agents) {
-    const expected = agent.id === 'codex' ? settings.codexHookEnhancement : settings.hookEnhancement;
+    const expected = agent.id === 'codex' ? settings.codexHookEnhancement
+      : agent.id === 'workbuddy' ? settings.workBuddyHookEnhancement
+        : settings.hookEnhancement;
     checks.push({
       id: `${agent.id}:realtime`,
       agentId: agent.id,
@@ -52,7 +59,7 @@ export function runAgentDoctor(settings = {}) {
         ? '已连接' : `缺少 ${agent.integration.missingEvents} 个 hook`,
       repairable: expected && agent.integration.status !== 'connected',
     });
-    if (settings.permissionBubble === true) {
+    if (settings.permissionBubble === true && agent.capabilities.permissions) {
       checks.push({
         id: `${agent.id}:permission`, agentId: agent.id, label: `${agent.label} 权限卡片`,
         level: agent.integration.permissionInstalled ? 'ok' : 'warning',

@@ -17,6 +17,7 @@ process.env.MACLAWD_CLAUDE_SETTINGS = CLAUDE_SETTINGS;
 process.env.MACLAWD_CLAUDE_DIRS = join(root, 'empty-claude');
 process.env.MACLAWD_CODEX_HOME = join(root, 'empty-codex');
 process.env.MACLAWD_WORKBUDDY_DIR = join(root, 'empty-wb');
+process.env.MACLAWD_WORKBUDDY_SETTINGS = join(root, 'workbuddy-settings.json');
 process.env.MACLAWD_KIMI_CODE_DIR = join(root, 'empty-kimi');
 process.env.MACLAWD_KIMI_LEGACY_DIR = join(root, 'empty-kimi2');
 process.env.MACLAWD_QWEN_DIR = join(root, 'empty-qwen');
@@ -204,6 +205,22 @@ test('/api/settings 只接受已知键，未知键被丢弃', async () => {
   // 默认值仍然在
   assert.equal(settings.recordUsage, true);
   assert.equal(settings.hookEnhancement, false, 'hook 增强必须默认关闭');
+  assert.equal(settings.workBuddyHookEnhancement, false, 'WorkBuddy hook 增强必须默认关闭');
+});
+
+test('WorkBuddy 设置开关会真正安装和卸载状态 Hooks', async () => {
+  const enabled = await post('/api/settings', { workBuddyHookEnhancement: true });
+  assert.equal(enabled.settings.workBuddyHookEnhancement, true);
+  assert.match(enabled.effects.join(' '), /WorkBuddy 状态事件/);
+  const active = JSON.parse(readFileSync(process.env.MACLAWD_WORKBUDDY_SETTINGS, 'utf8'));
+  assert.ok(active.hooks.PreToolUse.some((group) =>
+    group.hooks?.some((hook) => hook.command?.endsWith('PreToolUse --maclawd-source=workbuddy'))));
+  assert.equal(Object.hasOwn(active.hooks, 'PermissionRequest'), false);
+
+  const disabled = await post('/api/settings', { workBuddyHookEnhancement: false });
+  assert.equal(disabled.settings.workBuddyHookEnhancement, false);
+  const cleaned = JSON.parse(readFileSync(process.env.MACLAWD_WORKBUDDY_SETTINGS, 'utf8'));
+  assert.equal(Object.hasOwn(cleaned, 'hooks'), false);
 });
 
 test('开启额度读取时自动兼容 Claude HUD，关闭后完整恢复', async () => {
