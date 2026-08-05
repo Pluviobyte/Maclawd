@@ -50,6 +50,16 @@ test('同优先级取最近事件的会话', () => {
   assert.equal(e.current().actionId, 'working.testing');
 });
 
+test('Claude 与 Codex 的同名 session 被隔离并可供会话面板读取', () => {
+  const e = engine();
+  e.observeEvent({ type: 'PreToolUse', sessionId: 'same', agentId: 'claude-code', toolName: 'Read', pid: 101, cwd: '/tmp/a' }, SEC);
+  e.observeEvent({ type: 'PreToolUse', sessionId: 'same', agentId: 'codex', toolName: 'Read', pid: 202, cwd: '/tmp/b' }, 2 * SEC);
+  const sessions = e.sessions();
+  assert.equal(sessions.length, 2);
+  assert.deepEqual(sessions.map((s) => s.id).sort(), ['claude-code:same', 'codex:same']);
+  assert.equal(sessions.find((s) => s.agentId === 'codex').pid, 202);
+});
+
 test('会话静默后退出活跃集，不会永远占着状态', () => {
   const e = engine({ sessionIdleMs: 10 * SEC });
   e.observeEvent({ type: 'Stop', sessionId: 'a' }, 1 * SEC);
@@ -136,6 +146,13 @@ test('权限被批准后插播 owner_resolved，闭合 needs_owner 的故事', (
 test('没有待批准权限时不插播 owner_resolved', () => {
   const e = engine();
   e.observeEvent({ type: 'PermissionResolved', sessionId: 's' }, SEC);
+  assert.equal(e.current().actionId, 'working');
+});
+
+test('权限卡超时只解除等待，不播放已批准反馈', () => {
+  const e = engine();
+  e.observeEvent({ type: 'PermissionRequest', sessionId: 's' }, SEC);
+  e.observeEvent({ type: 'PermissionResolved', sessionId: 's', resolution: 'timeout' }, 2 * SEC);
   assert.equal(e.current().actionId, 'working');
 });
 

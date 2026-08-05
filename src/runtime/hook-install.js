@@ -251,7 +251,7 @@ export function hookStatus() {
 function permissionEntry(port) {
   return {
     type: 'http',
-    url: `http://127.0.0.1:${port}${PERMISSION_PATH}`,
+    url: `http://127.0.0.1:${port}${PERMISSION_PATH}?agent=claude-code`,
     timeout: PERMISSION_TIMEOUT_S,
   };
 }

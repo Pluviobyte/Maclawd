@@ -516,12 +516,89 @@ struct AnalyticsSnapshot: Equatable {
 
 // MARK: - Store
 
+struct LiveAgentSession: Identifiable {
+    let id: String
+    let agentLabel: String
+    let stateLabel: String
+    let project: String
+    let pid: Int32?
+    let stateSince: Date
+    let subagents: Int
+    let winner: Bool
+
+    init?(_ json: [String: Any]) {
+        guard let id = json["id"] as? String else { return nil }
+        self.id = id
+        agentLabel = json["agentLabel"] as? String ?? "Agent"
+        stateLabel = json["stateLabel"] as? String ?? (json["state"] as? String ?? "运行中")
+        project = json["project"] as? String ?? ""
+        pid = (json["pid"] as? NSNumber).map { Int32($0.intValue) }
+        stateSince = Date(timeIntervalSince1970: ((json["stateSince"] as? NSNumber)?.doubleValue ?? 0) / 1000)
+        subagents = (json["subagents"] as? NSNumber)?.intValue ?? 0
+        winner = json["winner"] as? Bool ?? false
+    }
+}
+
+struct AgentConnection: Identifiable {
+    let id: String
+    let label: String
+    let status: String
+    let realtime: Bool
+    let installed: Bool
+    let permissions: Bool
+    let quota: Bool
+    let terminalFocus: Bool
+    let verified: Bool
+    let missingEvents: Int
+    let trustReviewRequired: Bool
+
+    init?(_ json: [String: Any]) {
+        guard let id = json["id"] as? String else { return nil }
+        self.id = id
+        label = json["label"] as? String ?? id
+        verified = json["verified"] as? Bool ?? false
+        installed = json["installed"] as? Bool ?? false
+        let capabilities = json["capabilities"] as? [String: Any] ?? [:]
+        realtime = capabilities["realtime"] as? Bool ?? false
+        permissions = capabilities["permissions"] as? Bool ?? false
+        quota = capabilities["quota"] as? Bool ?? false
+        terminalFocus = capabilities["terminalFocus"] as? Bool ?? false
+        let integration = json["integration"] as? [String: Any] ?? [:]
+        status = integration["status"] as? String ?? "usage-only"
+        missingEvents = (integration["missingEvents"] as? NSNumber)?.intValue ?? 0
+        trustReviewRequired = integration["trustReviewRequired"] as? Bool ?? false
+    }
+}
+
+struct AgentDoctorCheck: Identifiable {
+    let id: String
+    let agentId: String
+    let label: String
+    let message: String
+    let level: String
+    let repairable: Bool
+
+    init?(_ json: [String: Any]) {
+        guard let id = json["id"] as? String else { return nil }
+        self.id = id
+        agentId = json["agentId"] as? String ?? ""
+        label = json["label"] as? String ?? id
+        message = json["message"] as? String ?? ""
+        level = json["level"] as? String ?? "info"
+        repairable = json["repairable"] as? Bool ?? false
+    }
+}
+
 @MainActor
 final class PanelStore: ObservableObject {
     @Published private(set) var summary = PanelSummary()
     @Published private(set) var analytics = AnalyticsSnapshot()
     @Published private(set) var quota = QuotaSnapshot()
     @Published private(set) var settings: [String: Any] = [:]
+    @Published private(set) var liveSessions: [LiveAgentSession] = []
+    @Published private(set) var agentConnections: [AgentConnection] = []
+    @Published private(set) var doctorSummary: String = "检查中…"
+    @Published private(set) var doctorChecks: [AgentDoctorCheck] = []
     @Published private(set) var loading = false
     @Published private(set) var lastError: String?
     /// 保留 `range` 这个名字给面板探针；它现在只控制统计页，概览始终是今天。
@@ -600,6 +677,11 @@ final class PanelStore: ObservableObject {
                 workBuddyInstalled: WorkBuddyInstallationDetector.isInstalled()
             )
         }
+        get("/api/sessions") { [weak self] json in
+            guard let self else { return }
+            self.liveSessions = (json?["sessions"] as? [[String: Any]] ?? []).compactMap(LiveAgentSession.init)
+        }
+        refreshAgents()
     }
 
     func applyAnalyticsFilters(source: String?, model: String?, project: String?) {
@@ -731,6 +813,24 @@ final class PanelStore: ObservableObject {
     func loadSettings() {
         get("/api/settings") { [weak self] json in
             if let s = json?["settings"] as? [String: Any] { self?.settings = s }
+        }
+    }
+
+    func refreshAgents() {
+        get("/api/agents") { [weak self] json in
+            guard let self else { return }
+            self.agentConnections = (json?["agents"] as? [[String: Any]] ?? []).compactMap(AgentConnection.init)
+            let doctor = json?["doctor"] as? [String: Any]
+            self.doctorSummary = doctor?["summary"] as? String ?? "暂不可用"
+            self.doctorChecks = (doctor?["checks"] as? [[String: Any]] ?? []).compactMap(AgentDoctorCheck.init)
+        }
+    }
+
+    func agentAction(_ agentId: String, _ action: String) {
+        post("/api/agents", body: ["agentId": agentId, "action": action]) { [weak self] json in
+            self?.agentConnections = (json?["agents"] as? [[String: Any]] ?? []).compactMap(AgentConnection.init)
+            self?.loadSettings()
+            self?.refreshAgents()
         }
     }
 

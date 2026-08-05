@@ -17,6 +17,8 @@ export const DEFAULTS = {
   petEnergy: true,
   // A 层：Claude Code hooks。要写 ~/.claude/settings.json，默认关。
   hookEnhancement: false,
+  // Codex 官方 command hooks。单独授权，因为它写的是 ~/.codex/hooks.json。
+  codexHookEnhancement: false,
   // A 层，但**必须与 hookEnhancement 分开**：hooks 是按事件分组的数组，
   // 往里加一条谁也不影响；statusLine 是**单槽位**，占了就把用户原来的挤掉。
   // 用户完全可能愿意加 hooks 却不愿意让出状态行，那是两个独立的信任决定。

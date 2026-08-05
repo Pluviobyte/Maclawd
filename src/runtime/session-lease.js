@@ -59,8 +59,9 @@ export function leaseDir() {
 }
 
 /** 会话 id → 文件名。只允许安全字符，其余一律编码——它要用作路径。 */
-function leaseFile(sessionId) {
-  const safe = String(sessionId).replace(/[^A-Za-z0-9_-]/g, (c) =>
+function leaseFile(sessionId, agentId = null) {
+  const scoped = agentId ? `${agentId}:${sessionId}` : sessionId;
+  const safe = String(scoped).replace(/[^A-Za-z0-9_-]/g, (c) =>
     `_${c.charCodeAt(0).toString(16)}`);
   return join(leaseDir(), `${safe.slice(0, 120)}.json`);
 }
@@ -86,12 +87,14 @@ function processIdentity(pid) {
 
 /** 写一份租约。任何失败都必须静默——它跑在 hook 里。 */
 export function writeLease({
-  sessionId, state, pid = null, cwd = null, now = Date.now(), ttlMs = LEASE_TTL_MS,
+  sessionId, state, pid = null, cwd = null, agentId = null,
+  now = Date.now(), ttlMs = LEASE_TTL_MS,
 } = {}) {
   if (!sessionId || !SUSTAINED.has(state)) return null;
   const record = {
     version: LEASE_VERSION,
     sessionId: String(sessionId),
+    agentId: typeof agentId === 'string' ? agentId : null,
     state,
     at: now,
     validUntil: now + ttlMs,
@@ -105,7 +108,7 @@ export function writeLease({
   if (body.length > MAX_LEASE_BYTES) return null;
   try {
     mkdirSync(leaseDir(), { recursive: true });
-    const target = leaseFile(sessionId);
+    const target = leaseFile(sessionId, agentId);
     const tmp = `${target}.${process.pid}.tmp`;
     writeFileSync(tmp, body, 'utf8');
     renameSync(tmp, target);
@@ -116,10 +119,10 @@ export function writeLease({
 }
 
 /** 一个会话结束了，租约立刻作废。留着它会让下次启动复活一个已经没了的会话。 */
-export function dropLease(sessionId) {
+export function dropLease(sessionId, agentId = null) {
   if (!sessionId) return;
   try {
-    rmSync(leaseFile(sessionId), { force: true });
+    rmSync(leaseFile(sessionId, agentId), { force: true });
   } catch {
     // 删不掉也没关系：validUntil 与进程身份检查会兜住
   }

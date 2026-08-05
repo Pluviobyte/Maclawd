@@ -76,6 +76,8 @@ function buildEvent(eventName, payload) {
   const event = {
     type: eventName,
     sessionId: typeof payload.session_id === 'string' ? payload.session_id : 'default',
+    agentId: 'claude-code',
+    channel: 'hook',
   };
 
   const toolName = payload.tool_name;
@@ -87,7 +89,7 @@ function buildEvent(eventName, payload) {
     event.commandClass = classifyCommand(command);
   }
 
-  if (typeof payload.agent_id === 'string') event.agentId = payload.agent_id;
+  if (typeof payload.agent_id === 'string') event.subagentId = payload.agent_id;
   if (typeof payload.agent_type === 'string') event.agentType = payload.agent_type;
 
   // **谁发起的这次请求。** 有了它，桌宠才能从「提醒你有事」变成「点我带你过去」——
@@ -198,14 +200,14 @@ function recordLease(eventName, event) {
   try {
     // 会话结束了就把租约撤掉，别让下次启动复活一个已经没了的会话
     if (eventName === 'SessionEnd') {
-      dropLease(event.sessionId);
+      dropLease(event.sessionId, 'claude-code');
       return;
     }
     const state = LEASE_STATES[eventName] === 'byCommand'
       ? (event.commandClass ?? 'working')
       : LEASE_STATES[eventName];
     if (!state) return;
-    writeLease({ sessionId: event.sessionId, state, pid: event.pid, cwd: event.cwd });
+    writeLease({ sessionId: event.sessionId, state, pid: event.pid, cwd: event.cwd, agentId: 'claude-code' });
   } catch {
     // 租约是尽力而为：写不成也绝不能影响 agent
   }

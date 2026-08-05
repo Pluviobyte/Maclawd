@@ -15,11 +15,12 @@ import SwiftUI
  */
 
 enum PanelTab: String, CaseIterable, Identifiable {
-    case overview, stats, settings
+    case overview, sessions, stats, settings
     var id: String { rawValue }
     var title: String {
         switch self {
         case .overview: return "概览"
+        case .sessions: return "会话"
         case .stats: return "统计"
         case .settings: return "设置"
         }
@@ -81,6 +82,7 @@ struct PanelView: View {
                 Group {
                     switch tab {
                     case .overview: OverviewPage(client: client, store: store)
+                    case .sessions: SessionsPage(store: store)
                     case .stats: StatsPage(store: store, disabled: client.state.disabled)
                     case .settings:
                         SettingsPage(
@@ -158,6 +160,66 @@ struct PanelView: View {
                 .buttonStyle(.plain)
             }
         }
+    }
+}
+
+// MARK: - 实时会话
+
+private struct SessionsPage: View {
+    @ObservedObject var store: PanelStore
+    @State private var now = Date()
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("实时会话").font(.system(size: 13, weight: .semibold))
+                Spacer()
+                Text("\(store.liveSessions.count) 个").font(.system(size: 10)).foregroundStyle(.secondary)
+            }
+            if store.liveSessions.isEmpty {
+                SectionCard(title: "当前") {
+                    Text("暂无活跃会话。连接 Claude Code 或 Codex 后，运行状态会出现在这里。")
+                        .font(.system(size: 11)).foregroundStyle(.secondary)
+                }
+            } else {
+                ForEach(store.liveSessions) { session in
+                    SectionCard(title: session.agentLabel) {
+                        VStack(alignment: .leading, spacing: 7) {
+                            HStack {
+                                Circle().fill(session.winner ? PanelTheme.accent : Color.secondary.opacity(0.45))
+                                    .frame(width: 7, height: 7)
+                                Text(session.stateLabel).font(.system(size: 12, weight: .semibold))
+                                Spacer()
+                                Text(elapsed(session.stateSince)).font(.system(size: 10)).foregroundStyle(.secondary)
+                            }
+                            HStack {
+                                Text(session.project.isEmpty ? "未识别项目" : session.project)
+                                    .font(.system(size: 10.5)).foregroundStyle(.secondary).lineLimit(1)
+                                if session.subagents > 0 {
+                                    Text("· \(session.subagents) 个子代理").font(.system(size: 10)).foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                if let pid = session.pid {
+                                    Button("回到终端") { TerminalFocus.activate(pid: pid_t(pid)) }
+                                        .font(.system(size: 10))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .onAppear {
+            now = Date()
+            store.refresh()
+        }
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { now = $0 }
+    }
+
+    private func elapsed(_ date: Date) -> String {
+        let seconds = max(0, Int(now.timeIntervalSince(date)))
+        if seconds < 60 { return "刚刚" }
+        return Fmt.duration(seconds)
     }
 }
 

@@ -18,6 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuBar: MenuBarController!
     private var pet: PetWindow!
     private var panel: PanelController!
+    private var permissionCards: PermissionCardController!
     private var timer: Timer?
     private var petVisible = true
     private var monitor: NWPathMonitor?
@@ -63,6 +64,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         pet = PetWindow(repoRoot: root)
         panel = PanelController(client: client, repoRoot: root)
+        permissionCards = PermissionCardController(port: { [weak self] in self?.client.currentPort ?? 4173 })
+        permissionCards.petFrame = { [weak self] in self?.pet.frame }
+        permissionCards.start()
         panel.onOpenBrowser = { [weak self] path in
             guard let self, let url = URL(string: "http://127.0.0.1:\(self.client.currentPort)\(path)")
             else { return }
@@ -246,6 +250,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         timer?.invalidate()
         monitor?.cancel()
+        permissionCards?.stop()
         client?.stopRuntime()
     }
 

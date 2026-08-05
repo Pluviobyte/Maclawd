@@ -29,6 +29,16 @@ test('沉默必须等于不干预——这是整条通道最重要的一条', ()
   assert.deepEqual(decisionResponse('乱写'), {});
 });
 
+test('Codex 权限返回体使用官方 decision.behavior 协议', () => {
+  assert.deepEqual(decisionResponse('allow', 'codex'), {
+    hookSpecificOutput: {
+      hookEventName: 'PermissionRequest',
+      decision: { behavior: 'allow' },
+    },
+  });
+  assert.deepEqual(decisionResponse(null, 'codex'), {});
+});
+
 test('用户点允许后，等待中的请求拿到决策', async () => {
   const broker = createPermissionBroker({ timeoutMs: 5000 });
   const pending = broker.request({ session_id: 's1', tool_name: 'Bash', tool_input: { command: 'ls' } });
@@ -69,7 +79,9 @@ test('不保留原始载荷，只留可展示的摘要字段', async () => {
   const broker = createPermissionBroker({ timeoutMs: 5000 });
   broker.request({ session_id: 's1', tool_name: 'Read', tool_input: { file_path: '/x' }, secret_field: '不该出现' });
   const entry = broker.list()[0];
-  assert.deepEqual(Object.keys(entry).sort(), ['at', 'detail', 'id', 'sessionId', 'tool']);
+  assert.deepEqual(Object.keys(entry).sort(), [
+    'agentId', 'agentLabel', 'at', 'detail', 'expiresAt', 'id', 'project', 'sessionId', 'tool',
+  ]);
   broker.releaseAll();
 });
 

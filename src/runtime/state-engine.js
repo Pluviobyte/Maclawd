@@ -458,8 +458,12 @@ const SYNTHETIC_SESSIONS = new Set(['rate', 'shell']);
   }
 
   function observeEvent(event, now = 0) {
-    const { type, sessionId = 'default' } = event ?? {};
+    const { type, sessionId: externalId = 'default' } = event ?? {};
     if (!type) return;
+    const sourceAgent = event?.agentId === 'claude-code' || event?.agentId === 'codex';
+    const sessionId = sourceAgent
+      ? `${event.agentId}:${externalId}`
+      : externalId;
 
     // 存在信号不是动作，只是「人还在」的一次打卡：不进会话表、不参与仲裁、
     // 也不该 logEvent（外壳每 20 秒报一次，会把事件日志淹掉）。
@@ -501,6 +505,9 @@ const SYNTHETIC_SESSIONS = new Set(['rate', 'shell']);
     });
 
     const s = session(sessionId);
+    s.externalId = externalId;
+    if (sourceAgent) s.agentId = event.agentId;
+    if (typeof event.channel === 'string') s.channel = event.channel;
     s.at = now;
     // 发起方信息。每个事件都可能带，取最后一次——同一个会话换终端的情况
     // （tmux attach 到别处）下，新的那个才是你现在能跳过去的。
@@ -560,12 +567,12 @@ const SYNTHETIC_SESSIONS = new Set(['rate', 'shell']);
         if (!String(s.state).startsWith('working')) s.state = 'working';
         break;
       case 'SubagentStart':
-        if (event.agentId) s.subagents.add(event.agentId);
+        if (event.subagentId ?? event.agentId) s.subagents.add(event.subagentId ?? event.agentId);
         s.state = 'delegating';
         s.variant = s.subagents.size >= 2 ? 'two-or-more-subagents' : 'one-subagent';
         break;
       case 'SubagentStop':
-        if (event.agentId) s.subagents.delete(event.agentId);
+        if (event.subagentId ?? event.agentId) s.subagents.delete(event.subagentId ?? event.agentId);
         if (s.subagents.size === 0) s.state = 'working';
         else s.variant = s.subagents.size >= 2 ? 'two-or-more-subagents' : 'one-subagent';
         break;
@@ -593,7 +600,7 @@ const SYNTHETIC_SESSIONS = new Set(['rate', 'shell']);
       case 'PermissionResolved':
         if (s.pendingPermission) {
           s.pendingPermission = false;
-          pushOneshot('owner_resolved', now);
+          if (event.resolution !== 'timeout') pushOneshot('owner_resolved', now);
         }
         s.state = 'working';
         break;
@@ -832,7 +839,10 @@ const SYNTHETIC_SESSIONS = new Set(['rate', 'shell']);
     let restored = 0;
     for (const lease of leases ?? []) {
       if (!lease?.sessionId || !lease.state) continue;
-      const s = session(lease.sessionId);
+      const id = lease.agentId ? `${lease.agentId}:${lease.sessionId}` : lease.sessionId;
+      const s = session(id);
+      s.externalId = lease.sessionId;
+      s.agentId = lease.agentId ?? null;
       s.state = lease.state;
       s.at = Number.isFinite(lease.at) ? lease.at : now;
       s.stateSince = s.at;
@@ -861,6 +871,22 @@ const SYNTHETIC_SESSIONS = new Set(['rate', 'shell']);
      */
     tick: (now) => { resolve(now); return snapshot(); },
     current: snapshot,
+    sessions: () => [...sessions.entries()]
+      .filter(([id]) => !SYNTHETIC_SESSIONS.has(id))
+      .map(([id, s]) => ({
+        id,
+        externalId: s.externalId ?? id,
+        agentId: s.agentId ?? null,
+        channel: s.channel ?? null,
+        state: s.state,
+        variant: s.variant,
+        at: s.at,
+        stateSince: s.stateSince ?? s.at,
+        subagents: s.subagents.size,
+        pid: s.pid ?? null,
+        cwd: s.cwd ?? null,
+        winner: id === current.sessionId,
+      })),
     /** 诊断用：当前活跃会话与派生量。 */
     debug: () => ({
       energy,

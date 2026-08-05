@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { execFile } from 'node:child_process';
-import { extname, join, normalize, resolve } from 'node:path';
+import { basename, extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parsers, SOURCE_LABELS } from './parsers/index.js';
 import { scanAll } from './scan.js';
@@ -20,6 +20,12 @@ import {
   installHooks, uninstallHooks, hookStatus,
   installPermissionHook, uninstallPermissionHook, permissionHookStatus,
 } from './hook-install.js';
+import {
+  installCodexHooks, uninstallCodexHooks,
+  installCodexPermissionHook, uninstallCodexPermissionHook,
+} from './codex-hook-install.js';
+import { agentConnections, runAgentDoctor } from './agent-registry.js';
+import { createCodexSessionMonitor } from './codex-session-monitor.js';
 import {
   installStatusline, uninstallStatusline, statuslineStatus,
 } from './statusline-install.js';
@@ -407,6 +413,14 @@ export function createUsageServer({
   const engine = createStateEngine({
     onChange: (state) => coverage.observe(state.actionId, Date.now()),
   });
+  let lastCodexHookAt = 0;
+  const stopCodexMonitor = createCodexSessionMonitor({
+    onEvent: (event) => {
+      // Official hooks are authoritative. JSONL is an explicitly best-effort fallback
+      // because Codex documents transcript_path as unstable.
+      if (Date.now() - lastCodexHookAt > 15_000) engine.observeEvent(event, Date.now());
+    },
+  });
   // 桌宠没开的那段时间里，hook 写的租约是唯一留下的痕迹。启动时读回来，
   // 免得一个任务跑到一半时桌宠从 idle 开始演。
   // 失败不能挡住启动——租约是尽力而为的增强，不是必要条件。
@@ -662,9 +676,63 @@ export function createUsageServer({
         return;
       }
 
+      if (pathname === '/api/sessions') {
+        const sessions = engine.sessions().map((session) => ({
+          id: session.id,
+          sessionId: session.externalId,
+          agentId: session.agentId ?? 'unknown',
+          agentLabel: SOURCE_LABELS[session.agentId] ?? session.agentId ?? 'Agent',
+          channel: session.channel,
+          state: session.state,
+          stateLabel: orchestrator.plan(session.state, { variant: session.variant })?.name ?? session.state,
+          project: session.cwd ? basename(session.cwd) : '',
+          pid: session.pid,
+          at: session.at,
+          stateSince: session.stateSince,
+          subagents: session.subagents,
+          winner: session.winner,
+        }));
+        sendJson(res, 200, { sessions, updatedAt: Date.now() });
+        return;
+      }
+
+      if (pathname === '/api/agents') {
+        if (req.method === 'POST') {
+          const { agentId, action } = JSON.parse((await readBody(req)) || '{}');
+          if (!['install', 'repair', 'uninstall'].includes(action)
+            || !['claude-code', 'codex'].includes(agentId)) {
+            sendJson(res, 400, { error: '未知 Agent 或操作' });
+            return;
+          }
+          if (agentId === 'claude-code') {
+            if (action === 'uninstall') {
+              uninstallHooks();
+              uninstallPermissionHook();
+            } else {
+              installHooks();
+              if (loadSettings().permissionBubble) installPermissionHook({ port: currentPort });
+            }
+            saveSettings({ hookEnhancement: action !== 'uninstall' });
+          } else {
+            if (action === 'uninstall') {
+              uninstallCodexHooks();
+              uninstallCodexPermissionHook();
+            } else {
+              installCodexHooks();
+              if (loadSettings().permissionBubble) installCodexPermissionHook();
+            }
+            saveSettings({ codexHookEnhancement: action !== 'uninstall' });
+          }
+        }
+        const current = loadSettings();
+        sendJson(res, 200, { agents: agentConnections(), doctor: runAgentDoctor(current) });
+        return;
+      }
+
       if (pathname === '/api/event' && req.method === 'POST') {
         // hook 写入器将来往这里投事件；现在先让面板可以手动触发以验证状态机。
         const event = JSON.parse((await readBody(req)) || '{}');
+        if (event.agentId === 'codex' && event.channel === 'hook') lastCodexHookAt = Date.now();
         // 尺寸模式不经过状态引擎——见 setMiniMode 上方的说明。
         if (event.type === 'shell.miniEnter' || event.type === 'shell.miniExit') {
           setMiniMode(event.type === 'shell.miniEnter', Date.now());
@@ -680,23 +748,25 @@ export function createUsageServer({
       // Claude Code 的 http hook 打进来并等待决策。
       if (pathname === '/api/permission' && req.method === 'POST') {
         const payload = JSON.parse((await readBody(req)) || '{}');
+        const agentId = url.searchParams.get('agent') === 'codex' ? 'codex' : 'claude-code';
         if (!loadSettings().permissionBubble) {
           // 通道关闭：立刻交回，绝不让 agent 干等。
-          sendJson(res, 200, decisionResponse(null));
+          sendJson(res, 200, decisionResponse(null, agentId));
           return;
         }
         engine.observeEvent({
           type: 'PermissionRequest',
           sessionId: payload.session_id ?? 'default',
+          agentId,
         }, Date.now());
-        const decision = await permissions.request(payload);
-        if (decision) {
-          engine.observeEvent({
-            type: 'PermissionResolved',
-            sessionId: payload.session_id ?? 'default',
-          }, Date.now());
-        }
-        sendJson(res, 200, decisionResponse(decision));
+        const decision = await permissions.request(payload, { agentId });
+        engine.observeEvent({
+          type: 'PermissionResolved',
+          sessionId: payload.session_id ?? 'default',
+          agentId,
+          resolution: decision ?? 'timeout',
+        }, Date.now());
+        sendJson(res, 200, decisionResponse(decision, agentId));
         return;
       }
 
@@ -892,12 +962,23 @@ export function createUsageServer({
                 effects.push(`已移除 ${r.removed.length} 个状态事件`);
               }
             }
+            if (next.codexHookEnhancement !== before.codexHookEnhancement) {
+              if (next.codexHookEnhancement) {
+                const r = installCodexHooks();
+                effects.push(`已安装 ${r.changed.length + r.existing.length} 个 Codex 状态事件`);
+              } else {
+                const r = uninstallCodexHooks();
+                effects.push(`已移除 ${r.existing.length} 个 Codex 状态事件`);
+              }
+            }
             if (next.permissionBubble !== before.permissionBubble) {
               if (next.permissionBubble) {
                 installPermissionHook({ port: currentPort });
-                effects.push('已注册权限决策 hook');
+                installCodexPermissionHook();
+                effects.push('已注册 Claude Code 与 Codex 权限决策 hook');
               } else {
                 uninstallPermissionHook();
+                uninstallCodexPermissionHook();
                 effects.push('已移除权限决策 hook');
               }
             }
@@ -960,6 +1041,21 @@ export function createUsageServer({
               }
             }
           } catch (err) {
+            // External hook files are the source of truth for these toggles. If one
+            // write fails, restore both settings and integrations to the prior state
+            // instead of leaving a switch that claims a half-installed connection.
+            next = saveSettings(before);
+            try {
+              if (before.hookEnhancement) installHooks(); else uninstallHooks();
+              if (before.codexHookEnhancement) installCodexHooks(); else uninstallCodexHooks();
+              if (before.permissionBubble) {
+                installPermissionHook({ port: currentPort });
+                installCodexPermissionHook();
+              } else {
+                uninstallPermissionHook();
+                uninstallCodexPermissionHook();
+              }
+            } catch { /* Doctor will surface an external file that remains unreadable. */ }
             sendJson(res, 200, { settings: next, error: err.message });
             return;
           }
@@ -1063,6 +1159,7 @@ export function createUsageServer({
   // 否则 server.close() 会一直等这些请求，测试卡在关闭那一步。
   server.on('close', () => {
     stopHookWatch();
+    stopCodexMonitor();
     quotaWorker.stop();
     clearInterval(ticker);
     for (const resolve of waiters) resolve();

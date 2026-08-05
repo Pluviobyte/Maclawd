@@ -46,7 +46,7 @@ export function createPermissionBroker({ timeoutMs = DEFAULT_TIMEOUT_MS } = {}) 
     let detail = '';
     if (input && typeof input === 'object') {
       // 只取几个已知字段，且一律过脱敏——绝不整个 tool_input 往外发。
-      const candidate = input.command ?? input.file_path ?? input.path ?? input.url ?? '';
+      const candidate = input.command ?? input.file_path ?? input.path ?? input.url ?? input.description ?? '';
       detail = safeTitle(String(candidate), { maxLength: 80 });
     }
     return { tool, detail };
@@ -56,15 +56,19 @@ export function createPermissionBroker({ timeoutMs = DEFAULT_TIMEOUT_MS } = {}) 
    * Claude Code 的 http hook 打进来。返回一个 Promise，
    * 决策产生或超时后 resolve。
    */
-  function request(payload) {
+  function request(payload, { agentId = 'claude-code' } = {}) {
     const id = randomUUID();
     const { tool, detail } = summarize(payload);
     const entry = {
       id,
       tool,
       detail,
+      agentId,
+      agentLabel: agentId === 'codex' ? 'Codex' : 'Claude Code',
+      project: typeof payload?.cwd === 'string' ? payload.cwd.split('/').filter(Boolean).at(-1) ?? '' : '',
       sessionId: typeof payload?.session_id === 'string' ? payload.session_id : 'default',
       at: Date.now(),
+      expiresAt: Date.now() + timeoutMs,
     };
 
     return new Promise((resolvePromise) => {
@@ -122,7 +126,18 @@ export function createPermissionBroker({ timeoutMs = DEFAULT_TIMEOUT_MS } = {}) 
  * null → 空对象，表示「不表态」，Claude Code 继续走它自己的确认流程。
  * 这是最重要的一条：**沉默必须等于不干预**。
  */
-export function decisionResponse(decision) {
+export function decisionResponse(decision, agentId = 'claude-code') {
+  if (agentId === 'codex') {
+    if (decision === 'allow' || decision === 'deny') {
+      return {
+        hookSpecificOutput: {
+          hookEventName: 'PermissionRequest',
+          decision: { behavior: decision },
+        },
+      };
+    }
+    return {};
+  }
   if (decision === 'allow') {
     return { hookSpecificOutput: { hookEventName: 'PermissionRequest', permissionDecision: 'allow' } };
   }

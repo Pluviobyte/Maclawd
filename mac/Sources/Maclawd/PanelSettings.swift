@@ -24,6 +24,7 @@ struct SettingsPage: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             usageSection
+            agentConnectionSection
             quotaSection
             alertSection
             menuBarSection
@@ -37,6 +38,79 @@ struct SettingsPage: View {
         } message: {
             Text("检测到已安装的版本不同。只会替换 ~/.codex/pets/maclawd 中可识别的 Maclawd 宠物包。")
         }
+    }
+
+    private var agentConnectionSection: some View {
+        SectionCard(title: "Agent 连接") {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Doctor：\(store.doctorSummary)")
+                    .font(.system(size: 10.5, weight: .medium))
+                    .foregroundStyle(store.doctorSummary.contains("修复") ? .orange : PanelTheme.accent)
+                ForEach(store.doctorChecks.filter { $0.level != "ok" }) { check in
+                    HStack(alignment: .top, spacing: 6) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(check.label).font(.system(size: 10.5, weight: .medium))
+                            Text(check.message).font(.system(size: 9.5)).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        if check.repairable {
+                            Button("修复") { store.agentAction(check.agentId, "repair") }
+                                .font(.system(size: 10))
+                        }
+                    }
+                }
+                ForEach(store.agentConnections) { agent in
+                    VStack(alignment: .leading, spacing: 5) {
+                        HStack {
+                            Text(agent.label).font(.system(size: 11.5, weight: .semibold))
+                            Text(statusTitle(agent.status)).font(.system(size: 9.5)).foregroundStyle(.secondary)
+                            Spacer()
+                            if agent.realtime, agent.status == "connected" {
+                                Button("移除") { store.agentAction(agent.id, "uninstall") }.font(.system(size: 10))
+                            } else if agent.realtime {
+                                Button(agent.status == "partial" ? "修复" : "连接") {
+                                    store.agentAction(agent.id, agent.status == "partial" ? "repair" : "install")
+                                }.font(.system(size: 10))
+                            }
+                        }
+                        HStack(spacing: 5) {
+                            capability("用量", active: true)
+                            capability("实时", active: agent.realtime)
+                            capability("权限", active: agent.permissions)
+                            capability("跳转", active: agent.terminalFocus)
+                            capability("额度", active: agent.quota)
+                            if agent.verified { Text("已验证").font(.system(size: 8.5)).foregroundStyle(PanelTheme.accent) }
+                        }
+                        if agent.id == "codex", agent.trustReviewRequired {
+                            Text("安装后请在 Codex /hooks 中确认一次信任。JSONL 仅作尽力而为的后备通道。")
+                                .font(.system(size: 9.5)).foregroundStyle(.tertiary)
+                        }
+                    }
+                }
+                SwitchRow(
+                    title: "在桌宠旁批准权限",
+                    detail: "Claude Code 与 Codex 请求权限时显示原生卡片；超时不表态，仍回到 Agent 自己的确认流程。",
+                    isOn: store.bool("permissionBubble")
+                ) { store.setSetting("permissionBubble", $0) }
+            }
+        }
+    }
+
+    private func statusTitle(_ status: String) -> String {
+        switch status {
+        case "connected": return "已连接"
+        case "partial": return "需修复"
+        case "usage-only": return "用量支持"
+        default: return "可连接"
+        }
+    }
+
+    private func capability(_ title: String, active: Bool) -> some View {
+        Text(title).font(.system(size: 8.5, weight: .medium))
+            .foregroundStyle(active ? Color.primary.opacity(0.8) : Color.secondary.opacity(0.35))
+            .padding(.horizontal, 5).padding(.vertical, 2)
+            .background((active ? PanelTheme.accent.opacity(0.12) : Color.secondary.opacity(0.06)),
+                        in: Capsule())
     }
 
     // MARK: 用量记录
@@ -59,8 +133,8 @@ struct SettingsPage: View {
 
                 SwitchRow(
                     title: "启用 Claude Code 事件增强",
-                    detail: "写入 ~/.claude/settings.json 的 hooks。那是按事件分组的数组，"
-                          + "会与你已有的合并，不会覆盖。",
+                    detail: "让 Maclawd 通过 Claude Code 的 Hooks 实时接收运行事件，对桌宠的实时动作和状态判断更加精准。"
+                          + "会向 ~/.claude/settings.json 添加 hooks，不覆盖已有配置，也不处理权限。",
                     isOn: store.bool("hookEnhancement")
                 ) { store.setSetting("hookEnhancement", $0) }
             }
