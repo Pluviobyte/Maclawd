@@ -26,6 +26,11 @@ struct QuotaWindow: Identifiable, Equatable {
     /// live / quiet / reset
     let state: String
     let staleSeconds: Int
+    /// WorkBuddy Credits 的精确数值；Claude/Codex 没有这些字段时保持 nil。
+    let used: Double?
+    let limit: Double?
+    let remaining: Double?
+    let kind: String?
 
     var isReset: Bool { state == "reset" }
     var isQuiet: Bool { state == "quiet" }
@@ -41,6 +46,10 @@ struct QuotaWindow: Identifiable, Equatable {
         self.resetAt = (raw["resetAt"] as? Double).map { Date(timeIntervalSince1970: $0 / 1000) }
         self.state = raw["state"] as? String ?? "live"
         self.staleSeconds = raw["staleSeconds"] as? Int ?? 0
+        self.used = raw["used"] as? Double
+        self.limit = raw["limit"] as? Double
+        self.remaining = raw["remaining"] as? Double
+        self.kind = raw["kind"] as? String
     }
 }
 
@@ -76,6 +85,22 @@ struct QuotaSource: Identifiable, Equatable {
 
 struct WorkBuddyQuotaStatus: Equatable {
     var installed = false
+    var refreshing = false
+    var lastErrorCode: String?
+    var lastSuccessAt: Date?
+
+    mutating func decode(_ raw: Any?) {
+        guard let value = raw as? [String: Any] else { return }
+        refreshing = value["refreshing"] as? Bool ?? false
+        if let error = value["lastError"] as? [String: Any] {
+            lastErrorCode = error["code"] as? String
+        } else {
+            lastErrorCode = nil
+        }
+        lastSuccessAt = (value["lastSuccessAt"] as? Double).map {
+            Date(timeIntervalSince1970: $0 / 1000)
+        }
+    }
 }
 
 /// 状态行通道的四种情形。面板据此决定显示什么——「没装通道」和
@@ -108,6 +133,7 @@ struct QuotaSnapshot: Equatable {
         var out = QuotaSnapshot()
         out.sources = (json["sources"] as? [[String: Any]] ?? []).compactMap(QuotaSource.init)
         out.workBuddy.installed = workBuddyInstalled
+        out.workBuddy.decode(json["workBuddy"])
         out.empty = json["empty"] as? Bool ?? out.sources.isEmpty
         out.enabled = json["enabled"] as? Bool ?? false
         if let sl = json["statusline"] as? [String: Any] {
@@ -866,6 +892,15 @@ final class PanelStore: ObservableObject {
 // MARK: - 格式化
 
 enum Fmt {
+    static func credits(_ n: Double) -> String {
+        if abs(n.rounded() - n) < 0.000_001 {
+            return NumberFormatter.localizedString(from: NSNumber(value: n.rounded()), number: .decimal)
+        }
+        return String(format: "%.2f", n)
+            .replacingOccurrences(of: #"0+$"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"\.$"#, with: "", options: .regularExpression)
+    }
+
     static func tokens(_ n: Double) -> String {
         if n >= 1e9 { return String(format: "%.2fB", n / 1e9) }
         if n >= 1e6 { return String(format: "%.2fM", n / 1e6) }

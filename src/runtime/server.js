@@ -39,6 +39,7 @@ import {
   readQuota, recordQuota, clearQuota, pendingAlerts, markAlerted, QUOTA_FILE,
 } from './account-quota.js';
 import { createCodexQuotaCollector } from './codex-quota.js';
+import { createWorkBuddyQuotaCollector } from './workbuddy-quota.js';
 import { createPermissionBroker, decisionResponse } from './permissions.js';
 import { authorize, currentToken, pairingUrls, resetToken, rotateToken } from './lan.js';
 import { createOrchestrator } from './orchestrator.js';
@@ -403,11 +404,13 @@ function openProject(action, path) {
 export function createUsageServer({
   collector = null,
   quotaCollector = null,
+  workBuddyQuotaCollector = null,
   identity = createRuntimeIdentity(),
 } = {}) {
   // 面板不该要求用户手动点刷新，所以服务端自带后台采集循环。
   const worker = collector ?? createCollector();
   const quotaWorker = quotaCollector ?? createCodexQuotaCollector();
+  const workBuddyQuotaWorker = workBuddyQuotaCollector ?? createWorkBuddyQuotaCollector();
 
   // 状态引擎 + 编排器：目前只有「速率推断」这条降级路径在喂它，
   // hook 通道接上后同一个引擎直接消费 hook 事件，不需要改结构。
@@ -835,6 +838,7 @@ export function createUsageServer({
         // 打开额度页时触发一次带缓存的 Codex 刷新。不阻塞本次响应，
         // 成功后原生面板下一轮轻量轮询就会拿到。
         void quotaWorker.refresh().catch(() => {});
+        void workBuddyQuotaWorker.refresh().catch(() => {});
         const settings = loadSettings();
         const snapshot = readQuota();
         sendJson(res, 200, {
@@ -843,6 +847,7 @@ export function createUsageServer({
           // 这两种情况的文案完全不同。
           statusline: statuslineStatus(),
           enabled: settings.quotaTracking === true,
+          workBuddy: workBuddyQuotaWorker.status(),
           alert: {
             enabled: settings.quotaAlert === true,
             threshold: settings.quotaAlertThreshold,
@@ -993,6 +998,7 @@ export function createUsageServer({
                 if (r.blocked) {
                   next = saveSettings({ quotaTracking: true, quotaStatusline: false });
                   void quotaWorker.refresh({ force: true }).catch(() => {});
+                  void workBuddyQuotaWorker.refresh({ force: true }).catch(() => {});
                   sendJson(res, 200, {
                     settings: next,
                     blocked: 'statusline',
@@ -1006,6 +1012,7 @@ export function createUsageServer({
                   ? '已开启 Codex 额度并与 Claude HUD 自动兼容'
                   : (r.chained ? '已开启 Codex 额度并保留 Claude 状态行' : '已开启 Codex 与 Claude Code 额度'));
                 void quotaWorker.refresh({ force: true }).catch(() => {});
+                void workBuddyQuotaWorker.refresh({ force: true }).catch(() => {});
               } else {
                 const r = uninstallStatusline();
                 next = saveSettings({ quotaTracking: false, quotaStatusline: false });
@@ -1037,6 +1044,7 @@ export function createUsageServer({
                   ? '已与 Claude HUD 自动兼容'
                   : (r.chained ? '已串联并保留原有状态行' : '已注册状态行'));
                 next = saveSettings({ quotaTracking: true, quotaStatusline: true });
+                void workBuddyQuotaWorker.refresh({ force: true }).catch(() => {});
               } else {
                 const r = uninstallStatusline();
                 next = saveSettings({ quotaTracking: false, quotaStatusline: false });
@@ -1168,12 +1176,13 @@ export function createUsageServer({
     stopHookWatch();
     stopCodexMonitor();
     quotaWorker.stop();
+    workBuddyQuotaWorker.stop();
     clearInterval(ticker);
     for (const resolve of waiters) resolve();
     waiters.clear();
   });
 
-  return { server, worker, quotaWorker, identity };
+  return { server, worker, quotaWorker, workBuddyQuotaWorker, identity };
 }
 
 /** 端口被占时最多往后试几个。够覆盖「同机开了几个 Vite」，又不会无限游走。 */
@@ -1213,7 +1222,7 @@ async function probeMaclawd(port, timeoutMs = 400) {
  */
 export function serve({ port = 4173, host = null, collector = null } = {}) {
   const {
-    server, worker, quotaWorker, identity,
+    server, worker, quotaWorker, workBuddyQuotaWorker, identity,
   } = createUsageServer({ collector });
   // 只有显式开启局域网镜像才监听外部地址；否则严格绑回环。
   const bind = host ?? (loadSettings().lanMirror === true ? '0.0.0.0' : '127.0.0.1');
@@ -1259,7 +1268,10 @@ export function serve({ port = 4173, host = null, collector = null } = {}) {
       // 后台开始采集，页面打开即有数据。
       worker.start().catch(() => {});
       quotaWorker.start();
-      resolvePromise({ server, worker, quotaWorker, identity, port: actual, host: bind });
+      workBuddyQuotaWorker.start();
+      resolvePromise({
+        server, worker, quotaWorker, workBuddyQuotaWorker, identity, port: actual, host: bind,
+      });
     });
   });
 }

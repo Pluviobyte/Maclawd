@@ -419,23 +419,37 @@ private struct QuotaBlock: View {
                         }
                     }
                 }
-                if store.quota.workBuddy.installed {
-                    workBuddyUnavailable
+                if store.quota.workBuddy.installed
+                    && (!store.quota.sources.contains(where: { $0.id == "workbuddy" })
+                        || store.quota.workBuddy.lastErrorCode != nil) {
+                    workBuddyStatus
                 }
             }
         }
     }
 
-    private var workBuddyUnavailable: some View {
+    private var workBuddyStatus: some View {
         VStack(alignment: .leading, spacing: 3) {
             Text("WorkBuddy")
                 .font(.system(size: 11, weight: .semibold))
-            Text("暂不支持读取积分")
+            Text(workBuddyStatusTitle)
                 .font(.system(size: 11, weight: .medium))
-            Text("WorkBuddy 尚未提供可供 Maclawd 使用的官方读取接口")
+            Text("使用本机 WorkBuddy 登录状态查询计费服务；Token 只在请求期间驻留内存。")
                 .font(.system(size: 10))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var workBuddyStatusTitle: String {
+        guard store.quota.enabled else { return "开启额度读取后自动显示积分" }
+        switch store.quota.workBuddy.lastErrorCode {
+        case "ENOAUTH": return "请先登录 WorkBuddy"
+        case "EAUTH": return "WorkBuddy 登录状态已失效"
+        case "ENODATA": return "WorkBuddy 暂未返回可用积分"
+        case "ERATELIMIT": return "WorkBuddy 查询频繁，稍后自动重试"
+        case .some: return "WorkBuddy 积分读取失败，稍后自动重试"
+        case .none: return "正在读取 WorkBuddy 积分"
         }
     }
 
@@ -445,7 +459,7 @@ private struct QuotaBlock: View {
         if !store.quota.enabled {
             VStack(alignment: .leading, spacing: 3) {
                 Text("未开启").font(.system(size: 12))
-                Text("在设置里开启后，Maclawd 会分别读取 Codex 与 Claude Code 额度")
+                Text("在设置里开启后，Maclawd 会读取 Codex、Claude Code 与 WorkBuddy 额度")
                     .font(.system(size: 11)).foregroundStyle(.secondary)
             }
         } else {
@@ -485,7 +499,8 @@ private struct QuotaRow: View {
             HStack(spacing: 6) {
                 Text(window.label)
                     .font(.system(size: 11, weight: .medium))
-                    .frame(width: 46, alignment: .leading)
+                    .lineLimit(1)
+                    .frame(width: 72, alignment: .leading)
 
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
@@ -508,6 +523,9 @@ private struct QuotaRow: View {
                     .frame(width: 68, alignment: .trailing)
             }
             HStack(spacing: 6) {
+                if let remaining = window.remaining, let limit = window.limit {
+                    Text("\(Fmt.credits(remaining)) / \(Fmt.credits(limit)) Credits")
+                }
                 if let until = Fmt.until(window.resetAt), !window.isReset {
                     Text(until)
                 }
@@ -519,7 +537,7 @@ private struct QuotaRow: View {
             }
             .font(.system(size: 9.5))
             .foregroundStyle(.tertiary)
-            .padding(.leading, 52)
+            .padding(.leading, 78)
         }
     }
 }

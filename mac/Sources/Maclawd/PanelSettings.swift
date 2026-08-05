@@ -156,7 +156,9 @@ struct SettingsPage: View {
             VStack(alignment: .leading, spacing: 10) {
                 SwitchRow(
                     title: "读取订阅额度",
-                    detail: "Codex 通过官方 CLI 自动读取；Claude Code 通过状态行读取。"
+                    detail: "Codex 通过官方 CLI 自动读取；Claude Code 通过状态行读取；"
+                          + "WorkBuddy 会读取本机登录文件，并使用其中的 Token 查询计费服务。"
+                          + "Token 只在内存中使用，不写入 Maclawd 数据或日志。"
                           + "Maclawd 会自动兼容 Claude HUD 并保持它原有的显示。",
                     isOn: store.bool("quotaTracking"),
                     enabled: !statuslineBusy

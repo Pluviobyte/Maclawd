@@ -26,8 +26,8 @@ export function agentConnections() {
         realtime,
         permissions: realtime && parser.id !== 'workbuddy',
         terminalFocus: realtime,
-        // Hooks 只证明实时状态能力；WorkBuddy 积分属于另一条本地数据通道。
-        quota: parser.id === 'claude-code' || parser.id === 'codex',
+        // WorkBuddy 额度来自本机登录凭据 + 计费查询，不依赖 Hooks 是否开启。
+        quota: parser.id === 'claude-code' || parser.id === 'codex' || parser.id === 'workbuddy',
       },
       integration: realtime ? {
         status: ready ? 'connected' : status.installed?.length ? 'partial' : 'available',

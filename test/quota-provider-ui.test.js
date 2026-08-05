@@ -63,13 +63,31 @@ test('Claude 自定义状态行不会让已开启的 Codex 额度被误报为未
   assert.match(block, /case \.foreign:[\s\S]*Codex/);
 });
 
-test('已安装 WorkBuddy 时与现有额度来源并列，但不伪造进度条', () => {
+test('WorkBuddy 真实积分与现有额度来源共用进度条并显示精确积分', () => {
   const block = panelSource.slice(
     panelSource.indexOf('private struct QuotaBlock'),
     panelSource.indexOf('private struct QuotaRow'),
   );
-  assert.match(block, /store\.quota\.workBuddy\.installed/);
-  assert.match(block, /Text\("WorkBuddy"\)/);
-  assert.match(block, /暂不支持读取积分/);
-  assert.match(block, /官方读取接口/);
+  assert.match(block, /ForEach\(store\.quota\.sources\)/);
+  assert.doesNotMatch(block, /暂不支持读取积分/);
+  const row = panelSource.slice(
+    panelSource.indexOf('private struct QuotaRow'),
+    panelSource.indexOf('// MARK: - 小图形'),
+  );
+  assert.match(row, /window\.remaining/);
+  assert.match(row, /window\.limit/);
+  assert.match(row, /Fmt\.credits/);
+});
+
+test('WorkBuddy 尚未登录或私有接口失效时给出可行动降级状态', () => {
+  const block = panelSource.slice(
+    panelSource.indexOf('private struct QuotaBlock'),
+    panelSource.indexOf('private struct QuotaRow'),
+  );
+  assert.match(block, /workBuddyStatus/);
+  assert.match(block, /请先登录 WorkBuddy/);
+  assert.match(block, /登录状态已失效/);
+  assert.match(block, /正在读取 WorkBuddy 积分/);
+  assert.match(block, /lastErrorCode != nil/,
+    '即使还有旧积分，登录或网络错误也必须同时显示');
 });

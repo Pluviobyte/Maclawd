@@ -18,7 +18,8 @@ test('Agent 注册表把 WorkBuddy 暴露为无权限接管的实时来源', asy
     assert.equal(workBuddy.installed, true);
     assert.equal(workBuddy.capabilities.realtime, true);
     assert.equal(workBuddy.capabilities.permissions, false);
-    assert.equal(workBuddy.capabilities.quota, false, 'Hooks 不等于积分数据，不能误报额度能力');
+    assert.equal(workBuddy.capabilities.quota, true,
+      'WorkBuddy 额度由本地登录凭据和计费查询提供，与 Hooks 通道相互独立');
     assert.equal(workBuddy.integration.status, 'available');
 
     const doctor = runAgentDoctor({ workBuddyHookEnhancement: true });

@@ -63,6 +63,51 @@ test('短窗口排在长窗口前面——它才是「现在能不能开大活�
   assert.deepEqual(ids, ['five_hour', 'seven_day']);
 });
 
+test('WorkBuddy 积分桶保留已用、总额、剩余与类型供首页精确展示', () => {
+  recordQuota({
+    source: 'workbuddy',
+    sourceLabel: 'WorkBuddy',
+    completeSnapshot: true,
+    windows: {
+      base_1: {
+        label: '基础体验包', kind: 'base', used: 253.62, limit: 500,
+        remaining: 246.38, usedPercent: 50.724, resetAt: T0 + 30 * 24 * HOUR,
+      },
+      bonus_1: {
+        label: '活动赠送包', kind: 'bonus', used: 10, limit: 100,
+        remaining: 90, usedPercent: 10, resetAt: T0 + 60 * 24 * HOUR,
+      },
+    },
+  }, { now: T0 });
+
+  const source = readQuota({ now: T0 }).sources.find((item) => item.id === 'workbuddy');
+  assert.equal(source.label, 'WorkBuddy');
+  assert.deepEqual(source.windows.map((window) => window.id), ['base_1', 'bonus_1']);
+  assert.deepEqual(source.windows[0], {
+    id: 'base_1', label: '基础体验包', kind: 'base', used: 253.62, limit: 500,
+    remaining: 246.38, usedPercent: 50.724, resetAt: T0 + 30 * 24 * HOUR,
+    state: 'live', updatedAt: T0, lastSeenAt: T0, staleSeconds: 0,
+  });
+});
+
+test('额度窗口重置后不再暴露重置前的精确积分', () => {
+  recordQuota({
+    source: 'workbuddy', completeSnapshot: true,
+    windows: {
+      base_1: {
+        label: '基础包', kind: 'base', usedPercent: 25,
+        used: 25, limit: 100, remaining: 75, resetAt: T0 + 1_000,
+      },
+    },
+  }, { now: T0 });
+  const window = readQuota({ now: T0 + 1_001 }).sources[0].windows[0];
+  assert.equal(window.state, 'reset');
+  assert.equal(window.usedPercent, null);
+  assert.equal(window.used, null);
+  assert.equal(window.limit, null);
+  assert.equal(window.remaining, null);
+});
+
 // ---------- 新鲜度 ----------
 
 test('超过 5 分钟没确认 → quiet，并给出过了多久', () => {

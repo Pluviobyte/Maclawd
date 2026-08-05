@@ -31,6 +31,8 @@ export const QUOTA_VERSION = 1;
 export const QUIET_AFTER_MS = 5 * 60 * 1000;
 /** Codex 官方读取做十分钟缓存，不能在下一次正常刷新前误标过期。 */
 export const CODEX_QUIET_AFTER_MS = 10 * 60 * 1000;
+/** WorkBuddy 云端额度十分钟刷新；留五分钟网络抖动余量再标 quiet。 */
+export const WORKBUDDY_QUIET_AFTER_MS = 15 * 60 * 1000;
 /** 窗口重置这么久之后仍无新报告，记录直接丢弃。 */
 export const DROP_AFTER_RESET_MS = 48 * 60 * 60 * 1000;
 /** 没有 resetAt 的记录（理论上不该有）靠这个兜底老化。 */
@@ -45,6 +47,7 @@ export const WINDOW_ORDER = ['five_hour', 'seven_day'];
 
 function validWindowKey(source, key) {
   if (WINDOW_ORDER.includes(key)) return true;
+  if (source === 'workbuddy') return /^(base|bonus)_\d+$/.test(key);
   return (source === 'codex' || source.startsWith('codex:'))
     && (/^duration_\d+$/.test(key) || /^codex_(primary|secondary)$/.test(key));
 }
@@ -53,6 +56,13 @@ function orderedWindowKeys(source, windows) {
   return Object.keys(windows ?? {})
     .filter((key) => validWindowKey(source, key))
     .sort((a, b) => {
+      if (source === 'workbuddy') {
+        const [aKind, aIndex] = a.split('_');
+        const [bKind, bIndex] = b.split('_');
+        const kindOrder = { base: 0, bonus: 1 };
+        return (kindOrder[aKind] ?? 2) - (kindOrder[bKind] ?? 2)
+          || Number(aIndex) - Number(bIndex);
+      }
       const aDuration = num(windows[a]?.durationMinutes);
       const bDuration = num(windows[b]?.durationMinutes);
       if (aDuration !== null || bDuration !== null) {
@@ -65,6 +75,7 @@ function orderedWindowKeys(source, windows) {
 export const SOURCE_LABELS = {
   'claude-code': 'Claude Code',
   codex: 'Codex',
+  workbuddy: 'WorkBuddy',
 };
 
 function emptyStore() {
@@ -137,10 +148,17 @@ export function recordQuota(report, { now = Date.now() } = {}) {
     // updatedAt 只在数值真的变了才动；lastSeenAt 每次都动。
     const changed = !before
       || before.usedPercent !== usedPercent
-      || before.resetAt !== resetAt;
+      || before.resetAt !== resetAt
+      || before.used !== num(windows[key]?.used)
+      || before.limit !== num(windows[key]?.limit)
+      || before.remaining !== num(windows[key]?.remaining);
     next.windows[key] = {
       usedPercent,
       resetAt,
+      used: num(windows[key]?.used),
+      limit: num(windows[key]?.limit),
+      remaining: num(windows[key]?.remaining),
+      kind: ['base', 'bonus'].includes(windows[key]?.kind) ? windows[key].kind : null,
       label: typeof windows[key]?.label === 'string'
         ? windows[key].label.trim().slice(0, 48) : (before?.label ?? null),
       durationMinutes: num(windows[key]?.durationMinutes) ?? before?.durationMinutes ?? null,
@@ -208,7 +226,8 @@ export function freshness(window, now = Date.now(), source = null) {
   const resetAt = num(window?.resetAt);
   if (resetAt !== null && now > resetAt) return 'reset';
   const lastSeenAt = num(window?.lastSeenAt) ?? 0;
-  const quietAfter = source === 'codex' ? CODEX_QUIET_AFTER_MS : QUIET_AFTER_MS;
+  const quietAfter = source === 'codex' ? CODEX_QUIET_AFTER_MS
+    : source === 'workbuddy' ? WORKBUDDY_QUIET_AFTER_MS : QUIET_AFTER_MS;
   return now - lastSeenAt > quietAfter ? 'quiet' : 'live';
 }
 
@@ -231,6 +250,10 @@ export function readQuota({ now = Date.now() } = {}) {
         label: w.label ?? WINDOW_LABELS[key] ?? key,
         // 已重置的窗口不给百分比——那个数字是重置前的，已经不成立了。
         usedPercent: state === 'reset' ? null : w.usedPercent,
+        used: state === 'reset' ? null : (w.used ?? null),
+        limit: state === 'reset' ? null : (w.limit ?? null),
+        remaining: state === 'reset' ? null : (w.remaining ?? null),
+        kind: w.kind ?? null,
         resetAt: w.resetAt ?? null,
         state,
         updatedAt: w.updatedAt ?? null,

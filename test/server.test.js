@@ -30,10 +30,12 @@ const { writeJson } = await import('../src/runtime/store.js');
 const { ROLLUP_FILE } = await import('../src/runtime/paths.js');
 const { clearQuota, recordQuota } = await import('../src/runtime/account-quota.js');
 const { createCodexQuotaCollector } = await import('../src/runtime/codex-quota.js');
+const { createWorkBuddyQuotaCollector } = await import('../src/runtime/workbuddy-quota.js');
 
 let server;
 let base;
 let quotaWorker;
+let workBuddyQuotaWorker;
 
 before(async () => {
   // 造一份最小聚合数据，带一个已知项目路径。
@@ -56,6 +58,19 @@ before(async () => {
       },
     }),
   });
+  workBuddyQuotaWorker = createWorkBuddyQuotaCollector({
+    enabled: () => true,
+    intervalMs: 60_000,
+    read: async () => ({
+      source: 'workbuddy', sourceLabel: 'WorkBuddy', completeSnapshot: true,
+      windows: {
+        base_1: {
+          label: '基础体验包', kind: 'base', used: 25, limit: 100,
+          remaining: 75, usedPercent: 25, resetAt: Date.now() + 86_400_000,
+        },
+      },
+    }),
+  });
   ({ server } = createUsageServer({
     collector: {
       live: () => ({ tokensPerMin: 0, sources: [], trackedFiles: 0, disabled: false, updatedAt: null }),
@@ -65,6 +80,7 @@ before(async () => {
       stop: () => {},
     },
     quotaCollector: quotaWorker,
+    workBuddyQuotaCollector: workBuddyQuotaWorker,
   }));
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   base = `http://127.0.0.1:${server.address().port}`;
@@ -172,7 +188,7 @@ test('/api/actions 返回全部动作与角色合同', async () => {
   assert.equal(d.contract.bodyColor, '#DE886D');
 });
 
-test('/api/quota 刷新官方 Codex 额度后与 Claude Code 按服务商分开返回', async () => {
+test('/api/quota 刷新 Codex 与 WorkBuddy 后和 Claude Code 按服务商分开返回', async () => {
   clearQuota();
   recordQuota({
     source: 'claude-code',
@@ -186,12 +202,15 @@ test('/api/quota 刷新官方 Codex 额度后与 Claude Code 按服务商分开�
   let snapshot;
   do {
     snapshot = await json('/api/quota');
-    if (snapshot.sources.some((source) => source.id === 'codex')) break;
+    if (snapshot.sources.some((source) => source.id === 'codex')
+      && snapshot.sources.some((source) => source.id === 'workbuddy')) break;
     await new Promise((resolve) => setTimeout(resolve, 5));
   } while (Date.now() < deadline);
 
-  assert.deepEqual(snapshot.sources.map((source) => source.label), ['Claude Code', 'Codex']);
+  assert.deepEqual(snapshot.sources.map((source) => source.label), ['Claude Code', 'Codex', 'WorkBuddy']);
   assert.equal(snapshot.sources.find((source) => source.id === 'codex').windows[0].usedPercent, 51);
+  assert.equal(snapshot.sources.find((source) => source.id === 'workbuddy').windows[0].remaining, 75);
+  assert.equal(snapshot.workBuddy.lastError, null);
 });
 
 test('/api/settings 只接受已知键，未知键被丢弃', async () => {
