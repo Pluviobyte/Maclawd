@@ -6,6 +6,22 @@ enum AnalyticsMetric: String, CaseIterable, Identifiable {
     var title: String {
         switch self { case .tokens: "Token"; case .cost: "估算费用"; case .active: "时长" }
     }
+
+    func value(totalTokens: Double, estimatedCost: Double?, activeSeconds: Int) -> Double {
+        switch self {
+        case .tokens: totalTokens
+        case .cost: estimatedCost ?? 0
+        case .active: Double(activeSeconds)
+        }
+    }
+
+    func exactText(totalTokens: Double, estimatedCost: Double?, activeSeconds: Int) -> String {
+        switch self {
+        case .tokens: Fmt.exactTokens(totalTokens)
+        case .cost: estimatedCost.map { String(format: "估算 $%.4f", $0) } ?? "未计价"
+        case .active: Fmt.exactDuration(activeSeconds)
+        }
+    }
 }
 
 enum DistributionKind: String, CaseIterable, Identifiable {
@@ -332,11 +348,8 @@ struct AnalyticsTrendChart: View {
     @State private var hoveredDay: String?
 
     private func value(_ point: AnalyticsSeriesPoint) -> Double {
-        switch metric {
-        case .tokens: point.totalTokens
-        case .cost: point.estimatedCost ?? 0
-        case .active: Double(point.activeSeconds)
-        }
+        metric.value(totalTokens: point.totalTokens, estimatedCost: point.estimatedCost,
+                     activeSeconds: point.activeSeconds)
     }
 
     var body: some View {
@@ -380,58 +393,71 @@ struct AnalyticsTrendChart: View {
     }
 
     private func formattedExact(_ point: AnalyticsSeriesPoint) -> String {
-        switch metric {
-        case .tokens: Fmt.exactTokens(point.totalTokens)
-        case .cost: point.estimatedCost.map { String(format: "估算 $%.4f", $0) } ?? "未计价"
-        case .active: Fmt.exactDuration(point.activeSeconds)
-        }
+        metric.exactText(totalTokens: point.totalTokens, estimatedCost: point.estimatedCost,
+                         activeSeconds: point.activeSeconds)
     }
 }
 
 struct AnalyticsHeatmap: View {
     let cells: [AnalyticsHeatCell]
     let metric: AnalyticsMetric
+    @State private var hoveredCellID: String?
     private let columns = Array(repeating: GridItem(.fixed(9), spacing: 2), count: 24)
 
     private func value(_ cell: AnalyticsHeatCell) -> Double {
-        switch metric {
-        case .tokens: cell.totalTokens
-        case .cost: cell.estimatedCost ?? 0
-        case .active: Double(cell.activeSeconds)
-        }
+        metric.value(totalTokens: cell.totalTokens, estimatedCost: cell.estimatedCost,
+                     activeSeconds: cell.activeSeconds)
     }
 
     var body: some View {
         let peak = max(cells.map(value).max() ?? 1, 1)
-        HStack(alignment: .top, spacing: 6) {
-            VStack(spacing: 2) {
-                ForEach(["一", "二", "三", "四", "五", "六", "日"], id: \.self) { day in
-                    Text(day).font(.system(size: 8)).foregroundStyle(.tertiary).frame(height: 9)
+        VStack(alignment: .leading, spacing: 4) {
+            Group {
+                if let hovered = cells.first(where: { $0.id == hoveredCellID }) {
+                    Text(heatText(hovered)).foregroundStyle(.primary)
+                } else {
+                    Text("悬浮热力格查看具体数值").foregroundStyle(.tertiary)
                 }
             }
-            VStack(alignment: .leading, spacing: 3) {
-                LazyVGrid(columns: columns, alignment: .leading, spacing: 2) {
-                    ForEach(cells) { cell in
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(PanelTheme.body.opacity(value(cell) == 0 ? 0.08
-                                                          : 0.22 + 0.70 * value(cell) / peak))
-                            .frame(width: 9, height: 9)
-                            .help(heatHelp(cell))
+            .font(.system(size: 9.5, weight: .medium))
+            .lineLimit(1)
+            .frame(maxWidth: .infinity, minHeight: 14, alignment: .leading)
+
+            HStack(alignment: .top, spacing: 6) {
+                VStack(spacing: 2) {
+                    ForEach(["一", "二", "三", "四", "五", "六", "日"], id: \.self) { day in
+                        Text(day).font(.system(size: 8)).foregroundStyle(.tertiary).frame(height: 9)
                     }
                 }
-                HStack { Text("0"); Spacer(); Text("6"); Spacer(); Text("12"); Spacer(); Text("18"); Spacer(); Text("23") }
-                    .frame(width: 262).font(.system(size: 8)).foregroundStyle(.tertiary)
+                VStack(alignment: .leading, spacing: 3) {
+                    LazyVGrid(columns: columns, alignment: .leading, spacing: 2) {
+                        ForEach(cells) { cell in
+                            heatCell(cell, peak: peak)
+                        }
+                    }
+                    HStack { Text("0"); Spacer(); Text("6"); Spacer(); Text("12"); Spacer(); Text("18"); Spacer(); Text("23") }
+                        .frame(width: 262).font(.system(size: 8)).foregroundStyle(.tertiary)
+                }
             }
         }
     }
 
-    private func heatHelp(_ cell: AnalyticsHeatCell) -> String {
-        let prefix = "周\(cell.weekday) \(cell.hour):00 · "
-        switch metric {
-        case .tokens: return prefix + Fmt.tokens(cell.totalTokens)
-        case .cost: return prefix + (cell.estimatedCost.map { String(format: "估算 $%.2f", $0) } ?? "未计价")
-        case .active: return prefix + Fmt.duration(cell.activeSeconds)
-        }
+    private func heatCell(_ cell: AnalyticsHeatCell, peak: Double) -> some View {
+        RoundedRectangle(cornerRadius: 2)
+            .fill(PanelTheme.body.opacity(value(cell) == 0 ? 0.08
+                                          : 0.22 + 0.70 * value(cell) / peak))
+            .frame(width: 9, height: 9)
+            .onHover { hovering in
+                if hovering { hoveredCellID = cell.id }
+                else if hoveredCellID == cell.id { hoveredCellID = nil }
+            }
+    }
+
+    private func heatText(_ cell: AnalyticsHeatCell) -> String {
+        let prefix = String(format: "周%d %02d:00 · ", cell.weekday, cell.hour)
+        return prefix + metric.exactText(totalTokens: cell.totalTokens,
+                                         estimatedCost: cell.estimatedCost,
+                                         activeSeconds: cell.activeSeconds)
     }
 }
 

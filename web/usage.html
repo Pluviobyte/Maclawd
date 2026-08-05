@@ -55,8 +55,10 @@
     background:var(--ink);color:var(--card);box-shadow:0 4px 12px rgba(30,30,46,.18);
     font-size:11px;font-weight:600;line-height:1.3;white-space:nowrap;pointer-events:none;
     transform:translate(-50%,-100%);}
-  .heat{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,11px);gap:3px;margin-top:8px;overflow-x:auto;padding-bottom:4px;}
+  .heatPlot{position:relative;}
+  .heat{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,11px);gap:3px;margin-top:8px;overflow-x:auto;padding:4px 1px;}
   .heat i{width:11px;height:11px;border-radius:2px;background:rgba(30,30,46,.06);}
+  .heat i:hover{outline:1px solid var(--accent);outline-offset:1px;}
   h2{font-size:15px;margin:0 0 12px;}
   h2 span{font-weight:500;color:var(--muted);font-size:12px;margin-left:6px;}
   table{width:100%;border-collapse:collapse;font-size:13px;}
@@ -156,7 +158,10 @@
 
   <div class="card">
     <h2>分时活跃 <span>24 小时 × 周一至周日</span></h2>
-    <div class="heat" id="heat"></div>
+    <div class="heatPlot" id="heatPlot">
+      <div class="heat" id="heat"></div>
+      <div class="chartTooltip" id="heatTooltip" role="tooltip" hidden></div>
+    </div>
   </div>
 
   <div class="grid2">
@@ -286,6 +291,7 @@ function clearUsageData(){
   el('dailyMeta').textContent = '';
   el('dailyTooltip').hidden = true;
   el('daily').innerHTML = '';
+  el('heatTooltip').hidden = true;
   el('heat').innerHTML = '';
   el('tBySource').innerHTML = '<tr><td colspan="3" style="color:var(--muted)">暂无数据</td></tr>';
   el('tByModel').innerHTML = '<tr><td colspan="3" style="color:var(--muted)">暂无数据</td></tr>';
@@ -388,7 +394,10 @@ function render(){
       .map(cell => {
         const v = cell ? trendValue(cell) : 0;
         const alpha = v === 0 ? 0 : 0.18 + 0.82*Math.pow(v/heatMax, .45);
-        return `<i style="background:${v?`rgba(222,136,109,${alpha.toFixed(2)})`:'rgba(30,30,46,.06)'}" title="周${weekday+1} ${hour}:00 · ${cell ? trendMetricText(cell) : '—'}"></i>`;
+        const tooltip = cell
+          ? `周${cell.weekday} ${String(cell.hour).padStart(2, '0')}:00 · ${exactTrendMetricText(cell)}`
+          : `周${weekday+1} ${String(hour).padStart(2, '0')}:00 · —`;
+        return `<i style="background:${v?`rgba(222,136,109,${alpha.toFixed(2)})`:'rgba(30,30,46,.06)'}" data-tooltip="${esc(tooltip)}"></i>`;
       }).join('')).join('');
 
   // 三个维度与原生面板共用分析接口，费用和 Token 不会再出现两套口径。
@@ -599,19 +608,23 @@ el('rescan').onclick = async () => {
   setTimeout(() => { el('rescan').textContent = '重新扫描'; }, 1600);
 };
 
-el('daily').onpointermove = (event) => {
-  const bar = event.target.closest('i[data-tooltip]');
-  if (!bar) return;
-  const plot = el('dailyPlot'), tooltip = el('dailyTooltip');
-  const plotRect = plot.getBoundingClientRect(), barRect = bar.getBoundingClientRect();
-  tooltip.textContent = bar.dataset.tooltip;
-  tooltip.hidden = false;
-  const halfWidth = tooltip.offsetWidth / 2;
-  const center = barRect.left + barRect.width / 2 - plotRect.left;
-  tooltip.style.left = `${Math.min(plotRect.width - halfWidth, Math.max(halfWidth, center))}px`;
-  tooltip.style.top = `${barRect.top - plotRect.top - 5}px`;
-};
-el('daily').onpointerleave = () => { el('dailyTooltip').hidden = true; };
+function bindPointTooltip(containerID, plotID, tooltipID){
+  const container = el(containerID), plot = el(plotID), tooltip = el(tooltipID);
+  container.onpointermove = (event) => {
+    const point = event.target.closest('i[data-tooltip]');
+    if (!point){ tooltip.hidden = true; return; }
+    const plotRect = plot.getBoundingClientRect(), pointRect = point.getBoundingClientRect();
+    tooltip.textContent = point.dataset.tooltip;
+    tooltip.hidden = false;
+    const halfWidth = tooltip.offsetWidth / 2;
+    const center = pointRect.left + pointRect.width / 2 - plotRect.left;
+    tooltip.style.left = `${Math.min(plotRect.width - halfWidth, Math.max(halfWidth, center))}px`;
+    tooltip.style.top = `${pointRect.top - plotRect.top - 5}px`;
+  };
+  container.onpointerleave = () => { tooltip.hidden = true; };
+}
+bindPointTooltip('daily', 'dailyPlot', 'dailyTooltip');
+bindPointTooltip('heat', 'heatPlot', 'heatTooltip');
 
 const today = new Date(), monthAgo = new Date(); monthAgo.setDate(today.getDate()-29);
 const inputDate = (date) => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
