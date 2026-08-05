@@ -62,3 +62,14 @@ test('Claude 自定义状态行不会让已开启的 Codex 额度被误报为未
   assert.match(block, /if !store\.quota\.enabled/);
   assert.match(block, /case \.foreign:[\s\S]*Codex/);
 });
+
+test('已安装 WorkBuddy 时与现有额度来源并列，但不伪造进度条', () => {
+  const block = panelSource.slice(
+    panelSource.indexOf('private struct QuotaBlock'),
+    panelSource.indexOf('private struct QuotaRow'),
+  );
+  assert.match(block, /store\.quota\.workBuddy\.installed/);
+  assert.match(block, /Text\("WorkBuddy"\)/);
+  assert.match(block, /暂不支持读取积分/);
+  assert.match(block, /官方读取接口/);
+});

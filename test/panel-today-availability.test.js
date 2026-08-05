@@ -13,6 +13,7 @@ test('今天的索引还未产出记录时，不把未知值显示成 0', () => 
   try {
     execFileSync('swiftc', [
       join(ROOT, 'mac/Sources/Maclawd/PanelModel.swift'),
+      join(ROOT, 'mac/Sources/Maclawd/WorkBuddyInstallation.swift'),
       join(ROOT, 'mac/Tests/PanelTodayAvailabilityContract.swift'),
       '-o', binary,
     ], { cwd: ROOT, stdio: 'pipe' });

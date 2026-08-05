@@ -334,10 +334,10 @@ private struct QuotaBlock: View {
 
     var body: some View {
         SectionCard(title: "订阅额度") {
-            if store.quota.empty {
-                emptyState
-            } else {
-                VStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 10) {
+                if store.quota.empty {
+                    emptyState
+                } else {
                     ForEach(store.quota.sources) { source in
                         VStack(alignment: .leading, spacing: 7) {
                             // 来源是额度的一部分，不是只有多来源时才需要的分组标题。
@@ -357,7 +357,23 @@ private struct QuotaBlock: View {
                         }
                     }
                 }
+                if store.quota.workBuddy.installed {
+                    workBuddyUnavailable
+                }
             }
+        }
+    }
+
+    private var workBuddyUnavailable: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text("WorkBuddy")
+                .font(.system(size: 11, weight: .semibold))
+            Text("暂不支持读取积分")
+                .font(.system(size: 11, weight: .medium))
+            Text("WorkBuddy 尚未提供可供 Maclawd 使用的官方读取接口")
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 

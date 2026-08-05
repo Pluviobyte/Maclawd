@@ -64,5 +64,16 @@ struct PanelAnalyticsContract {
             "cost": ["estimated": NSNull(), "coverage": 0.0],
         ])
         precondition(unpriced.cost.estimated == nil)
+
+        let quota = QuotaSnapshot.decode([
+            "sources": [],
+            "empty": true,
+        ], workBuddyInstalled: true)
+        precondition(quota.workBuddy.installed)
+
+        precondition(WorkBuddyInstallationDetector.isInstalled { identifier in
+            identifier == "com.workbuddy.workbuddy" ? URL(fileURLWithPath: "/Moved/WorkBuddy.app") : nil
+        })
+        precondition(!WorkBuddyInstallationDetector.isInstalled { _ in nil })
     }
 }

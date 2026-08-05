@@ -12,6 +12,7 @@ test('the native panel decodes the analytics API contract', () => {
   try {
     execFileSync('swiftc', [
       join(ROOT, 'mac/Sources/Maclawd/PanelModel.swift'),
+      join(ROOT, 'mac/Sources/Maclawd/WorkBuddyInstallation.swift'),
       join(ROOT, 'mac/Tests/PanelAnalyticsContract.swift'),
       '-o', binary,
     ], { cwd: ROOT, stdio: 'pipe' });

@@ -74,6 +74,10 @@ struct QuotaSource: Identifiable, Equatable {
     }
 }
 
+struct WorkBuddyQuotaStatus: Equatable {
+    var installed = false
+}
+
 /// 状态行通道的四种情形。面板据此决定显示什么——「没装通道」和
 /// 「装了但还没数据」的文案完全不同，混在一起会让用户干等。
 enum StatuslineState: String {
@@ -82,6 +86,7 @@ enum StatuslineState: String {
 
 struct QuotaSnapshot: Equatable {
     var sources: [QuotaSource] = []
+    var workBuddy = WorkBuddyQuotaStatus()
     var empty: Bool = true
     var statusline: StatuslineState = .unknown
     var foreignCommand: String?
@@ -96,9 +101,13 @@ struct QuotaSnapshot: Equatable {
     }
 
     /// 解码 `/api/quota`。RuntimeClient 和 PanelStore 共用这一份。
-    static func decode(_ json: [String: Any]) -> QuotaSnapshot {
+    static func decode(
+        _ json: [String: Any],
+        workBuddyInstalled: Bool = false
+    ) -> QuotaSnapshot {
         var out = QuotaSnapshot()
         out.sources = (json["sources"] as? [[String: Any]] ?? []).compactMap(QuotaSource.init)
+        out.workBuddy.installed = workBuddyInstalled
         out.empty = json["empty"] as? Bool ?? out.sources.isEmpty
         out.enabled = json["enabled"] as? Bool ?? false
         if let sl = json["statusline"] as? [String: Any] {
@@ -584,7 +593,12 @@ final class PanelStore: ObservableObject {
         refreshAnalytics()
         get("/api/quota") { [weak self] json in
             guard let self, let json else { return }
-            self.quota = QuotaSnapshot.decode(json)
+            // PanelStore 是 @MainActor；只在面板打开后的刷新中查询 Launch Services。
+            // RuntimeClient 的后台菜单栏轮询继续使用纯解码，不接触 AppKit。
+            self.quota = QuotaSnapshot.decode(
+                json,
+                workBuddyInstalled: WorkBuddyInstallationDetector.isInstalled()
+            )
         }
     }
 
