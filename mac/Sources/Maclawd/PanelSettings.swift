@@ -156,10 +156,12 @@ struct SettingsPage: View {
             VStack(alignment: .leading, spacing: 10) {
                 SwitchRow(
                     title: "读取订阅额度",
-                    detail: "Codex 通过官方 CLI 自动读取；Claude Code 通过状态行读取；"
+                    info: "Codex 通过官方 CLI 自动读取；Claude Code 通过状态行读取；"
                           + "WorkBuddy 会读取本机登录文件，并使用其中的 Token 查询计费服务。"
                           + "Token 只在内存中使用，不写入 Maclawd 数据或日志。"
-                          + "Maclawd 会自动兼容 Claude HUD 并保持它原有的显示。",
+                          + "Maclawd 会自动兼容 Claude HUD 并保持它原有的显示。\n\n"
+                          + "Claude Code 状态行只在交互式界面刷新。`claude -p`、CI 与后台任务"
+                          + "同样消耗额度，但不会触发更新，因此数字可能滞后。",
                     isOn: store.bool("quotaTracking"),
                     enabled: !statuslineBusy
                 ) { want in
@@ -178,13 +180,6 @@ struct SettingsPage: View {
                         .font(.system(size: 10.5))
                         .foregroundStyle(PanelTheme.accent)
                 }
-                // 这条盲区必须写在界面上，不能只写在文档里：
-                // 用户看到一个 3 小时没动的数字，第一反应是「坏了」。
-                Text("Claude Code 状态行只在交互式界面刷新。`claude -p`、CI 与后台任务同样消耗额度，"
-                     + "但不会触发更新，因此数字可能滞后。")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.tertiary)
-                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
@@ -400,20 +395,67 @@ struct SettingsPage: View {
 // MARK: - 组件
 
 private struct SwitchRow: View {
+    private enum Description {
+        case inline(String)
+        case info(String)
+    }
+
     let title: String
-    let detail: String
+    private let description: Description
     let isOn: Bool
     var enabled: Bool = true
     let onChange: (Bool) -> Void
+    @State private var showingInfo = false
+
+    init(title: String, detail: String, isOn: Bool, enabled: Bool = true,
+         onChange: @escaping (Bool) -> Void) {
+        self.title = title
+        self.description = .inline(detail)
+        self.isOn = isOn
+        self.enabled = enabled
+        self.onChange = onChange
+    }
+
+    init(title: String, info: String, isOn: Bool, enabled: Bool = true,
+         onChange: @escaping (Bool) -> Void) {
+        self.title = title
+        self.description = .info(info)
+        self.isOn = isOn
+        self.enabled = enabled
+        self.onChange = onChange
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.system(size: 12))
-                Text(detail)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.tertiary)
-                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 4) {
+                    Text(title).font(.system(size: 12))
+                    if case .info(let info) = description {
+                        Button { showingInfo.toggle() } label: {
+                            Image(systemName: "info.circle")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .help(info)
+                        .accessibilityLabel("关于\(title)")
+                        .accessibilityHint("显示详细说明")
+                        .popover(isPresented: $showingInfo, arrowEdge: .bottom) {
+                            Text(info)
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(12)
+                                .frame(width: 280, alignment: .leading)
+                        }
+                    }
+                }
+                if case .inline(let detail) = description {
+                    Text(detail)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.tertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             Spacer(minLength: 6)
             Toggle("", isOn: Binding(get: { isOn }, set: onChange))

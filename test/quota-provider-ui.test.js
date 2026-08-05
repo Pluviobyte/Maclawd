@@ -52,6 +52,13 @@ test('额度主开关同时说明 Codex 与 Claude Code，不再冒充为 Claude
   assert.match(quota, /isOn: store\.bool\("quotaTracking"\)/);
   assert.match(quota, /Codex/);
   assert.match(quota, /Claude Code/);
+  assert.match(settingsSource, /Image\(systemName: "info\.circle"\)/,
+    '额度读取说明应收进原生信息提示，不常驻占用设置页空间');
+  assert.match(settingsSource, /\.help\(info\)/);
+  assert.match(settingsSource, /Button \{ showingInfo\.toggle\(\) \}/,
+    '信息提示还应支持键盘聚焦和点击展开');
+  assert.doesNotMatch(quota, /Text\("Claude Code 状态行只在交互式界面刷新/,
+    '刷新盲区说明不应再直接铺在开关下方');
 });
 
 test('Claude 自定义状态行不会让已开启的 Codex 额度被误报为未开启', () => {

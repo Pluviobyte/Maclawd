@@ -75,5 +75,5 @@ export function runAgentDoctor(settings = {}) {
     }
   }
   const warnings = checks.filter((c) => c.level === 'warning').length;
-  return { summary: warnings ? `${warnings} 项需要修复` : '连接正常', warnings, checks };
+  return { summary: warnings ? `${warnings} 项需要修复` : '已启用的实时连接配置完整', warnings, checks };
 }
