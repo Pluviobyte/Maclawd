@@ -49,7 +49,7 @@ test('人走了 → 完整走完 idle → away → sleeping', () => {
   const e = started();
   e.observeEvent({ type: 'shell.presence' }, 2 * MIN);
   // 之后再没有任何存在信号
-  assert.ok(e.tick(3 * MIN).actionId.startsWith('idle'), '刚走开时还是 idle');
+  assertAwake(e.tick(3 * MIN).actionId, '刚走开时还不应进入睡眠链');
   assert.equal(e.tick(2 * MIN + 5 * MIN + SEC).actionId, 'away', '五分钟后该进 away');
   assert.equal(e.tick(2 * MIN + 6 * MIN + SEC).actionId, 'sleeping', '再过一分钟该睡着');
 });
