@@ -1,4 +1,4 @@
-import { openSync, closeSync, readSync, readdirSync, statSync } from 'node:fs';
+import { openSync, closeSync, readSync, readdirSync, statSync, watch } from 'node:fs';
 import { join } from 'node:path';
 import { sessionDirs } from './parsers/codex.js';
 
@@ -44,10 +44,14 @@ export function codexJsonlEvent(row, context = {}) {
   return null;
 }
 
-export function createCodexSessionMonitor({ onEvent, intervalMs = 1000, now = Date.now } = {}) {
+export function createCodexSessionMonitor({
+  onEvent, intervalMs = 1000, now = Date.now, watchImpl = watch,
+} = {}) {
   const offsets = new Map();
   const contexts = new Map();
   const remainders = new Map();
+  const watchers = [];
+  let watchTimer = null;
 
   function read(path, start, length) {
     const buffer = Buffer.alloc(length);
@@ -111,8 +115,39 @@ export function createCodexSessionMonitor({ onEvent, intervalMs = 1000, now = Da
       }
     }
   }
+
+  // Codex GUI 会持续追加 rollout JSONL。固定 1s 轮询平均要等 500ms，
+  // 这对「刚开始工具 / 刚结束」的桌宠状态已经能被人感知。
+  // fs.watch 只作为低延迟触发器：真正的 offset、半行和轮转处理仍全部走
+  // poll() 这一条路；原来的定时器保留作为丢事件/目录新建时的自愈兜底。
+  const schedulePoll = () => {
+    if (watchTimer) clearTimeout(watchTimer);
+    watchTimer = setTimeout(() => {
+      watchTimer = null;
+      poll();
+    }, 15);
+    watchTimer.unref?.();
+  };
+
+  poll();
+  for (const dir of sessionDirs()) {
+    try {
+      const watcher = watchImpl(dir, { recursive: true }, schedulePoll);
+      watcher.on?.('error', () => {});
+      watcher.unref?.();
+      watchers.push(watcher);
+    } catch {
+      // 目录尚未生成、系统不支持 recursive watch 或权限变化时，
+      // 下面的 interval 仍能恢复，不让优化变成新的单点故障。
+    }
+  }
+  // 堵住「首次 poll 完成到 watcher 装好」之间的极短窗口。
   poll();
   const timer = setInterval(poll, intervalMs);
   timer.unref?.();
-  return () => clearInterval(timer);
+  return () => {
+    clearInterval(timer);
+    if (watchTimer) clearTimeout(watchTimer);
+    for (const watcher of watchers) watcher.close?.();
+  };
 }

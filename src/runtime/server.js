@@ -587,7 +587,20 @@ export function createUsageServer({
       }
     }
 
-    engine.observeRate(live.disabled ? 0 : live.tokensPerMin, now);
+    // Codex GUI/CLI 的 rollout JSONL 已由 createCodexSessionMonitor 转成可靠的
+    // task_started / tool / task_complete 生命周期事件。不能再把 Codex 近 5 分钟
+    // Token 速率当作「现在正在工作」：任务结束后窗口仍为正数，会造出
+    // 一个每 100ms 刷新的 rate:working 幽灵会话，反过来压住真实 GUI 状态。
+    //
+    // 其他尚无事件通道的工具继续使用速率降级。老 collector/mock 没有
+    // 分源字段时保持旧行为，避免升级期间把所有降级检测一刀切掉。
+    const bySource = live.tokensPerMinBySource;
+    const inferredRate = bySource && typeof bySource === 'object'
+      ? Object.entries(bySource).reduce((sum, [source, value]) => (
+        source === 'codex' ? sum : sum + (Number(value) || 0)
+      ), 0)
+      : live.tokensPerMin;
+    engine.observeRate(live.disabled ? 0 : inferredRate, now);
     const state = engine.tick(now);
     persistCoverage(now);
 

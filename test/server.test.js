@@ -36,6 +36,14 @@ let server;
 let base;
 let quotaWorker;
 let workBuddyQuotaWorker;
+const collectorLive = {
+  tokensPerMin: 0,
+  tokensPerMinBySource: {},
+  sources: [],
+  trackedFiles: 0,
+  disabled: false,
+  updatedAt: null,
+};
 
 before(async () => {
   // 造一份最小聚合数据，带一个已知项目路径。
@@ -73,7 +81,7 @@ before(async () => {
   });
   ({ server } = createUsageServer({
     collector: {
-      live: () => ({ tokensPerMin: 0, sources: [], trackedFiles: 0, disabled: false, updatedAt: null }),
+      live: () => ({ ...collectorLive }),
       status: () => ({ running: false, scanning: false, enabled: true, live: {}, lastScan: null }),
       scanNow: async () => ({ records: 0, elapsedMs: 0, stats: {}, warnings: [] }),
       start: async () => {},
@@ -113,6 +121,29 @@ test('/api/ping 暴露可校验的运行时身份与协议版本', async () => {
   assert.ok(Number.isInteger(ping.port) && ping.port > 0);
   assert.match(ping.instanceId, /^[a-f0-9]{32}$/);
   assert.ok(Number.isFinite(ping.startedAt) && ping.startedAt <= Date.now());
+});
+
+test('Codex GUI 真实事件不被 5 分钟 Token 速率覆盖', async () => {
+  collectorLive.tokensPerMin = 2_000;
+  collectorLive.tokensPerMinBySource = { codex: 2_000 };
+  collectorLive.sources = ['codex'];
+  try {
+    const response = await fetch(`${base}/api/event`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        type: 'UserPromptSubmit', sessionId: 'gui-latency',
+        agentId: 'codex', channel: 'jsonl',
+      }),
+    });
+    const snapshot = await response.json();
+    assert.equal(snapshot.state.actionId, 'thinking');
+    assert.equal(snapshot.state.sessionId, 'codex:gui-latency');
+  } finally {
+    collectorLive.tokensPerMin = 0;
+    collectorLive.tokensPerMinBySource = {};
+    collectorLive.sources = [];
+  }
 });
 
 test('静态路径不得穿越出仓库', async () => {

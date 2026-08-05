@@ -36,3 +36,30 @@ test('fallback learns session identity without replaying history and keeps parti
   assert.equal(events[0].cwd, '/tmp/project');
   delete process.env.MACLAWD_CODEX_HOME;
 });
+
+test('GUI 写入完整事件后由文件变化立即触发，不等下一轮慢轮询', async () => {
+  const home = mkdtempSync(join(tmpdir(), 'maclawd-codex-watch-'));
+  process.env.MACLAWD_CODEX_HOME = home;
+  const dir = join(home, 'sessions');
+  mkdirSync(dir, { recursive: true });
+  const path = join(dir, 'rollout.jsonl');
+  writeFileSync(path, `${JSON.stringify({ type: 'session_meta', payload: { id: 'watched' } })}\n`);
+
+  let stop = () => {};
+  try {
+    const event = new Promise((resolve) => {
+      stop = createCodexSessionMonitor({ onEvent: resolve, intervalMs: 10_000 });
+    });
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    appendFileSync(path, `${JSON.stringify({ type: 'event_msg', payload: { type: 'task_started' } })}\n`);
+    const received = await Promise.race([
+      event,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('文件变化未在 800ms 内触发')), 800)),
+    ]);
+    assert.equal(received.type, 'UserPromptSubmit');
+    assert.equal(received.sessionId, 'watched');
+  } finally {
+    stop();
+    delete process.env.MACLAWD_CODEX_HOME;
+  }
+});

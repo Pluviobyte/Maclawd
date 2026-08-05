@@ -57,6 +57,7 @@ export function createCollector({
 
   const live = {
     tokensPerMin: 0,
+    tokensPerMinBySource: {},
     intensityInput: 0,
     sources: [],
     trackedFiles: 0,
@@ -156,6 +157,7 @@ export function createCollector({
     try {
       const result = await tailer.poll();
       live.tokensPerMin = result.tokensPerMin;
+      live.tokensPerMinBySource = result.tokensPerMinBySource ?? {};
       live.sources = [...new Set(result.fresh.map((r) => r.source))];
       live.trackedFiles = result.trackedFiles;
       live.disabled = Boolean(result.disabled);

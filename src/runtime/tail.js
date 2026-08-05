@@ -44,7 +44,10 @@ export function createTailer({
     // 与扫描同一条闸门：关掉之后不碰任何文件，也不推进游标。
     if (!ignoreSettings && !usageEnabled()) {
       samples = [];
-      return { fresh, tokensPerMin: 0, windowTokens: 0, trackedFiles: 0, disabled: true };
+      return {
+        fresh, tokensPerMin: 0, tokensPerMinBySource: {},
+        windowTokens: 0, trackedFiles: 0, disabled: true,
+      };
     }
 
     for (const parser of parsers) {
@@ -128,10 +131,17 @@ export function createTailer({
 
     const windowTokens = samples.reduce((sum, [, tokens]) => sum + tokens, 0);
     const minutes = windowMs / 60_000;
+    const tokensBySource = {};
+    for (const [, tokens, record] of samples) {
+      if (typeof record?.source !== 'string' || !record.source) continue;
+      tokensBySource[record.source] = (tokensBySource[record.source] ?? 0) + tokens;
+    }
 
     return {
       fresh,
       tokensPerMin: Math.round(windowTokens / minutes),
+      tokensPerMinBySource: Object.fromEntries(Object.entries(tokensBySource)
+        .map(([source, tokens]) => [source, Math.round(tokens / minutes)])),
       windowTokens,
       trackedFiles: files.size,
     };
