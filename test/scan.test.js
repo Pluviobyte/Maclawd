@@ -162,6 +162,7 @@ test('预算耗尽后下次扫描从被饿死的来源开始，并公开每来�
   writeFileSync(files[1], '{"value":2}\n');
   writeFileSync(files[2], '{"value":3}\n');
 
+  let fakeNow = 0;
   const parser = (id, fileOrFiles, delayMs = 0) => ({
     id,
     discover: () => (Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles]).map((file, index) => {
@@ -173,8 +174,7 @@ test('预算耗尽后下次扫描从被饿死的来源开始，并公开每来�
       const records = [];
       return {
         onObject(obj) {
-          const until = Date.now() + delayMs;
-          while (Date.now() < until) { /* fixture burns this scan's work budget */ }
+          fakeNow += delayMs;
           records.push({ source: id, model: 'm', project: 'p', ts: 1,
             input: obj.value, output: 0, cacheRead: 0, write5m: 0, write1h: 0,
             reasoning: 0, messageId: `${id}-${obj.value}`, requestId: null,
@@ -189,14 +189,18 @@ test('预算耗尽后下次扫描从被饿死的来源开始，并公开每来�
   const { scanAll } = await import('../src/runtime/scan.js');
 
   try {
-    const first = await scanAll({ parsers: [slow, waiting], budgetMs: 2, ignoreSettings: true });
+    const options = {
+      parsers: [slow, waiting], budgetMs: 2, ignoreSettings: true,
+      clock: () => fakeNow,
+    };
+    const first = await scanAll(options);
     assert.equal(first.bySource.waiting.length, 0);
     assert.equal(first.sourceStatus.slow.deferredFiles, 1,
       '慢来源自己仍有文件待处理，不能让它连续霸占下一轮起点');
     assert.equal(first.sourceStatus.waiting.complete, false);
     assert.equal(first.sourceStatus.waiting.deferredFiles, 1);
 
-    const second = await scanAll({ parsers: [slow, waiting], budgetMs: 2, ignoreSettings: true });
+    const second = await scanAll(options);
     assert.equal(second.bySource.waiting.length, 1,
       '持久化调度游标必须让下一轮先处理上次没机会运行的来源');
     assert.equal(second.sourceStatus.waiting.complete, true);

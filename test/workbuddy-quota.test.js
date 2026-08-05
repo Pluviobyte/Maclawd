@@ -9,6 +9,12 @@ import {
   workBuddyAuthDirectories, workBuddyQuotaReport,
 } from '../src/runtime/workbuddy-quota.js';
 
+/** 让 Node 20/22 测试等待生产代码中故意 unref 的超时器。 */
+async function withEventLoopLease(promise, maxMs = 1_000) {
+  const lease = setTimeout(() => {}, maxMs);
+  try { return await promise; } finally { clearTimeout(lease); }
+}
+
 test('WorkBuddy 真实资源响应按基础包与额外包分别保留精确积分', () => {
   const report = workBuddyQuotaReport({
     code: 0,
@@ -213,7 +219,7 @@ test('WorkBuddy 额度采集器合并刷新、缓存结果并在开关关闭后�
 test('WorkBuddy 计费请求有超时边界且错误信息不泄露 Token', async () => {
   const secret = 'never-print-this-token';
   await assert.rejects(
-    readWorkBuddyQuota({
+    withEventLoopLease(readWorkBuddyQuota({
       credential: { accessToken: secret, uid: 'user-1', domain: 'www.codebuddy.cn' },
       timeoutMs: 5,
       fetchImpl: (_url, options) => new Promise((_resolve, reject) => {
@@ -223,7 +229,7 @@ test('WorkBuddy 计费请求有超时边界且错误信息不泄露 Token', asyn
           reject(error);
         }, { once: true });
       }),
-    }),
+    })),
     (error) => error.code === 'ETIMEDOUT' && !error.message.includes(secret),
   );
 });

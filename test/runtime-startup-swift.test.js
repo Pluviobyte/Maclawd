@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 const SOURCE = resolve('mac/Sources/Maclawd/RuntimeStartupCoordinator.swift');
+const nativeTest = process.platform === 'darwin' ? test : test.skip;
 
 function runSwiftHarness(body) {
   const dir = mkdtempSync(join(tmpdir(), 'maclawd-swift-runtime-test-'));
@@ -20,7 +21,7 @@ function runSwiftHarness(body) {
   }
 }
 
-test('Swift 启动协调：身份与版本完全匹配时复用运行时', () => {
+nativeTest('Swift 启动协调：身份与版本完全匹配时复用运行时', () => {
   const output = runSwiftHarness(`
 import Foundation
 
@@ -39,7 +40,7 @@ print(decision == .reuse(port: 4173) ? "reuse" : "wrong")
   assert.equal(output, 'reuse');
 });
 
-test('Swift 启动协调：仅当可执行路径和 argv 都匹配时替换 legacy 运行时', () => {
+nativeTest('Swift 启动协调：仅当可执行路径和 argv 都匹配时替换 legacy 运行时', () => {
   const output = runSwiftHarness(`
 import Foundation
 
@@ -68,7 +69,7 @@ print(decision == .replaceLegacy(port: 4173, pid: 42) ? "replace" : "wrong")
   assert.equal(output, 'replace');
 });
 
-test('Swift 启动协调：已验证但版本不同的运行时走令牌替换', () => {
+nativeTest('Swift 启动协调：已验证但版本不同的运行时走令牌替换', () => {
   const output = runSwiftHarness(`
 import Foundation
 
@@ -89,7 +90,7 @@ print(decision == .replaceManaged(
   assert.equal(output, 'replace');
 });
 
-test('Swift 启动协调：身份不完整或参数不匹配时绝不终止', () => {
+nativeTest('Swift 启动协调：身份不完整或参数不匹配时绝不终止', () => {
   const output = runSwiftHarness(`
 import Foundation
 
@@ -114,7 +115,7 @@ if case .untrusted = decision { print("refuse") } else { print("wrong") }
   assert.equal(output, 'refuse');
 });
 
-test('Swift 启动协调：legacy argv 必须是受支持的精确形状', () => {
+nativeTest('Swift 启动协调：legacy argv 必须是受支持的精确形状', () => {
   const output = runSwiftHarness(`
 import Foundation
 
@@ -154,7 +155,7 @@ print(allRefused ? "refuse" : "wrong")
   assert.equal(output, 'refuse');
 });
 
-test('Swift 启动协调：端点进程仍存活但探针无响应时拒绝启动第二份', () => {
+nativeTest('Swift 启动协调：端点进程仍存活但探针无响应时拒绝启动第二份', () => {
   const output = runSwiftHarness(`
 import Foundation
 

@@ -213,6 +213,8 @@ function runChained(command, stdinText) {
       child = spawn('/bin/sh', ['-c', command], {
         stdio: ['pipe', 'pipe', 'ignore'],
         env: process.env,
+        // 独立进程组，超时时能一并收掉 shell 拉起的 sleep / awk / node。
+        detached: true,
       });
     } catch {
       done(null);
@@ -220,7 +222,9 @@ function runChained(command, stdinText) {
     }
 
     const timer = setTimeout(() => {
-      try { child.kill('SIGKILL'); } catch { /* 已经退了 */ }
+      try { process.kill(-child.pid, 'SIGKILL'); } catch {
+        try { child.kill('SIGKILL'); } catch { /* 已经退了 */ }
+      }
       done(null);
     }, CHAIN_TIMEOUT_MS);
     timer.unref?.();

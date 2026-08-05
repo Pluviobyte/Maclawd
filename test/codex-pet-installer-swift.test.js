@@ -5,8 +5,9 @@ import { join, resolve } from 'node:path';
 import test from 'node:test';
 
 const ROOT = resolve(import.meta.dirname, '..');
+const nativeTest = process.platform === 'darwin' ? test : test.skip;
 
-test('the native Codex pet installer validates, installs, updates, and protects collisions', () => {
+nativeTest('the native Codex pet installer validates, installs, updates, and protects collisions', () => {
   const scratch = mkdtempSync(join(tmpdir(), 'maclawd-pet-installer-'));
   const binary = join(scratch, 'pet-installer-contract');
   try {

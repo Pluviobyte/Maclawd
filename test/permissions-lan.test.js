@@ -14,6 +14,12 @@ const {
 
 after(() => rmSync(root, { recursive: true, force: true }));
 
+/** 测试自己持有事件循环，不改生产超时器的 unref 退出语义。 */
+async function withEventLoopLease(promise, maxMs = 1_000) {
+  const lease = setTimeout(() => {}, maxMs);
+  try { return await promise; } finally { clearTimeout(lease); }
+}
+
 // ---------- 权限通道 ----------
 
 test('允许 / 拒绝分别翻译成 Claude Code 的决策形态', () => {
@@ -51,7 +57,9 @@ test('用户点允许后，等待中的请求拿到决策', async () => {
 
 test('超时返回 null 而不是自动允许或自动拒绝', async () => {
   const broker = createPermissionBroker({ timeoutMs: 30 });
-  const decision = await broker.request({ session_id: 's1', tool_name: 'Bash' });
+  const decision = await withEventLoopLease(
+    broker.request({ session_id: 's1', tool_name: 'Bash' }),
+  );
   assert.equal(decision, null);
   assert.equal(broker.size, 0);
 });

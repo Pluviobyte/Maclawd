@@ -5,8 +5,9 @@ import { join, resolve } from 'node:path';
 import test from 'node:test';
 
 const ROOT = resolve(import.meta.dirname, '..');
+const nativeTest = process.platform === 'darwin' ? test : test.skip;
 
-test('原生实时会话按完整目录分组，并按关注优先级排序', () => {
+nativeTest('原生实时会话按完整目录分组，并按关注优先级排序', () => {
   const scratch = mkdtempSync(join(tmpdir(), 'maclawd-live-sessions-'));
   const binary = join(scratch, 'live-sessions-contract');
   try {

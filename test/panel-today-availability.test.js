@@ -6,8 +6,9 @@ import { join, resolve } from 'node:path';
 import test from 'node:test';
 
 const ROOT = resolve(import.meta.dirname, '..');
+const nativeTest = process.platform === 'darwin' ? test : test.skip;
 
-test('今天的索引还未产出记录时，不把未知值显示成 0', () => {
+nativeTest('今天的索引还未产出记录时，不把未知值显示成 0', () => {
   const scratch = mkdtempSync(join(tmpdir(), 'maclawd-today-availability-'));
   const binary = join(scratch, 'today-availability-contract');
   try {

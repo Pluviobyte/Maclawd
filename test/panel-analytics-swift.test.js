@@ -5,8 +5,9 @@ import { join, resolve } from 'node:path';
 import test from 'node:test';
 
 const ROOT = resolve(import.meta.dirname, '..');
+const nativeTest = process.platform === 'darwin' ? test : test.skip;
 
-test('the native panel decodes the analytics API contract', () => {
+nativeTest('the native panel decodes the analytics API contract', () => {
   const scratch = mkdtempSync(join(tmpdir(), 'maclawd-panel-contract-'));
   const binary = join(scratch, 'panel-contract');
   try {

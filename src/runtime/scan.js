@@ -218,13 +218,14 @@ export async function scanAll({
   parsers = allParsers,
   onProgress,
   budgetMs = budgetFromEnv(),
+  clock = Date.now,
   // 时间预算只能在文件之间检查；再给单文件一个字节上限，避免一个数百 MB
   // 的 JSONL 独占事件循环几分钟。后续轮次沿已有 offset 继续。
   maxFileBytes = 16 * 1024 * 1024,
   // 只有测试与「用户主动点重新扫描」之外的路径才需要绕过；默认必须尊重开关。
   ignoreSettings = false,
 } = {}) {
-  const startedAt = Date.now();
+  const startedAt = clock();
 
   // 主开关关在源头生效：一次 readdir 都不做。把闸设在这里而不是调用方，
   // 是为了让「关掉之后还在读日志」这种事在架构上不可能发生。
@@ -355,7 +356,7 @@ export async function scanAll({
       }
 
       // 预算耗尽：保留旧数据（若有），把这个文件留到下次。
-      if (Date.now() - startedAt > budgetMs) {
+      if (clock() - startedAt > budgetMs) {
         stats.deferred++;
         status.deferredFiles++;
         status.complete = false;
@@ -565,7 +566,7 @@ export async function scanAll({
     projectPaths,
     warnings,
     stats,
-    elapsedMs: Date.now() - startedAt,
+    elapsedMs: clock() - startedAt,
     // 还有文件没来得及处理时，上层应显示「正在建立索引」，而不是把结果当完整数据。
     indexing: stats.deferred > 0 ? { deferred: stats.deferred } : null,
   };

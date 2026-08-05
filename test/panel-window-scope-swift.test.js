@@ -6,8 +6,9 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
+const nativeTest = process.platform === 'darwin' ? test : test.skip;
 
-test('自定义日期 sheet 内的取消和应用不会被当成面板外点击', () => {
+nativeTest('自定义日期 sheet 内的取消和应用不会被当成面板外点击', () => {
   const dir = mkdtempSync(join(tmpdir(), 'maclawd-panel-window-scope-'));
   const binary = join(dir, 'panel-window-scope-contract');
   try {
