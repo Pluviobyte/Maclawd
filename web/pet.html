@@ -275,7 +275,7 @@ const GROUP_LABELS = { primary:'主状态', modifier:'工作修饰', interaction
 const SETTING_ROWS = [
   ['recordUsage','记录 token 用量','读取本机 AI 编程工具日志。纯只读、不联网，所以默认开启。关闭后立即停止扫描与跟读并释放文件句柄，已有数据保留。',null],
   ['petEnergy','用用量影响桌宠行为','累计用量让 Maclawd 逐渐变困：偏移 idle 变体权重与 away 阈值。关闭后 energy 恒为 1，角色仍会在长时间静默后入睡。','recordUsage'],
-  ['hookEnhancement','启用 Claude Code 事件增强','让 Maclawd 准确知道 Claude 在思考、调用工具还是在等你决定。需要修改 ~/.claude/settings.json——这是在动你另一个工具的配置，所以默认关闭，且卸载时只移除自己写入的条目。',null],
+  ['hookEnhancement','启用 Claude Code 事件增强','让 Maclawd 通过 Claude Code 的 Hooks 实时接收运行事件，对桌宠的实时动作和状态判断更加精准。会向 ~/.claude/settings.json 添加 hooks，不覆盖已有配置，也不处理权限。',null],
   ['showCost','显示成本估算','按 API 单价估算，与订阅费无关。价格表当前有缺口（未知模型不猜价格），所以默认不展示。',null],
   ['reducedMotion','减弱动效','道具与身体动作停止，只保留低频眨眼。动作时长由契约锁定，不会因此改变。',null],
   ['permissionBubble','在桌宠上批准权限','拦截 Claude Code 的权限请求并在桌宠上给出 Allow / Deny。这是很重的行为，默认关闭；超时或未开启时一律不表态，决策原样交回 Claude Code。需要单独安装 HTTP hook。',null],

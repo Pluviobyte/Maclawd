@@ -53,6 +53,9 @@ import { watchHooks } from './hook-health.js';
 import {
   createRuntimeIdentity, managementTokenMatches, publicRuntimeIdentity,
 } from './runtime-identity.js';
+import {
+  sessionAgentLabel, sessionStateLabel, sessionStatePriority,
+} from './session-presentation.js';
 
 /**
  * 本地前端服务。零依赖，只绑 127.0.0.1。
@@ -690,11 +693,13 @@ export function createUsageServer({
           id: session.id,
           sessionId: session.externalId,
           agentId: session.agentId ?? 'unknown',
-          agentLabel: SOURCE_LABELS[session.agentId] ?? session.agentId ?? 'Agent',
+          agentLabel: sessionAgentLabel(session.agentId, SOURCE_LABELS[session.agentId]),
           channel: session.channel,
           state: session.state,
-          stateLabel: orchestrator.plan(session.state, { variant: session.variant })?.name ?? session.state,
+          stateLabel: sessionStateLabel(session.state, session.variant),
+          statePriority: sessionStatePriority(session.state),
           project: session.cwd ? basename(session.cwd) : '',
+          projectPath: session.cwd ? normalize(session.cwd) : '',
           pid: session.pid,
           at: session.at,
           stateSince: session.stateSince,

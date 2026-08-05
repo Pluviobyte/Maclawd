@@ -174,35 +174,42 @@ private struct SessionsPage: View {
             HStack {
                 Text("实时会话").font(.system(size: 13, weight: .semibold))
                 Spacer()
-                Text("\(store.liveSessions.count) 个").font(.system(size: 10)).foregroundStyle(.secondary)
+                Text("\(store.liveSessions.count) 个会话")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
             }
             if store.liveSessions.isEmpty {
                 SectionCard(title: "当前") {
-                    Text("暂无活跃会话。连接 Claude Code 或 Codex 后，运行状态会出现在这里。")
+                    Text("暂无运行中的项目。连接 Claude Code 或 Codex 后，项目状态会出现在这里。")
                         .font(.system(size: 11)).foregroundStyle(.secondary)
                 }
             } else {
-                ForEach(store.liveSessions) { session in
-                    SectionCard(title: session.agentLabel) {
-                        VStack(alignment: .leading, spacing: 7) {
-                            HStack {
-                                Circle().fill(session.winner ? PanelTheme.accent : Color.secondary.opacity(0.45))
-                                    .frame(width: 7, height: 7)
-                                Text(session.stateLabel).font(.system(size: 12, weight: .semibold))
-                                Spacer()
-                                Text(elapsed(session.stateSince)).font(.system(size: 10)).foregroundStyle(.secondary)
+                ForEach(Array(projectGroups.enumerated()), id: \.element.id) { index, group in
+                    if index > 0 {
+                        Divider().opacity(0.45).padding(.vertical, 2)
+                    }
+                    VStack(alignment: .leading, spacing: 10) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(group.name)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                            if !group.path.isEmpty {
+                                Text(group.path)
+                                    .font(.system(size: 9.5))
+                                    .foregroundStyle(.tertiary)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                                    .accessibilityLabel("完整路径 \(group.path)")
                             }
-                            HStack {
-                                Text(session.project.isEmpty ? "未识别项目" : session.project)
-                                    .font(.system(size: 10.5)).foregroundStyle(.secondary).lineLimit(1)
-                                if session.subagents > 0 {
-                                    Text("· \(session.subagents) 个子代理").font(.system(size: 10)).foregroundStyle(.secondary)
+                        }
+
+                        VStack(alignment: .leading, spacing: 0) {
+                            ForEach(Array(group.sessions.enumerated()), id: \.element.id) { sessionIndex, session in
+                                if sessionIndex > 0 {
+                                    Divider().opacity(0.28).padding(.vertical, 7)
                                 }
-                                Spacer()
-                                if let pid = session.pid {
-                                    Button("回到终端") { TerminalFocus.activate(pid: pid_t(pid)) }
-                                        .font(.system(size: 10))
-                                }
+                                sessionRow(session)
                             }
                         }
                     }
@@ -214,6 +221,45 @@ private struct SessionsPage: View {
             store.refresh()
         }
         .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { now = $0 }
+    }
+
+    private var projectGroups: [LiveProjectGroup] {
+        LiveProjectGroup.make(from: store.liveSessions)
+    }
+
+    private func sessionRow(_ session: LiveAgentSession) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(session.agentLabel)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.primary)
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(stateColor(session))
+                    .frame(width: 6, height: 6)
+                    .accessibilityHidden(true)
+                Text(session.stateLabel)
+                    .font(.system(size: 10.5, weight: .medium))
+                    .foregroundStyle(stateColor(session))
+                Spacer(minLength: 8)
+                Text(auxiliaryText(session))
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private func stateColor(_ session: LiveAgentSession) -> Color {
+        if session.state == "error" { return .red }
+        if session.state == "needs_owner" { return .orange }
+        return .secondary
+    }
+
+    private func auxiliaryText(_ session: LiveAgentSession) -> String {
+        let duration = elapsed(session.stateSince)
+        guard session.subagents > 0 else { return duration }
+        return "\(duration) · \(session.subagents) 个子代理"
     }
 
     private func elapsed(_ date: Date) -> String {
@@ -443,7 +489,34 @@ private struct QuotaBlock: View {
             }
         }
         if presentation.bonus != nil || !presentation.bonusDetails.isEmpty {
-            DisclosureGroup(isExpanded: $workBuddyBonusExpanded) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.16)) {
+                    workBuddyBonusExpanded.toggle()
+                }
+            } label: {
+                VStack(alignment: .leading, spacing: 2) {
+                    if let bonus = presentation.bonus {
+                        QuotaRow(window: bonus, deadlineAction: .expire)
+                    } else {
+                        Text("额外额度 · 数据暂不完整")
+                            .font(.system(size: 11, weight: .medium))
+                    }
+                    HStack(spacing: 5) {
+                        Text("\(presentation.bonusDetails.count) 个额外积分包 · 点击查看明细")
+                        Spacer(minLength: 4)
+                        Image(systemName: workBuddyBonusExpanded ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 8.5, weight: .semibold))
+                    }
+                    .font(.system(size: 9.5))
+                    .foregroundStyle(.tertiary)
+                    .padding(.leading, 78)
+                    .padding(.trailing, 2)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if workBuddyBonusExpanded {
                 VStack(alignment: .leading, spacing: 7) {
                     ForEach(Array(presentation.bonusDetails.enumerated()), id: \.element.id) { index, window in
                         VStack(alignment: .leading, spacing: 2) {
@@ -461,22 +534,8 @@ private struct QuotaBlock: View {
                     }
                 }
                 .padding(.top, 6)
-                .padding(.leading, 10)
-            } label: {
-                VStack(alignment: .leading, spacing: 2) {
-                    if let bonus = presentation.bonus {
-                        QuotaRow(window: bonus, deadlineAction: .expire)
-                    } else {
-                        Text("额外额度 · 数据暂不完整")
-                            .font(.system(size: 11, weight: .medium))
-                    }
-                    Text("\(presentation.bonusDetails.count) 个额外积分包 · 点击查看明细")
-                        .font(.system(size: 9.5))
-                        .foregroundStyle(.tertiary)
-                        .padding(.leading, 78)
-                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
-            .tint(.secondary)
         }
     }
 

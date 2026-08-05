@@ -97,7 +97,7 @@ struct PanelAnalyticsContract {
             ],
         ])!
         let presentation = WorkBuddyQuotaPresentation(source: workBuddy)
-        precondition(presentation.base?.label == "基础月度额度")
+        precondition(presentation.base?.label == "订阅额度")
         precondition(presentation.base?.limit == 500)
         precondition(presentation.base?.remaining == 400)
         precondition(presentation.bonus?.label == "额外额度")

@@ -123,7 +123,7 @@ struct WorkBuddyQuotaPresentation: Equatable {
                 }
                 return $0.id < $1.id
             }
-        base = Self.aggregate(baseWindows, id: "workbuddy-base", label: "基础月度额度", kind: "base")
+        base = Self.aggregate(baseWindows, id: "workbuddy-base", label: "订阅额度", kind: "base")
         bonus = Self.aggregate(bonusWindows, id: "workbuddy-bonus", label: "额外额度", kind: "bonus")
         baseDetails = baseWindows
         bonusDetails = bonusWindows
@@ -615,23 +615,68 @@ struct AnalyticsSnapshot: Equatable {
 struct LiveAgentSession: Identifiable {
     let id: String
     let agentLabel: String
+    let state: String
     let stateLabel: String
+    let statePriority: Int
     let project: String
-    let pid: Int32?
+    let projectPath: String
     let stateSince: Date
+    let lastActivityAt: Date
     let subagents: Int
-    let winner: Bool
 
     init?(_ json: [String: Any]) {
         guard let id = json["id"] as? String else { return nil }
         self.id = id
-        agentLabel = json["agentLabel"] as? String ?? "Agent"
-        stateLabel = json["stateLabel"] as? String ?? (json["state"] as? String ?? "运行中")
+        agentLabel = json["agentLabel"] as? String ?? "其他 Agent"
+        state = json["state"] as? String ?? "unknown"
+        stateLabel = json["stateLabel"] as? String ?? "运行中"
+        statePriority = (json["statePriority"] as? NSNumber)?.intValue ?? 4
         project = json["project"] as? String ?? ""
-        pid = (json["pid"] as? NSNumber).map { Int32($0.intValue) }
+        projectPath = json["projectPath"] as? String ?? ""
         stateSince = Date(timeIntervalSince1970: ((json["stateSince"] as? NSNumber)?.doubleValue ?? 0) / 1000)
+        lastActivityAt = Date(timeIntervalSince1970: ((json["at"] as? NSNumber)?.doubleValue ?? 0) / 1000)
         subagents = (json["subagents"] as? NSNumber)?.intValue ?? 0
-        winner = json["winner"] as? Bool ?? false
+    }
+}
+
+struct LiveProjectGroup: Identifiable {
+    let id: String
+    let name: String
+    let path: String
+    let sessions: [LiveAgentSession]
+
+    var statePriority: Int { sessions.map(\.statePriority).min() ?? 4 }
+    var lastActivityAt: Date { sessions.map(\.lastActivityAt).max() ?? .distantPast }
+
+    static func make(from sessions: [LiveAgentSession]) -> [LiveProjectGroup] {
+        let unknownKey = "\u{0}unknown-project"
+        let grouped = Dictionary(grouping: sessions) { session in
+            session.projectPath.isEmpty ? unknownKey : session.projectPath
+        }
+
+        return grouped.map { key, projectSessions in
+            let sortedSessions = projectSessions.sorted { lhs, rhs in
+                if lhs.statePriority != rhs.statePriority { return lhs.statePriority < rhs.statePriority }
+                if lhs.lastActivityAt != rhs.lastActivityAt { return lhs.lastActivityAt > rhs.lastActivityAt }
+                if lhs.agentLabel != rhs.agentLabel {
+                    return lhs.agentLabel.localizedStandardCompare(rhs.agentLabel) == .orderedAscending
+                }
+                return lhs.id < rhs.id
+            }
+            let path = key == unknownKey ? "" : key
+            let reportedName = sortedSessions.first(where: { !$0.project.isEmpty })?.project
+            let pathName = path.isEmpty ? "" : URL(fileURLWithPath: path).lastPathComponent
+            return LiveProjectGroup(
+                id: key,
+                name: reportedName ?? (pathName.isEmpty ? "未识别项目" : pathName),
+                path: path,
+                sessions: sortedSessions
+            )
+        }.sorted { lhs, rhs in
+            if lhs.statePriority != rhs.statePriority { return lhs.statePriority < rhs.statePriority }
+            if lhs.lastActivityAt != rhs.lastActivityAt { return lhs.lastActivityAt > rhs.lastActivityAt }
+            return lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
+        }
     }
 }
 
