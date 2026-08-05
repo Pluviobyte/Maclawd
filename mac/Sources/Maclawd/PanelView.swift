@@ -393,6 +393,7 @@ private struct OverviewPage: View {
 
 private struct QuotaBlock: View {
     @ObservedObject var store: PanelStore
+    @State private var workBuddyBonusExpanded = false
 
     var body: some View {
         SectionCard(title: "订阅额度") {
@@ -407,8 +408,12 @@ private struct QuotaBlock: View {
                             Text(source.label)
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundStyle(.primary)
-                            ForEach(source.windows) { window in
-                                QuotaRow(window: window)
+                            if source.id == "workbuddy" {
+                                workBuddyQuota(source)
+                            } else {
+                                ForEach(source.windows) { window in
+                                    QuotaRow(window: window)
+                                }
                             }
                             if let context = source.context {
                                 Text("上下文剩余 \(Int(context.remainingPercent.rounded()))%"
@@ -425,6 +430,53 @@ private struct QuotaBlock: View {
                     workBuddyStatus
                 }
             }
+        }
+    }
+
+    @ViewBuilder private func workBuddyQuota(_ source: QuotaSource) -> some View {
+        let presentation = WorkBuddyQuotaPresentation(source: source)
+        if let base = presentation.base {
+            QuotaRow(window: base)
+        } else {
+            ForEach(presentation.baseDetails) { window in
+                QuotaRow(window: window)
+            }
+        }
+        if presentation.bonus != nil || !presentation.bonusDetails.isEmpty {
+            DisclosureGroup(isExpanded: $workBuddyBonusExpanded) {
+                VStack(alignment: .leading, spacing: 7) {
+                    ForEach(Array(presentation.bonusDetails.enumerated()), id: \.element.id) { index, window in
+                        VStack(alignment: .leading, spacing: 2) {
+                            QuotaRow(
+                                window: window,
+                                labelOverride: "额外包 \(index + 1)",
+                                deadlineAction: .expire
+                            )
+                            Text(window.label)
+                                .font(.system(size: 9.5))
+                                .foregroundStyle(.tertiary)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(.leading, 78)
+                        }
+                    }
+                }
+                .padding(.top, 6)
+                .padding(.leading, 10)
+            } label: {
+                VStack(alignment: .leading, spacing: 2) {
+                    if let bonus = presentation.bonus {
+                        QuotaRow(window: bonus, deadlineAction: .expire)
+                    } else {
+                        Text("额外额度 · 数据暂不完整")
+                            .font(.system(size: 11, weight: .medium))
+                    }
+                    Text("\(presentation.bonusDetails.count) 个额外积分包 · 点击查看明细")
+                        .font(.system(size: 9.5))
+                        .foregroundStyle(.tertiary)
+                        .padding(.leading, 78)
+                }
+            }
+            .tint(.secondary)
         }
     }
 
@@ -483,6 +535,8 @@ private struct QuotaBlock: View {
 
 private struct QuotaRow: View {
     let window: QuotaWindow
+    var labelOverride: String? = nil
+    var deadlineAction: QuotaDeadlineAction = .reset
 
     /// 不用红色——红色在 Maclawd 里已经是 `error` 的语言，额度用得多不是出错。
     /// 健康档用角色主色而不是绿色：绿色是仪表盘语言，主色让这一条
@@ -497,7 +551,7 @@ private struct QuotaRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 6) {
-                Text(window.label)
+                Text(labelOverride ?? window.label)
                     .font(.system(size: 11, weight: .medium))
                     .lineLimit(1)
                     .frame(width: 72, alignment: .leading)
@@ -526,7 +580,7 @@ private struct QuotaRow: View {
                 if let remaining = window.remaining, let limit = window.limit {
                     Text("\(Fmt.credits(remaining)) / \(Fmt.credits(limit)) Credits")
                 }
-                if let until = Fmt.until(window.resetAt), !window.isReset {
+                if let until = Fmt.until(window.resetAt, action: deadlineAction), !window.isReset {
                     Text(until)
                 }
                 // 状态行只在交互式界面渲染，`claude -p` 与 CI 都不触发。

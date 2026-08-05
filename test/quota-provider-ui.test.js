@@ -91,3 +91,17 @@ test('WorkBuddy 尚未登录或私有接口失效时给出可行动降级状态'
   assert.match(block, /lastErrorCode != nil/,
     '即使还有旧积分，登录或网络错误也必须同时显示');
 });
+
+test('WorkBuddy 首页只显示基础与额外额度，额外积分包可展开查看', () => {
+  const block = panelSource.slice(
+    panelSource.indexOf('private struct QuotaBlock'),
+    panelSource.indexOf('private struct QuotaRow'),
+  );
+  assert.match(block, /WorkBuddyQuotaPresentation/);
+  assert.match(block, /DisclosureGroup/);
+  assert.match(block, /bonusDetails/);
+  assert.match(block, /个额外积分包/);
+  assert.match(block, /deadlineAction: \.expire/);
+  assert.match(block, /Text\(window\.label\)/, '展开后必须保留 WorkBuddy 返回的真实包名');
+  assert.match(block, /数据暂不完整/, '无法汇总时不能静默隐藏额度');
+});

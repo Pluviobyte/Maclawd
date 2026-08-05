@@ -71,6 +71,54 @@ struct PanelAnalyticsContract {
         ], workBuddyInstalled: true)
         precondition(quota.workBuddy.installed)
 
+        let workBuddy = QuotaSource([
+            "id": "workbuddy",
+            "label": "WorkBuddy",
+            "windows": [
+                [
+                    "id": "base-1", "label": "个人体验版", "kind": "base",
+                    "used": 100.0, "limit": 500.0, "remaining": 400.0,
+                    "usedPercent": 20.0, "resetAt": 3_000.0, "state": "live",
+                ],
+                [
+                    "id": "bonus-late", "label": "裂变包", "kind": "bonus",
+                    "used": 100.0, "limit": 1_500.0, "remaining": 1_400.0,
+                    "usedPercent": 6.666, "resetAt": 5_000.0, "state": "live",
+                ],
+                [
+                    "id": "bonus-first", "label": "裂变包", "kind": "bonus",
+                    "used": 0.0, "limit": 100.0, "remaining": 100.0,
+                    "usedPercent": 0.0, "resetAt": 4_000.0, "state": "live",
+                ],
+                [
+                    "id": "bonus-reset", "label": "旧包", "kind": "bonus",
+                    "usedPercent": NSNull(), "state": "reset",
+                ],
+            ],
+        ])!
+        let presentation = WorkBuddyQuotaPresentation(source: workBuddy)
+        precondition(presentation.base?.label == "基础月度额度")
+        precondition(presentation.base?.limit == 500)
+        precondition(presentation.base?.remaining == 400)
+        precondition(presentation.bonus?.label == "额外额度")
+        precondition(presentation.bonus?.used == 100)
+        precondition(presentation.bonus?.limit == 1_600)
+        precondition(presentation.bonus?.remaining == 1_500)
+        precondition(presentation.bonus?.resetAt == Date(timeIntervalSince1970: 4))
+        precondition(presentation.bonusDetails.map(\.id) == ["bonus-first", "bonus-late"])
+        precondition(presentation.bonusDetails.map(\.label) == ["裂变包", "裂变包"])
+
+        let incomplete = QuotaSource([
+            "id": "workbuddy", "label": "WorkBuddy",
+            "windows": [[
+                "id": "partial", "label": "活动加量包", "kind": "bonus",
+                "usedPercent": 50.0, "state": "live",
+            ]],
+        ])!
+        let incompletePresentation = WorkBuddyQuotaPresentation(source: incomplete)
+        precondition(incompletePresentation.bonus == nil)
+        precondition(incompletePresentation.bonusDetails.map(\.label) == ["活动加量包"])
+
         precondition(WorkBuddyInstallationDetector.isInstalled { identifier in
             identifier == "com.workbuddy.workbuddy" ? URL(fileURLWithPath: "/Moved/WorkBuddy.app") : nil
         })

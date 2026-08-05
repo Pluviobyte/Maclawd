@@ -51,6 +51,29 @@ struct QuotaWindow: Identifiable, Equatable {
         self.remaining = raw["remaining"] as? Double
         self.kind = raw["kind"] as? String
     }
+
+    init(
+        id: String,
+        label: String,
+        used: Double,
+        limit: Double,
+        remaining: Double,
+        resetAt: Date?,
+        state: String,
+        staleSeconds: Int,
+        kind: String
+    ) {
+        self.id = id
+        self.label = label
+        self.used = used
+        self.limit = limit
+        self.remaining = remaining
+        self.usedPercent = limit > 0 ? max(0, min(100, used / limit * 100)) : nil
+        self.resetAt = resetAt
+        self.state = state
+        self.staleSeconds = staleSeconds
+        self.kind = kind
+    }
 }
 
 struct QuotaContext: Equatable {
@@ -80,6 +103,53 @@ struct QuotaSource: Identifiable, Equatable {
         self.windows = (raw["windows"] as? [[String: Any]] ?? []).compactMap(QuotaWindow.init)
         self.context = QuotaContext(raw["context"])
         self.model = raw["model"] as? String
+    }
+}
+
+/// WorkBuddy 首页只展示两条汇总；每个额外包仍保留在可展开明细里。
+struct WorkBuddyQuotaPresentation: Equatable {
+    let base: QuotaWindow?
+    let bonus: QuotaWindow?
+    let baseDetails: [QuotaWindow]
+    let bonusDetails: [QuotaWindow]
+
+    init(source: QuotaSource) {
+        let active = source.windows.filter { !$0.isReset }
+        let baseWindows = active.filter { $0.kind == "base" }
+        let bonusWindows = active.filter { $0.kind == "bonus" }
+            .sorted {
+                if $0.resetAt != $1.resetAt {
+                    return ($0.resetAt ?? .distantFuture) < ($1.resetAt ?? .distantFuture)
+                }
+                return $0.id < $1.id
+            }
+        base = Self.aggregate(baseWindows, id: "workbuddy-base", label: "基础月度额度", kind: "base")
+        bonus = Self.aggregate(bonusWindows, id: "workbuddy-bonus", label: "额外额度", kind: "bonus")
+        baseDetails = baseWindows
+        bonusDetails = bonusWindows
+    }
+
+    private static func aggregate(
+        _ windows: [QuotaWindow],
+        id: String,
+        label: String,
+        kind: String
+    ) -> QuotaWindow? {
+        guard !windows.isEmpty,
+              windows.allSatisfy({ $0.used != nil && $0.limit != nil && $0.remaining != nil })
+        else { return nil }
+        let state = windows.contains(where: { $0.isQuiet }) ? "quiet" : "live"
+        return QuotaWindow(
+            id: id,
+            label: label,
+            used: windows.compactMap(\.used).reduce(0, +),
+            limit: windows.compactMap(\.limit).reduce(0, +),
+            remaining: windows.compactMap(\.remaining).reduce(0, +),
+            resetAt: windows.compactMap(\.resetAt).min(),
+            state: state,
+            staleSeconds: windows.map(\.staleSeconds).max() ?? 0,
+            kind: kind
+        )
     }
 }
 
@@ -931,14 +1001,29 @@ enum Fmt {
             .joined(separator: " ")
     }
 
-    /// 距离重置还有多久。越远精度越粗——「6 天后」比「151h14m」好读。
-    static func until(_ date: Date?, now: Date = Date()) -> String? {
+    /// 距离重置或到期还有多久。越远精度越粗——「6 天后」比「151h14m」好读。
+    static func until(
+        _ date: Date?,
+        now: Date = Date(),
+        action: QuotaDeadlineAction = .reset
+    ) -> String? {
         guard let date else { return nil }
         let secs = Int(date.timeIntervalSince(now))
-        if secs <= 0 { return "即将重置" }
+        if secs <= 0 { return "即将\(action.label)" }
         let h = secs / 3600, m = (secs % 3600) / 60
-        if h >= 24 { return "\(h / 24) 天 \(h % 24) 小时后重置" }
-        if h > 0 { return "\(h)h\(String(format: "%02d", m))m 后重置" }
-        return "\(m) 分钟后重置"
+        if h >= 24 { return "\(h / 24) 天 \(h % 24) 小时后\(action.label)" }
+        if h > 0 { return "\(h)h\(String(format: "%02d", m))m 后\(action.label)" }
+        return "\(m) 分钟后\(action.label)"
+    }
+}
+
+enum QuotaDeadlineAction {
+    case reset, expire
+
+    var label: String {
+        switch self {
+        case .reset: "重置"
+        case .expire: "到期"
+        }
     }
 }
