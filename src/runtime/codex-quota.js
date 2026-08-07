@@ -187,6 +187,7 @@ export function readCodexRateLimits({
         return;
       }
       child = spawnImpl(command, ['app-server', '--stdio'], {
+        cwd: homedir(),
         stdio: ['pipe', 'pipe', 'pipe'],
         shell: false,
       });
