@@ -184,6 +184,27 @@ test('没装过就卸载 → 无害', () => {
 
 // ---------- 重装 ----------
 
+test('项目搬家后仍识别旧 Maclawd 状态行并刷新绝对路径', () => {
+  const oldScript = '/Users/rain/Desktop/Maclawd/hooks/maclawd-statusline.js';
+  write({
+    statusLine: {
+      type: 'command',
+      command: `/old/node ${JSON.stringify(oldScript)}`,
+    },
+  });
+
+  assert.equal(statuslineStatus().state, 'ours',
+    '同名 Maclawd 脚本只是换了安装位置，不该被当成第三方状态行');
+
+  const result = installStatusline({ nodePath: '/current/node' });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.chained, false);
+  assert.ok(read().statusLine.command.startsWith('/current/node'));
+  assert.ok(read().statusLine.command.includes(statuslineScriptPath()));
+  assert.ok(!read().statusLine.command.includes(oldScript));
+});
+
 test('重装（换了 node 路径）→ 刷新命令但保住 chain 关系', () => {
   write({ statusLine: FOREIGN });
   installStatusline({ nodePath: '/usr/bin/node', chainExisting: true });

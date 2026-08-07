@@ -32,6 +32,7 @@ import {
  */
 
 const STATUSLINE_SCRIPT = 'hooks/maclawd-statusline.js';
+const STATUSLINE_SCRIPT_NAME = STATUSLINE_SCRIPT.split('/').pop();
 export const CHAIN_SIDECAR_FILE = 'statusline-chain.json';
 
 export function statuslineScriptPath() {
@@ -43,16 +44,18 @@ export function chainSidecarPath() {
 }
 
 /**
- * 这条 statusLine 是我们写的吗？只认脚本路径，和 hook-install.js 的
- * isOurs 同一套判据——不依赖任何我们自己加的标记字段，因为用户可能
- * 手工编辑过 settings.json 而把标记弄丢，那时误判会导致我们去改别人的配置。
+ * 这条 statusLine 是我们写的吗？与 hook-install.js 一样，既认当前
+ * 完整路径，也认 Maclawd 专用脚本名。状态行命令保存的是绝对路径；
+ * 项目目录或 .app 一旦搬家，只比当前绝对路径就会把自己误报成 foreign，
+ * 进而因为“默认不覆盖第三方状态行”而永远无法自愈。脚本名是足够
+ * 严格的身份：识别后 installStatusline 只会将它刷新到当前 Maclawd 路径。
  */
 function isOurs(entry, script = statuslineScriptPath()) {
   return Boolean(entry)
     && typeof entry === 'object'
     && !Array.isArray(entry)
     && typeof entry.command === 'string'
-    && entry.command.includes(script);
+    && (entry.command.includes(script) || entry.command.includes(STATUSLINE_SCRIPT_NAME));
 }
 
 function isClaudeHud(entry) {
