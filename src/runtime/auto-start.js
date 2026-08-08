@@ -1,8 +1,11 @@
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readEndpoint } from './endpoint.js';
+import { dataDir } from './paths.js';
+
+export const AUTO_START_SUPPRESSION_FILE = 'auto-start-suppressed';
 
 /**
  * 开 Claude Code 时把 Maclawd 拉起来。
@@ -42,18 +45,25 @@ export function isRunning() {
   return readEndpoint() !== null;
 }
 
+/** 用户主动退出后，新 agent 会话不应擅自把应用复活。 */
+export function isAutoStartSuppressed() {
+  return existsSync(join(dataDir(), AUTO_START_SUPPRESSION_FILE));
+}
+
 /**
  * 需要的话把 app 拉起来。
  *
- * @returns {'running'|'launched'|'no-bundle'|'disabled'|'failed'}
+ * @returns {'running'|'launched'|'no-bundle'|'disabled'|'suppressed'|'failed'}
  */
 export function autoStart({
   enabled = true,
+  suppressed = isAutoStartSuppressed,
   running = isRunning,
   bundle = bundlePath,
   launch = defaultLaunch,
 } = {}) {
   if (!enabled) return 'disabled';
+  if (suppressed()) return 'suppressed';
   if (running()) return 'running';
   const app = bundle();
   if (!app) return 'no-bundle';

@@ -162,3 +162,18 @@ test('拉起 app：关掉开关就一步都不做', () => withDataDir(async () =
   assert.equal(r, 'disabled');
   assert.equal(probed, false, '关掉之后连探测都不该发生');
 }));
+
+test('拉起 app：用户主动退出后不被新会话复活', () => withDataDir(async (dir) => {
+  writeFileSync(join(dir, 'auto-start-suppressed'), '', 'utf8');
+  const autoStartModule = await import('../src/runtime/auto-start.js?case=user-quit');
+  let launched = 0;
+  let probed = 0;
+  const result = autoStartModule.autoStart({
+    running: () => { probed += 1; return false; },
+    bundle: () => { probed += 1; return '/Applications/Maclawd.app'; },
+    launch: () => { launched += 1; },
+  });
+  assert.equal(result, 'suppressed');
+  assert.equal(probed, 0, '主动退出后连进程和安装包都不应探测');
+  assert.equal(launched, 0, '退出应当一直有效，直到用户自己再打开 Maclawd');
+}));

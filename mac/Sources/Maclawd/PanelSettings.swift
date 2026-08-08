@@ -88,6 +88,12 @@ struct SettingsPage: View {
                     }
                 }
                 SwitchRow(
+                    title: "启动 Agent 时自动打开 Maclawd",
+                    detail: "已连接的 Claude Code 或 WorkBuddy 开始新会话时，若 Maclawd 没在运行则在后台打开。"
+                          + "与「登录时启动」无关；主动退出后，需要你手动打开一次才会恢复。",
+                    isOn: store.bool("autoStart", default: true)
+                ) { store.setSetting("autoStart", $0) }
+                SwitchRow(
                     title: "在桌宠旁批准权限",
                     detail: "Claude Code 与 Codex 请求权限时显示原生卡片；超时不表态，仍回到 Agent 自己的确认流程。",
                     isOn: store.bool("permissionBubble")

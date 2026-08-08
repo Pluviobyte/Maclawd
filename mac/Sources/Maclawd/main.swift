@@ -57,6 +57,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        do {
+            try AutoStartSuppression.clear()
+        } catch {
+            NSLog("Maclawd: 清理自动启动抑制标记失败 %@", error.localizedDescription)
+        }
         let root = resolveRepoRoot()
 
         client = RuntimeClient(repoRoot: root)
@@ -72,7 +77,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             else { return }
             NSWorkspace.shared.open(url)
         }
-        panel.onQuit = { NSApp.terminate(nil) }
+        panel.onQuit = { [weak self] in self?.quitByUserRequest() }
         // 菜单栏被折叠时退到桌宠身上（见 PanelController.usableAnchor）。
         panel.fallbackAnchor = { [weak self] in self?.pet.contentView }
 
@@ -107,7 +112,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.pet.recenter()
             self?.pet.orderFront(nil)
         }
-        menuBar.onQuit = { NSApp.terminate(nil) }
+        menuBar.onQuit = { [weak self] in self?.quitByUserRequest() }
         menuBar.onTogglePanel = { [weak self] anchor in
             self?.panel.toggle(relativeTo: anchor)
         }
@@ -252,6 +257,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         monitor?.cancel()
         permissionCards?.stop()
         client?.stopRuntime()
+    }
+
+    private func quitByUserRequest() {
+        do {
+            try AutoStartSuppression.suppress()
+        } catch {
+            // 标记写失败不应阻止用户退出；留日志供 Doctor/排查使用。
+            NSLog("Maclawd: 记录用户退出失败 %@", error.localizedDescription)
+        }
+        NSApp.terminate(nil)
     }
 
     private func togglePet() {
