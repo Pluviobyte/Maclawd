@@ -41,7 +41,10 @@ struct SettingsPage: View {
     }
 
     private var agentConnectionSection: some View {
-        SectionCard(title: "Agent 连接") {
+        SectionCard(title: "Agent 连接", info: "连接后，Maclawd 通过 Hooks 实时接收 Agent 的运行事件，"
+                    + "桌宠的动作和状态判断从被动推测变为精确响应。\n\n"
+                    + "开启会向对应 Agent 的配置文件添加 hooks，关闭会移除；"
+                    + "不覆盖已有配置，也不处理权限。") {
             VStack(alignment: .leading, spacing: 10) {
                 Text("Doctor：\(store.doctorSummary)")
                     .font(.system(size: 10.5, weight: .medium))
@@ -63,21 +66,24 @@ struct SettingsPage: View {
                     VStack(alignment: .leading, spacing: 5) {
                         HStack {
                             Text(agent.label).font(.system(size: 11.5, weight: .semibold))
-                            Text(statusTitle(agent.status)).font(.system(size: 9.5)).foregroundStyle(.secondary)
                             Spacer()
-                            if agent.realtime, agent.status == "connected" {
-                                Button("移除") { store.agentAction(agent.id, "uninstall") }.font(.system(size: 10))
-                            } else if agent.realtime {
-                                Button(agent.status == "partial" ? "修复" : "连接") {
-                                    store.agentAction(agent.id, agent.status == "partial" ? "repair" : "install")
-                                }.font(.system(size: 10))
+                            if agent.realtime {
+                                Toggle("", isOn: Binding(
+                                    get: { agent.status == "connected" },
+                                    set: { on in
+                                        store.agentAction(agent.id, on ? "install" : "uninstall")
+                                    }
+                                ))
+                                .labelsHidden()
+                                .toggleStyle(.switch)
+                                .controlSize(.mini)
                             }
                         }
                         HStack(spacing: 5) {
                             capability("用量", active: true)
-                            capability("实时", active: agent.realtime)
+                            capability("实时", active: agent.status == "connected")
                             capability("权限", active: agent.permissions)
-                            capability("跳转", active: agent.terminalFocus)
+                            capability("跳转", active: agent.status == "connected")
                             capability("额度", active: agent.quota)
                             if agent.verified { Text("已验证").font(.system(size: 8.5)).foregroundStyle(PanelTheme.accent) }
                         }
@@ -137,20 +143,6 @@ struct SettingsPage: View {
                     enabled: store.bool("recordUsage", default: true)
                 ) { store.setSetting("petEnergy", $0) }
 
-                SwitchRow(
-                    title: "启用 Claude Code 事件增强",
-                    detail: "让 Maclawd 通过 Claude Code 的 Hooks 实时接收运行事件，对桌宠的实时动作和状态判断更加精准。"
-                          + "会向 ~/.claude/settings.json 添加 hooks，不覆盖已有配置，也不处理权限。",
-                    isOn: store.bool("hookEnhancement")
-                ) { store.setSetting("hookEnhancement", $0) }
-
-                SwitchRow(
-                    title: "启用 WorkBuddy 事件增强",
-                    detail: "让 Maclawd 通过 WorkBuddy 的 Hooks 实时接收运行事件，让桌宠动作和状态判断更加精准。"
-                          + "会向 ~/.workbuddy-ai/settings.json 或 ~/.workbuddy/settings.json 添加 hooks，"
-                          + "不覆盖已有配置，也不处理权限。启用后请新开一个 WorkBuddy 会话。",
-                    isOn: store.bool("workBuddyHookEnhancement")
-                ) { store.setSetting("workBuddyHookEnhancement", $0) }
             }
         }
     }

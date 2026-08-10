@@ -707,14 +707,35 @@ private struct DailyBars: View {
 
 struct SectionCard<Content: View>: View {
     let title: String
+    var info: String? = nil
     @ViewBuilder var content: Content
+    @State private var showingInfo = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.system(size: 10.5, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .textCase(.none)
+            HStack(spacing: 4) {
+                Text(title)
+                    .font(.system(size: 10.5, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .textCase(.none)
+                if let info {
+                    Button { showingInfo.toggle() } label: {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help(info)
+                    .popover(isPresented: $showingInfo, arrowEdge: .bottom) {
+                        Text(info)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(12)
+                            .frame(width: 280, alignment: .leading)
+                    }
+                }
+            }
             content
         }
         .frame(maxWidth: .infinity, alignment: .leading)
