@@ -286,6 +286,7 @@ private struct OverviewPage: View {
                 indexingTodayNotice
             } else {
                 todayBlock
+                sourcesBlock
                 projectsBlock
                 // 内容比视口短时把脚注推到底，空白留在中间而不是堆在末尾。
                 // 顺带让脚注变成一条固定的底栏——上面的行数怎么变它都不动。
@@ -379,6 +380,37 @@ private struct OverviewPage: View {
                 }
                 if store.summary.hoursAvailable && !store.summary.hours.isEmpty {
                     HourSparkline(values: store.summary.hours)
+                }
+            }
+        }
+    }
+
+    private var sourcesBlock: some View {
+        Group {
+            if store.summary.bySource.count > 1 {
+                let total = max(store.summary.bySource.reduce(0) { $0 + $1.throughput }, 1)
+                SectionCard(title: store.summary.collectionComplete ? "工具" : "工具 · 已统计") {
+                    VStack(spacing: 6) {
+                        ForEach(store.summary.bySource) { item in
+                            let pct = item.throughput / total
+                            VStack(spacing: 3) {
+                                HStack {
+                                    Text(item.id).font(.system(size: 12)).lineLimit(1)
+                                    Spacer()
+                                    Text("\(Fmt.percent(pct))  \(Fmt.tokens(item.throughput))")
+                                        .font(.system(size: 11, design: .rounded))
+                                        .foregroundStyle(.secondary)
+                                }
+                                GeometryReader { geo in
+                                    Capsule().fill(Color.secondary.opacity(0.1))
+                                        .overlay(alignment: .leading) {
+                                            Capsule().fill(PanelTheme.body.opacity(0.75))
+                                                .frame(width: max(2, geo.size.width * pct))
+                                        }
+                                }.frame(height: 4)
+                            }
+                        }
+                    }
                 }
             }
         }

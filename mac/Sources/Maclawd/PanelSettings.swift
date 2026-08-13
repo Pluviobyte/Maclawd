@@ -81,9 +81,11 @@ struct SettingsPage: View {
                         }
                         HStack(spacing: 5) {
                             capability("用量", active: true)
-                            capability("实时", active: agent.status == "connected")
+                            capability("实时", active: agent.status == "connected",
+                                       hint: "开启右侧连接后生效")
                             capability("权限", active: agent.permissions)
-                            capability("跳转", active: agent.status == "connected")
+                            capability("跳转", active: agent.status == "connected",
+                                       hint: "开启右侧连接后生效")
                             capability("额度", active: agent.quota)
                             if agent.verified { Text("已验证").font(.system(size: 8.5)).foregroundStyle(PanelTheme.accent) }
                         }
@@ -117,12 +119,13 @@ struct SettingsPage: View {
         }
     }
 
-    private func capability(_ title: String, active: Bool) -> some View {
+    private func capability(_ title: String, active: Bool, hint: String? = nil) -> some View {
         Text(title).font(.system(size: 8.5, weight: .medium))
             .foregroundStyle(active ? Color.primary.opacity(0.8) : Color.secondary.opacity(0.35))
             .padding(.horizontal, 5).padding(.vertical, 2)
             .background((active ? PanelTheme.accent.opacity(0.12) : Color.secondary.opacity(0.06)),
                         in: Capsule())
+            .help(!active && hint != nil ? hint! : "")
     }
 
     // MARK: 用量记录

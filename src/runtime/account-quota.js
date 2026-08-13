@@ -33,6 +33,10 @@ export const QUIET_AFTER_MS = 5 * 60 * 1000;
 export const CODEX_QUIET_AFTER_MS = 10 * 60 * 1000;
 /** WorkBuddy 云端额度十分钟刷新；留五分钟网络抖动余量再标 quiet。 */
 export const WORKBUDDY_QUIET_AFTER_MS = 15 * 60 * 1000;
+/** Grok Build 十分钟刷新；留五分钟网络抖动余量再标 quiet。 */
+export const GROK_QUIET_AFTER_MS = 15 * 60 * 1000;
+/** Cursor 用量十分钟刷新；留五分钟网络抖动余量再标 quiet。 */
+export const CURSOR_QUIET_AFTER_MS = 15 * 60 * 1000;
 /** 窗口重置这么久之后仍无新报告，记录直接丢弃。 */
 export const DROP_AFTER_RESET_MS = 48 * 60 * 60 * 1000;
 /** 没有 resetAt 的记录（理论上不该有）靠这个兜底老化。 */
@@ -47,6 +51,8 @@ export const WINDOW_ORDER = ['five_hour', 'seven_day'];
 
 function validWindowKey(source, key) {
   if (WINDOW_ORDER.includes(key)) return true;
+  if (source === 'grok' && key === 'billing_cycle') return true;
+  if (source === 'cursor') return key === 'monthly_requests';
   if (source === 'workbuddy') return /^(base|bonus)_\d+$/.test(key);
   return (source === 'codex' || source.startsWith('codex:'))
     && (/^duration_\d+$/.test(key) || /^codex_(primary|secondary)$/.test(key));
@@ -75,6 +81,8 @@ function orderedWindowKeys(source, windows) {
 export const SOURCE_LABELS = {
   'claude-code': 'Claude Code',
   codex: 'Codex',
+  cursor: 'Cursor',
+  grok: 'Grok Build',
   workbuddy: 'WorkBuddy',
 };
 
@@ -227,7 +235,9 @@ export function freshness(window, now = Date.now(), source = null) {
   if (resetAt !== null && now > resetAt) return 'reset';
   const lastSeenAt = num(window?.lastSeenAt) ?? 0;
   const quietAfter = source === 'codex' ? CODEX_QUIET_AFTER_MS
-    : source === 'workbuddy' ? WORKBUDDY_QUIET_AFTER_MS : QUIET_AFTER_MS;
+    : source === 'cursor' ? CURSOR_QUIET_AFTER_MS
+      : source === 'grok' ? GROK_QUIET_AFTER_MS
+        : source === 'workbuddy' ? WORKBUDDY_QUIET_AFTER_MS : QUIET_AFTER_MS;
   return now - lastSeenAt > quietAfter ? 'quiet' : 'live';
 }
 

@@ -27,7 +27,7 @@ test('Codex 官方额度响应只读取订阅 codex 桶并与 Claude 独立展�
     rateLimitsByLimitId: {
       codex: {
         limitId: 'codex', planType: 'pro',
-        primary: { usedPercent: 51, windowDurationMins: 10_080, resetsAt: 1_786_202_663 },
+        primary: { usedPercent: 51, windowDurationMins: 10_080, resetsAt: 1_817_738_663 },
         secondary: null,
       },
       codex_bengalfox: {
@@ -48,7 +48,7 @@ test('Codex 官方额度响应只读取订阅 codex 桶并与 Claude 独立展�
     windows: {
       seven_day: {
         label: '本周', durationMinutes: 10_080,
-        usedPercent: 51, resetAt: 1_786_202_663_000,
+        usedPercent: 51, resetAt: 1_817_738_663_000,
       },
     },
   });
@@ -251,7 +251,7 @@ test('runtime 同时刷新只启动一次 Codex 读取，成功后写入统一�
       return {
         rateLimits: {
           limitId: 'codex', planType: 'pro',
-          primary: { usedPercent: 51, windowDurationMins: 10_080, resetsAt: 1_786_202_663 },
+          primary: { usedPercent: 51, windowDurationMins: 10_080, resetsAt: 1_817_738_663 },
         },
       };
     },
@@ -280,7 +280,7 @@ test('关闭采集器会丢弃仍在进行中的读取结果', async () => {
       return {
         rateLimits: {
           limitId: 'codex',
-          primary: { usedPercent: 51, windowDurationMins: 10_080, resetsAt: 1_786_202_663 },
+          primary: { usedPercent: 51, windowDurationMins: 10_080, resetsAt: 1_817_738_663 },
         },
       };
     },
@@ -310,7 +310,7 @@ test('十分钟内命中缓存不重复读取，刷新失败保留上一份成�
       return {
         rateLimits: {
           limitId: 'codex',
-          primary: { usedPercent: 51, windowDurationMins: 10_080, resetsAt: 1_786_202_663 },
+          primary: { usedPercent: 51, windowDurationMins: 10_080, resetsAt: 1_817_738_663 },
         },
       };
     },
