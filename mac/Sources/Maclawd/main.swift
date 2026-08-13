@@ -1,4 +1,5 @@
 import AppKit
+import CoreServices
 import IOKit.ps
 import Network
 
@@ -252,6 +253,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.monitor = monitor
     }
 
+    /**
+     退出即抑制自动拉起——只要退出是「人」发起的。
+
+     此前只有应用自己菜单里的「退出」会写抑制标记；从活动监视器退出、
+     osascript 的 quit、任何第三方发来的 quit 事件都绕过它，于是下一个
+     agent 会话又把应用拉起来——用户明明主动退出了，它看起来却像
+     「关不掉的流氓软件」。所以标记统一写在这里：一切正常退出都经过
+     applicationShouldTerminate。
+
+     唯一的例外是系统发起的注销 / 重启 / 关机：那不是「用户退出了
+     Maclawd」，重新登录后的第一个 agent 会话应该照常把桌宠带回来。
+     区分依据是 quit Apple Event 的 kAEQuitReason 属性——系统发起时带
+     注销 / 重启 / 关机之一，人发起的 quit 没有这个属性。
+     崩溃与强杀不经过这里，走「异常 → 下次会话自愈复活」的路径，
+     这是刻意保留的。
+     */
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        if !quitInitiatedBySystem {
+            do {
+                try AutoStartSuppression.suppress()
+            } catch {
+                // 标记写失败不应阻止用户退出；留日志供 Doctor/排查使用。
+                NSLog("Maclawd: 记录用户退出失败 %@", error.localizedDescription)
+            }
+        }
+        return .terminateNow
+    }
+
+    private var quitInitiatedBySystem: Bool {
+        guard let reason = NSAppleEventManager.shared()
+            .currentAppleEvent?
+            .attributeDescriptor(forKeyword: AEKeyword(kAEQuitReason))
+        else { return false }
+        let code = Int(reason.enumCodeValue)
+        return code == kAELogOut || code == kAEReallyLogOut
+            || code == kAERestart || code == kAEShowRestartDialog
+            || code == kAEShutDown || code == kAEShowShutdownDialog
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         timer?.invalidate()
         monitor?.cancel()
@@ -260,12 +300,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func quitByUserRequest() {
-        do {
-            try AutoStartSuppression.suppress()
-        } catch {
-            // 标记写失败不应阻止用户退出；留日志供 Doctor/排查使用。
-            NSLog("Maclawd: 记录用户退出失败 %@", error.localizedDescription)
-        }
+        // 抑制标记统一在 applicationShouldTerminate 里写，
+        // 那里能同时覆盖菜单退出与外部发来的 quit。这里只负责发起。
         NSApp.terminate(nil)
     }
 
