@@ -68,7 +68,6 @@ export function readGrokToken({ authPath } = {}) {
  * wire type 0（varint）→ 解码后若在合理的 epoch 秒范围内视为 resetsAt 候选。
  */
 export function parseGrpcBillingResponse(buffer) {
-  // 跳过 5 字节 gRPC-web 帧头
   if (buffer.length < 5) throw quotaError('EPROTO', 'gRPC 响应过短');
   const frameLength = buffer.readUInt32BE(1);
   if (5 + frameLength > buffer.length) throw quotaError('EPROTO', 'gRPC 帧长度超出响应');
@@ -76,50 +75,50 @@ export function parseGrpcBillingResponse(buffer) {
 
   let usedPercent = null;
   let resetsAt = null;
-  let offset = 0;
 
-  while (offset < proto.length) {
-    if (offset >= proto.length) break;
-    // 读 field tag
-    const tagResult = decodeVarint(proto, offset);
-    if (!tagResult) break;
-    offset = tagResult.offset;
-    const wireType = tagResult.value & 0x07;
+  // 递归扫描所有层级，float32 和 varint 候选可能在任意嵌套深度
+  function scan(buf) {
+    let offset = 0;
+    while (offset < buf.length) {
+      const tagResult = decodeVarint(buf, offset);
+      if (!tagResult) break;
+      offset = tagResult.offset;
+      const wireType = tagResult.value & 0x07;
 
-    if (wireType === 0) {
-      // varint
-      const varintResult = decodeVarint(proto, offset);
-      if (!varintResult) break;
-      offset = varintResult.offset;
-      const value = varintResult.value;
-      if (resetsAt === null && value > 1_700_000_000 && value < 2_100_000_000) {
-        resetsAt = value;
+      if (wireType === 0) {
+        const varintResult = decodeVarint(buf, offset);
+        if (!varintResult) break;
+        offset = varintResult.offset;
+        const value = varintResult.value;
+        if (resetsAt === null && value > 1_700_000_000 && value < 2_100_000_000) {
+          resetsAt = value;
+        }
+      } else if (wireType === 1) {
+        if (offset + 8 > buf.length) break;
+        offset += 8;
+      } else if (wireType === 2) {
+        const lenResult = decodeVarint(buf, offset);
+        if (!lenResult) break;
+        offset = lenResult.offset;
+        if (offset + lenResult.value > buf.length) break;
+        const sub = buf.subarray(offset, offset + lenResult.value);
+        offset += lenResult.value;
+        if (sub.length > 0) scan(sub);
+      } else if (wireType === 5) {
+        if (offset + 4 > buf.length) break;
+        const floatVal = buf.readFloatLE(offset);
+        offset += 4;
+        if (usedPercent === null && Number.isFinite(floatVal)
+            && floatVal >= 0 && floatVal <= 100) {
+          usedPercent = floatVal;
+        }
+      } else {
+        break;
       }
-    } else if (wireType === 1) {
-      // fixed64
-      if (offset + 8 > proto.length) break;
-      offset += 8;
-    } else if (wireType === 2) {
-      // length-delimited
-      const lenResult = decodeVarint(proto, offset);
-      if (!lenResult) break;
-      offset = lenResult.offset;
-      if (offset + lenResult.value > proto.length) break;
-      offset += lenResult.value;
-    } else if (wireType === 5) {
-      // fixed32 → float32
-      if (offset + 4 > proto.length) break;
-      const floatVal = proto.readFloatLE(offset);
-      offset += 4;
-      if (usedPercent === null && floatVal >= 0 && floatVal <= 100) {
-        usedPercent = floatVal;
-      }
-    } else {
-      // 未知 wire type，无法继续解析
-      break;
     }
   }
 
+  scan(proto);
   return { usedPercent, resetsAt };
 }
 
@@ -160,6 +159,8 @@ export async function readGrokBilling({
         'Content-Type': 'application/grpc-web+proto',
         'x-grpc-web': '1',
         'x-user-agent': 'connect-es/2.1.1',
+        // Cloudflare 1010 会拦截没有 User-Agent 的请求
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
         Origin: 'https://grok.com',
         Referer: 'https://grok.com/?_s=usage',
         Authorization: `Bearer ${token}`,
