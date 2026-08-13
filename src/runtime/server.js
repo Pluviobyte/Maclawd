@@ -39,6 +39,8 @@ import {
   readQuota, recordQuota, clearQuota, pendingAlerts, markAlerted, QUOTA_FILE,
 } from './account-quota.js';
 import { createCodexQuotaCollector } from './codex-quota.js';
+import { createCursorQuotaCollector } from './cursor-quota.js';
+import { createGrokQuotaCollector } from './grok-quota.js';
 import { createWorkBuddyQuotaCollector } from './workbuddy-quota.js';
 import { createPermissionBroker, decisionResponse } from './permissions.js';
 import { authorize, currentToken, pairingUrls, resetToken, rotateToken } from './lan.js';
@@ -276,7 +278,7 @@ function buildAnalytics(query) {
     return values.length === 1 ? values[0] : values;
   };
   try {
-    return queryUsageAnalytics(rollup, {
+    const result = queryUsageAnalytics(rollup, {
       range: query.get('range') || '30d',
       from: query.get('from'),
       to: query.get('to'),
@@ -289,6 +291,15 @@ function buildAnalytics(query) {
       limit: Number(query.get('limit')) || 50,
       priceBucket: costOf,
     });
+    // 工具显示名。analytics.js 只认识 rollup，不认识解析器注册表，所以在这里补。
+    // 只加不改：dimensions.sources 仍是 id 数组，老客户端不受影响。原生面板要在
+    // 区间条上直接显示筛选中的工具，不能再像现在这样显示 `claude-code` 这种裸 id。
+    if (result.dimensions) {
+      result.dimensions.sourceLabels = Object.fromEntries(
+        (result.dimensions.sources ?? []).map((id) => [id, SOURCE_LABELS[id] ?? id]),
+      );
+    }
+    return result;
   } catch (error) {
     return { empty: true, error: error.message };
   }
@@ -407,12 +418,16 @@ function openProject(action, path) {
 export function createUsageServer({
   collector = null,
   quotaCollector = null,
+  cursorQuotaCollector = null,
+  grokQuotaCollector = null,
   workBuddyQuotaCollector = null,
   identity = createRuntimeIdentity(),
 } = {}) {
   // 面板不该要求用户手动点刷新，所以服务端自带后台采集循环。
   const worker = collector ?? createCollector();
   const quotaWorker = quotaCollector ?? createCodexQuotaCollector();
+  const cursorQuotaWorker = cursorQuotaCollector ?? createCursorQuotaCollector();
+  const grokQuotaWorker = grokQuotaCollector ?? createGrokQuotaCollector();
   const workBuddyQuotaWorker = workBuddyQuotaCollector ?? createWorkBuddyQuotaCollector();
 
   // 状态引擎 + 编排器：目前只有「速率推断」这条降级路径在喂它，
@@ -856,6 +871,8 @@ export function createUsageServer({
         // 打开额度页时触发一次带缓存的 Codex 刷新。不阻塞本次响应，
         // 成功后原生面板下一轮轻量轮询就会拿到。
         void quotaWorker.refresh().catch(() => {});
+        void cursorQuotaWorker.refresh().catch(() => {});
+        void grokQuotaWorker.refresh().catch(() => {});
         void workBuddyQuotaWorker.refresh().catch(() => {});
         const settings = loadSettings();
         const snapshot = readQuota();
@@ -865,6 +882,8 @@ export function createUsageServer({
           // 这两种情况的文案完全不同。
           statusline: statuslineStatus(),
           enabled: settings.quotaTracking === true,
+          cursor: cursorQuotaWorker.status(),
+          grok: grokQuotaWorker.status(),
           workBuddy: workBuddyQuotaWorker.status(),
           alert: {
             enabled: settings.quotaAlert === true,
@@ -1016,6 +1035,8 @@ export function createUsageServer({
                 if (r.blocked) {
                   next = saveSettings({ quotaTracking: true, quotaStatusline: false });
                   void quotaWorker.refresh({ force: true }).catch(() => {});
+                  void cursorQuotaWorker.refresh({ force: true }).catch(() => {});
+                  void grokQuotaWorker.refresh({ force: true }).catch(() => {});
                   void workBuddyQuotaWorker.refresh({ force: true }).catch(() => {});
                   sendJson(res, 200, {
                     settings: next,
@@ -1030,6 +1051,8 @@ export function createUsageServer({
                   ? '已开启 Codex 额度并与 Claude HUD 自动兼容'
                   : (r.chained ? '已开启 Codex 额度并保留 Claude 状态行' : '已开启 Codex 与 Claude Code 额度'));
                 void quotaWorker.refresh({ force: true }).catch(() => {});
+                void cursorQuotaWorker.refresh({ force: true }).catch(() => {});
+                void grokQuotaWorker.refresh({ force: true }).catch(() => {});
                 void workBuddyQuotaWorker.refresh({ force: true }).catch(() => {});
               } else {
                 const r = uninstallStatusline();
@@ -1062,6 +1085,8 @@ export function createUsageServer({
                   ? '已与 Claude HUD 自动兼容'
                   : (r.chained ? '已串联并保留原有状态行' : '已注册状态行'));
                 next = saveSettings({ quotaTracking: true, quotaStatusline: true });
+                void grokQuotaWorker.refresh({ force: true }).catch(() => {});
+                void cursorQuotaWorker.refresh({ force: true }).catch(() => {});
                 void workBuddyQuotaWorker.refresh({ force: true }).catch(() => {});
               } else {
                 const r = uninstallStatusline();
@@ -1194,13 +1219,15 @@ export function createUsageServer({
     stopHookWatch();
     stopCodexMonitor();
     quotaWorker.stop();
+    cursorQuotaWorker.stop();
+    grokQuotaWorker.stop();
     workBuddyQuotaWorker.stop();
     clearInterval(ticker);
     for (const resolve of waiters) resolve();
     waiters.clear();
   });
 
-  return { server, worker, quotaWorker, workBuddyQuotaWorker, identity };
+  return { server, worker, quotaWorker, cursorQuotaWorker, grokQuotaWorker, workBuddyQuotaWorker, identity };
 }
 
 /** 端口被占时最多往后试几个。够覆盖「同机开了几个 Vite」，又不会无限游走。 */
@@ -1240,7 +1267,7 @@ async function probeMaclawd(port, timeoutMs = 400) {
  */
 export function serve({ port = 4173, host = null, collector = null } = {}) {
   const {
-    server, worker, quotaWorker, workBuddyQuotaWorker, identity,
+    server, worker, quotaWorker, cursorQuotaWorker, grokQuotaWorker, workBuddyQuotaWorker, identity,
   } = createUsageServer({ collector });
   // 只有显式开启局域网镜像才监听外部地址；否则严格绑回环。
   const bind = host ?? (loadSettings().lanMirror === true ? '0.0.0.0' : '127.0.0.1');
@@ -1286,9 +1313,12 @@ export function serve({ port = 4173, host = null, collector = null } = {}) {
       // 后台开始采集，页面打开即有数据。
       worker.start().catch(() => {});
       quotaWorker.start();
+      cursorQuotaWorker.start();
+      grokQuotaWorker.start();
       workBuddyQuotaWorker.start();
       resolvePromise({
-        server, worker, quotaWorker, workBuddyQuotaWorker, identity, port: actual, host: bind,
+        server, worker, quotaWorker, cursorQuotaWorker, grokQuotaWorker, workBuddyQuotaWorker,
+        identity, port: actual, host: bind,
       });
     });
   });

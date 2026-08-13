@@ -25,7 +25,10 @@ struct PanelAnalyticsContract {
                 "models": [["id": "gpt-test", "totalTokens": 1_000.0, "estimatedCost": 3.5]],
                 "projects": [["id": "Maclawd", "totalTokens": 1_000.0, "estimatedCost": 3.5]],
             ],
-            "dimensions": ["sources": ["codex"], "models": ["gpt-test"], "projects": ["Maclawd"]],
+            "dimensions": [
+                "sources": ["codex"], "models": ["gpt-test"], "projects": ["Maclawd"],
+                "sourceLabels": ["codex": "Codex CLI"],
+            ],
             "collection": ["complete": false, "deferredFiles": 3, "sources": [
                 "codex": ["discoveredFiles": 10, "indexedFiles": 7, "deferredFiles": 3,
                           "failedFiles": 0, "complete": false, "latestRecordAt": 1234.0],
@@ -51,8 +54,36 @@ struct PanelAnalyticsContract {
         precondition(snapshot.collection.complete == false)
         precondition(snapshot.collection.sources["codex"]?.deferredFiles == 3)
         precondition(snapshot.collection.progress == 0.7)
+        precondition(snapshot.collection.sources["codex"]?.progress == 0.7)
         precondition(snapshot.records.items.first?.source == "codex")
         precondition(snapshot.records.nextCursor == "cursor-1")
+
+        // 统计页区间条上的工具筛选：菜单里是全称，条上是去尾缀短名。
+        precondition(snapshot.dimensions.label(forSource: "codex") == "Codex CLI")
+        precondition(snapshot.dimensions.shortLabel(forSource: "codex") == "Codex")
+        // 服务端没给标签时必须回落到 id，不能显示空白。
+        precondition(snapshot.dimensions.label(forSource: "grok") == "grok")
+        precondition(snapshot.dimensions.shortLabel(forSource: "grok") == "grok")
+
+        let names = AnalyticsDimensions([
+            "sources": ["claude-code", "grok", "workbuddy", "opencode", "pi"],
+            "sourceLabels": [
+                "claude-code": "Claude Code", "grok": "Grok Build",
+                "workbuddy": "WorkBuddy", "opencode": "OpenCode", "pi": "pi",
+            ],
+        ])
+        precondition(names.shortLabel(forSource: "claude-code") == "Claude")
+        precondition(names.shortLabel(forSource: "grok") == "Grok")
+        // 没有空格的尾缀不是尾缀，不能砍成 "Open" / "Work"。
+        precondition(names.shortLabel(forSource: "opencode") == "OpenCode")
+        precondition(names.shortLabel(forSource: "workbuddy") == "WorkBuddy")
+        // 砍完会变空的，宁可原样显示。
+        precondition(names.shortLabel(forSource: "pi") == "pi")
+
+        let sourceProgress = AnalyticsSourceStatus([
+            "discoveredFiles": 10, "deferredFiles": 0, "complete": false,
+        ])
+        precondition(sourceProgress.progress == nil, "分母不完整时不显示假的 100%")
         let unknownProgress = AnalyticsCollection([
             "complete": false,
             "sources": ["codex": [

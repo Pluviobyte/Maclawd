@@ -50,7 +50,8 @@ slotStart × source × model × project → token bucket
 - `series`（每日 Token、费用、活跃/墙钟时长）
 - `heatmap`（固定 7×24 单元）
 - `distributions.tools/models/projects`
-- `dimensions`（筛选候选项）
+- `dimensions`（筛选候选项；`sourceLabels` 是 source id → 工具显示名，供界面直接展示，
+  不必再让每个客户端自己维护一份 id 到名字的映射）
 - `records`（按时间倒序的 30 分钟明细，基于最后一条稳定身份的 opaque cursor 分页）
 
 会话摘要无法从聚合结果中按分钟切割。跨越区间边界的会话完整计入相交区间，并在趋势与

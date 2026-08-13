@@ -34,7 +34,9 @@ test('部分空态不伪装成暂无数据，且不完整时隐藏比较并标�
   }
   assert.match(usage, /collection\.complete && a\.comparison/);
   assert.match(mobile, /collection\.complete && summary\.baseline/);
-  assert.match(analyticsSwift, /collection\.complete, let delta/);
+  // 原生统计页的完整度按选中的工具收窄（scopedComplete），但「不完整就不显示
+  // 比较」这条规则本身没变。
+  assert.match(analyticsSwift, /scopedComplete, let delta/);
   assert.match(panelSwift, /collectionComplete, let delta/);
   assert.match(usage, /lowerBound.*activeSeconds/s);
   assert.doesNotMatch(analyticsSwift, /lowerBound.*activeSeconds/s);

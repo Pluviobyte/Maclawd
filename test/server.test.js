@@ -193,6 +193,22 @@ test('/api/analytics 暴露统一的同比、趋势、热力图、分布和分�
   assert.equal(d.totals.nonCachedReadTokens, d.totals.billableTokens);
 });
 
+test('/api/analytics 按工具筛选，并带上工具显示名', async () => {
+  const hit = await json('/api/analytics?range=7d&source=claude-code');
+  assert.equal(hit.totals.totalTokens, 1050);
+  assert.equal(hit.sessions.available, true, '按工具筛选不该让会话时长变不可用');
+
+  const miss = await json('/api/analytics?range=7d&source=codex');
+  assert.equal(miss.totals.totalTokens, 0);
+
+  // 原生面板要在区间条上直接显示工具名，拿到裸 id 就只能显示 `claude-code`。
+  const d = await json('/api/analytics?range=7d');
+  assert.deepEqual(d.dimensions.sources, ['claude-code']);
+  assert.deepEqual(Object.keys(d.dimensions.sourceLabels), d.dimensions.sources,
+    '标签表必须与候选项一一对应，缺项会让界面显示空白');
+  assert.equal(d.dimensions.sourceLabels['claude-code'], 'Claude Code');
+});
+
 test('聚合结构版本不匹配时明确报 stale，而不是静默返回 0', async () => {
   writeJson(ROLLUP_FILE, { v: 0, days: {}, sessions: {} });
   const d = await json('/api/summary?range=all');

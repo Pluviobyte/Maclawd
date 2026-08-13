@@ -467,6 +467,8 @@ struct AnalyticsDimensions: Equatable {
     var sources: [String] = []
     var models: [String] = []
     var projects: [String] = []
+    /// source id → 工具显示名。缺失时一律回落到 id，绝不显示空白。
+    var sourceLabels: [String: String] = [:]
 
     init() {}
     init(_ raw: Any?) {
@@ -474,6 +476,32 @@ struct AnalyticsDimensions: Equatable {
         sources = d["sources"] as? [String] ?? []
         models = d["models"] as? [String] ?? []
         projects = d["projects"] as? [String] ?? []
+        sourceLabels = d["sourceLabels"] as? [String: String] ?? [:]
+    }
+
+    /// 全称。菜单项、tooltip、VoiceOver 用这个，它们不受面板宽度约束。
+    func label(forSource id: String) -> String {
+        let label = sourceLabels[id] ?? ""
+        return label.isEmpty ? id : label
+    }
+
+    /**
+     区间条专用短名。
+
+     这不是数据问题，是 360pt 面板的排版问题，所以规则留在展示层。实测（10.5pt
+     semibold + chevron + 内边距）区间条只剩约 87pt：「Claude Code」全称要 90.8pt，
+     「GitHub Copilot CLI」要 121.4pt，都放不下；去掉尾缀后 Claude 60.5pt、
+     Codex 57.1pt、Grok 49.0pt，全部进得去。
+
+     只砍已知尾缀，砍不动的交给调用方截断——宁可截断也不要猜。
+     */
+    func shortLabel(forSource id: String) -> String {
+        let full = label(forSource: id)
+        for suffix in [" Code", " CLI", " Build"] where full.hasSuffix(suffix) {
+            let trimmed = String(full.dropLast(suffix.count))
+            if !trimmed.isEmpty { return trimmed }
+        }
+        return full
     }
 }
 
@@ -484,6 +512,14 @@ struct AnalyticsSourceStatus: Equatable {
     var failedFiles = 0
     var complete = false
     var latestRecordAt: Double?
+
+    /// 单个来源的文件级索引进度，判定规则与 `AnalyticsCollection.progress` 一致。
+    var progress: Double? {
+        guard discoveredFiles > 0 else { return nil }
+        let value = min(1, max(0, Double(discoveredFiles - deferredFiles) / Double(discoveredFiles)))
+        if !complete && value >= 1 { return nil }
+        return value
+    }
 
     init() {}
     init(_ raw: Any?) {
@@ -825,8 +861,16 @@ final class PanelStore: ObservableObject {
         refreshAgents()
     }
 
-    func applyAnalyticsFilters(source: String?, model: String?, project: String?) {
+    /// 工具筛选在区间条上直接切，不走筛选 sheet——它的使用频次和区间一样高，
+    /// 埋进 sheet 意味着每次两步操作。同一个状态只能有一个入口，所以 sheet
+    /// 里不再有工具选项，它只管模型和项目。
+    func selectTool(_ source: String?) {
+        guard selectedSource != source else { return }
         selectedSource = source
+        refreshAnalytics()
+    }
+
+    func applyAnalyticsFilters(model: String?, project: String?) {
         selectedModel = model
         selectedProject = project
         refreshAnalytics()

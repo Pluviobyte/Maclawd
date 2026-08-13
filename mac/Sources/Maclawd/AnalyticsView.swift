@@ -51,8 +51,44 @@ struct StatsPage: View {
         ("month", "本月"), ("year", "今年"), ("all", "全部"),
     ]
 
+    /**
+     区间条上所有胶囊的横向内边距。
+
+     **7 会放不下。** 面板固定 360、去掉边距只剩 328，而五个区间胶囊 + ⋯ + 工具
+     筛选 + 漏斗在 padding 7 时实测要 340（WorkBuddy）到 357（GitHub Copilot CLI），
+     连「全部工具」这个默认态都会被挤成一个省略号。降到 5 之后最宽的真实工具名
+     还剩 12pt 余量，只有 GitHub Copilot CLI 会走截断。
+     */
+    private static let chipPadding: CGFloat = 5
+
+    /// 工具已经提到区间条上自述状态，漏斗只代表模型和项目。
     private var filterCount: Int {
-        [store.selectedSource, store.selectedModel, store.selectedProject].compactMap { $0 }.count
+        [store.selectedModel, store.selectedProject].compactMap { $0 }.count
+    }
+
+    private var toolBinding: Binding<String?> {
+        Binding(get: { store.selectedSource }, set: { store.selectTool($0) })
+    }
+
+    private var toolFullName: String? {
+        store.selectedSource.map { store.analytics.dimensions.label(forSource: $0) }
+    }
+
+    /**
+     采集完整度按当前工具收窄。
+
+     只筛 Codex 时，Cursor 还没索引完不该让 Codex 的数字被标成「已统计」——
+     那些文件根本不参与这次统计。缺少该来源状态时回落到全局值，宁可偏保守。
+     */
+    private var scopedComplete: Bool {
+        guard let source = store.selectedSource else { return store.analytics.collection.complete }
+        return store.analytics.collection.sources[source]?.complete
+            ?? store.analytics.collection.complete
+    }
+
+    private var scopedProgress: Double? {
+        guard let source = store.selectedSource else { return store.analytics.collection.progress }
+        return store.analytics.collection.sources[source]?.progress
     }
 
     var body: some View {
@@ -65,15 +101,7 @@ struct StatsPage: View {
                         .font(.system(size: 11)).foregroundStyle(.secondary)
                 }
             } else if store.analytics.empty {
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(store.analytics.collection.complete
-                         ? "这个区间没有数据" : "正在建立用量索引")
-                        .font(.system(size: 12, weight: .medium))
-                    Text(store.analytics.collection.complete
-                         ? "使用 AI 编程工具后，统计会随本地扫描自动更新"
-                         : "当前尚无已索引记录 · 待处理 \(store.analytics.collection.deferredFiles) 个文件")
-                        .font(.system(size: 11)).foregroundStyle(.secondary)
-                }
+                emptyState
             } else {
                 headline
                 trendCard
@@ -96,7 +124,7 @@ struct StatsPage: View {
                 Button { store.range = id } label: {
                     Text(label)
                         .font(.system(size: 10.5, weight: store.range == id ? .semibold : .regular))
-                        .padding(.horizontal, 7).padding(.vertical, 4)
+                        .padding(.horizontal, Self.chipPadding).padding(.vertical, 4)
                         .background(Capsule().fill(store.range == id
                                                    ? PanelTheme.accent.opacity(0.16)
                                                    : Color.secondary.opacity(0.1)))
@@ -115,6 +143,7 @@ struct StatsPage: View {
                     .background(Capsule().fill(Color.secondary.opacity(0.1)))
                     .foregroundStyle(isPrimaryRange ? Color.primary : PanelTheme.accent)
             }.menuStyle(.borderlessButton)
+            toolMenu
             Button { filtersPresented = true } label: {
                 Image(systemName: filterCount > 0 ? "line.3.horizontal.decrease.circle.fill"
                                                   : "line.3.horizontal.decrease.circle")
@@ -128,7 +157,78 @@ struct StatsPage: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(filterCount > 0 ? PanelTheme.accent : Color.secondary)
-            .help("筛选工具、模型和项目")
+            .help("筛选模型和项目")
+        }
+    }
+
+    /**
+     工具筛选。位置在日期区间右侧，因为「只看 Codex」和切区间是同一种浏览动作，
+     每天要用好几次；埋在筛选 sheet 里等于每次两步。
+
+     **必须显示当前选中的工具名，不能只用图标加角标。** 筛选一旦生效，页面上每个
+     数字都被它改过了，看不见筛的是谁就等于界面在暗中说谎。
+
+     宽度是硬约束：面板固定 360，去掉边距只剩 328，区间条已占约 241。所以条上用
+     去尾缀短名（Claude Code → Claude），全称留在菜单项和 VoiceOver 里。
+     */
+    private var toolMenu: some View {
+        let active = store.selectedSource != nil
+        return Menu {
+            Picker("工具", selection: toolBinding) {
+                Text("全部工具").tag(String?.none)
+                ForEach(store.analytics.dimensions.sources, id: \.self) { id in
+                    Text(store.analytics.dimensions.label(forSource: id)).tag(Optional(id))
+                }
+            }
+            .pickerStyle(.inline)
+            .labelsHidden()
+        } label: {
+            HStack(spacing: 2) {
+                Text(store.selectedSource.map { store.analytics.dimensions.shortLabel(forSource: $0) }
+                     ?? "全部工具")
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Image(systemName: "chevron.down").font(.system(size: 7, weight: .semibold))
+            }
+            .font(.system(size: 10.5, weight: active ? .semibold : .regular))
+            .padding(.horizontal, Self.chipPadding).padding(.vertical, 4)
+            .background(Capsule().fill(active ? PanelTheme.accent.opacity(0.16)
+                                              : Color.secondary.opacity(0.1)))
+            .foregroundStyle(active ? PanelTheme.accent : Color.primary)
+        }
+        // 必须是 .button 而不是旁边 ⋯ 用的 .borderlessButton：后者会把自定义标签的
+        // 胶囊底和内边距整个丢掉，只渲染文字，并且自己在左侧画一个箭头。
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .accessibilityLabel("按工具筛选")
+        .accessibilityValue(toolFullName ?? "全部工具")
+        .help(toolFullName.map { "只看 \($0)" } ?? "按工具筛选统计")
+    }
+
+    /// 区间没有数据时，先说清是不是筛选造成的。把「筛掉了」说成「没有数据」
+    /// 会让用户以为扫描坏了，然后去点重新扫描——那什么也修不好。
+    private var emptyState: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            if let name = toolFullName {
+                Text("当前筛选下这个区间没有数据").font(.system(size: 12, weight: .medium))
+                Text(scopedComplete
+                     ? "「\(name)」在这个区间没有记录，换个区间或清除筛选看看"
+                     : "「\(name)」的索引还在建立，稍后可能出现记录")
+                    .font(.system(size: 11)).foregroundStyle(.secondary)
+                Button("清除工具筛选") { store.selectTool(nil) }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(PanelTheme.accent)
+                    .padding(.top, 1)
+            } else {
+                Text(scopedComplete ? "这个区间没有数据" : "正在建立用量索引")
+                    .font(.system(size: 12, weight: .medium))
+                Text(scopedComplete
+                     ? "使用 AI 编程工具后，统计会随本地扫描自动更新"
+                     : "当前尚无已索引记录 · 待处理 \(store.analytics.collection.deferredFiles) 个文件")
+                    .font(.system(size: 11)).foregroundStyle(.secondary)
+            }
         }
     }
 
@@ -162,7 +262,7 @@ struct StatsPage: View {
                         )
                     }
                 }
-                if !store.analytics.collection.complete {
+                if !scopedComplete {
                     indexingProgress
                 }
                 Button {
@@ -232,13 +332,13 @@ struct StatsPage: View {
     private var indexingProgress: some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack {
-                Text("历史索引进度")
+                Text(toolFullName.map { "\($0) 索引进度" } ?? "历史索引进度")
                 Spacer()
-                Text(store.analytics.collection.progress.map(Fmt.percent) ?? "处理中")
+                Text(scopedProgress.map(Fmt.percent) ?? "处理中")
                     .fontWeight(.semibold)
             }
             .font(.system(size: 10.5))
-            if let progress = store.analytics.collection.progress {
+            if let progress = scopedProgress {
                 ProgressView(value: progress)
                     .progressViewStyle(.linear)
                     .tint(PanelTheme.accent)
@@ -254,9 +354,9 @@ struct StatsPage: View {
 
     private func comparisonLabel(key: String, fallback: String, partial: String) -> some View {
         Group {
-            if store.analytics.collection.complete, let delta = store.analytics.comparison[key] {
+            if scopedComplete, let delta = store.analytics.comparison[key] {
                 Text("较上期 \(delta >= 0 ? "+" : "−")\(Fmt.percent(abs(delta)))")
-            } else { Text(store.analytics.collection.complete ? fallback : partial) }
+            } else { Text(scopedComplete ? fallback : partial) }
         }.font(.system(size: 9.5)).foregroundStyle(.secondary)
     }
 
@@ -492,32 +592,30 @@ struct AnalyticsDistributionList: View {
     }
 }
 
+/// 工具筛选不在这里——它在统计页区间条上。同一个状态两个入口必然走向不同步。
 struct AnalyticsFilterSheet: View {
     @ObservedObject var store: PanelStore
     @Binding var isPresented: Bool
-    @State private var source: String?
     @State private var model: String?
     @State private var project: String?
 
     init(store: PanelStore, isPresented: Binding<Bool>) {
         self.store = store
         _isPresented = isPresented
-        _source = State(initialValue: store.selectedSource)
         _model = State(initialValue: store.selectedModel)
         _project = State(initialValue: store.selectedProject)
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("筛选统计").font(.headline)
-            selector("工具", values: store.analytics.dimensions.sources, selection: $source)
+            Text("筛选模型和项目").font(.headline)
             selector("模型", values: store.analytics.dimensions.models, selection: $model)
             selector("项目", values: store.analytics.dimensions.projects, selection: $project)
             HStack {
-                Button("清除") { source = nil; model = nil; project = nil }
+                Button("清除") { model = nil; project = nil }
                 Spacer(); Button("取消") { isPresented = false }
                 Button("应用") {
-                    store.applyAnalyticsFilters(source: source, model: model, project: project)
+                    store.applyAnalyticsFilters(model: model, project: project)
                     isPresented = false
                 }.keyboardShortcut(.defaultAction)
             }
