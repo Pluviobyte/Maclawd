@@ -17,6 +17,7 @@ import {
   installStatusline, uninstallStatusline, statuslineStatus,
 } from '../src/runtime/statusline-install.js';
 import { readQuota } from '../src/runtime/account-quota.js';
+import { offboard } from '../src/runtime/offboard.js';
 import { probe, diffProbe } from '../src/runtime/probe.js';
 import { rangeBounds } from '../src/runtime/rollup.js';
 import {
@@ -579,6 +580,62 @@ function runStatusline(args) {
 
 // ---------- quota ----------
 
+// ---------- offboard ----------
+
+/**
+ * 卸载应用前的收尾：把写进别的工具的配置一次性移干净。
+ * 逻辑全在 offboard.js；这里只负责把结果说成人话。
+ */
+function runOffboard() {
+  const r = offboard();
+  console.log(bold('移除 Maclawd 的全部外部写入'));
+
+  const describe = {
+    claudeHooks: (a) => (a.removed.length ? `移除 ${a.removed.length} 个事件` : '本来就没装'),
+    claudePermission: (a) => (a.removed ? '已移除' : '本来就没装'),
+    statusline: (a) => {
+      if (a.restored) return '已移除并还原你原来的状态行';
+      if (a.removed) return '已移除';
+      return a.foreign ? '槽位是别人的，未触碰' : '本来就没装';
+    },
+    codexHooks: (a) => (a.existing.length ? `移除 ${a.existing.length} 个事件` : '本来就没装'),
+    codexPermission: (a) => (a.existing.length ? '已移除' : '本来就没装'),
+    workBuddyHooks: (a) => (a.removed.length ? `移除 ${a.removed.length} 个事件` : '本来就没装'),
+    codexPet: (a) => {
+      if (a.removed) return '已移除';
+      if (a.blocked) return a.blocked;
+      return '本来就没装';
+    },
+  };
+  const labels = {
+    claudeHooks: 'Claude Code hooks',
+    claudePermission: 'Claude Code 权限通道',
+    statusline: 'Claude Code 状态行',
+    codexHooks: 'Codex hooks',
+    codexPermission: 'Codex 权限通道',
+    workBuddyHooks: 'WorkBuddy hooks',
+    codexPet: 'Codex 宠物包',
+  };
+  for (const [key, label] of Object.entries(labels)) {
+    const action = r.actions[key];
+    if (action) console.log(`  ${success(label.padEnd(18))} ${dim(describe[key](action))}`);
+  }
+  for (const { target, message } of r.errors) {
+    console.error(`  ✗ ${labels[target] ?? target}: ${message}`);
+  }
+
+  console.log();
+  console.log(dim('  对应设置开关已全部关闭。'));
+  if (r.leftovers.backups.length) {
+    console.log(dim('  保留的备份文件（确认无误后可手动删除）：'));
+    for (const path of r.leftovers.backups) console.log(dim(`    ${path}`));
+  }
+  console.log(dim(`  本机数据保留在 ${r.leftovers.dataDir}`));
+  console.log(dim(`  缓存保留在 ${r.leftovers.cacheDir}`));
+  console.log(dim('  完全卸载的全部路径见 README「完全卸载」。'));
+  if (r.errors.length) process.exitCode = 1;
+}
+
 function runQuota() {
   const snap = readQuota();
   const s = statuslineStatus();
@@ -640,6 +697,7 @@ try {
     case 'quota': runQuota(); break;
     case 'probe': await runProbe(rest); break;
     case 'coverage': runCoverage(); break;
+    case 'offboard': runOffboard(); break;
     default:
       console.log(`用法: maclawd-usage <命令>
 
@@ -665,7 +723,10 @@ try {
   statusline uninstall 卸载并还原
   daemon [分钟]        后台采集循环（默认 30 分钟全量扫描一次）
   serve [端口]         启动本地面板（默认 4173，自带后台采集）
-  update-prices       联网更新模型价格表（唯一的对外请求）`);
+  update-prices       联网更新模型价格表（唯一的对外请求）
+  offboard            移除写进其他工具的全部配置（hooks / 状态行 /
+                      权限通道 / Codex 宠物包），并关闭对应开关。
+                      本机用量数据与备份文件保留。卸载应用前跑这个。`);
   }
 } catch (err) {
   console.error(`失败: ${err.message}`);

@@ -52,6 +52,8 @@ import { classify, createCoverage } from './coverage.js';
 import { clearEndpoint, writeEndpoint } from './endpoint.js';
 import { readLeases } from './session-lease.js';
 import { watchHooks } from './hook-health.js';
+import { createManagerWatch } from './manager-watch.js';
+import { offboard } from './offboard.js';
 import {
   createRuntimeIdentity, managementTokenMatches, publicRuntimeIdentity,
 } from './runtime-identity.js';
@@ -941,13 +943,38 @@ export function createUsageServer({
           return;
         }
         sendJson(res, 202, { accepted: true, instanceId: identity.instanceId });
-        setImmediate(() => {
-          clearEndpoint({ instanceId: identity.instanceId });
-          worker.stop?.();
-          for (const resolve of waiters) resolve();
-          waiters.clear();
-          server.close();
-          server.closeIdleConnections?.();
+        setImmediate(shutdownRuntime);
+        return;
+      }
+
+      /**
+       * Offboarding：一键移除 Maclawd 写进别的工具的全部配置。
+       * 见 offboard.js 的规则说明。设置开关在里面同步关闭，
+       * 面板拿到返回后重读设置即可对齐。
+       */
+      if (pathname === '/api/offboard' && req.method === 'POST') {
+        sendJson(res, 200, offboard());
+        return;
+      }
+
+      /**
+       * 新外壳接管一个还活着的运行时（.reuse）之后认领它。
+       *
+       * 认领把管理者看护指向新外壳。不认领的话，父进程已死的运行时会在
+       * 宽限期结束后自行收摊——把刚接上的外壳晾在一个死端口上。
+       * CLI 直跑的运行时没有管理者概念，adopt 会被拒绝（adopted: false），
+       * 那不是错误：它的生死属于终端里的用户。
+       */
+      if (pathname === '/api/runtime/adopt' && req.method === 'POST') {
+        const candidate = req.headers.authorization?.replace(/^Bearer\s+/i, '') ?? '';
+        if (!managementTokenMatches(identity, candidate)) {
+          sendJson(res, 403, { error: '管理令牌无效' });
+          return;
+        }
+        const { pid } = JSON.parse((await readBody(req)) || '{}');
+        sendJson(res, 200, {
+          adopted: managerWatch.adopt(pid),
+          instanceId: identity.instanceId,
         });
         return;
       }
@@ -1212,10 +1239,33 @@ export function createUsageServer({
     const address = server.address();
     if (address && typeof address === 'object') currentPort = address.port;
   });
+
+  /**
+   * 主动收摊：清端点、停后台工作、放掉长轮询、关服务。
+   * /api/runtime/shutdown（新外壳替换旧运行时）与管理者看护（外壳被
+   * 强制退出）共用同一条路径——两条实现漂移的话，总有一条会留下
+   * 半死的进程或一个指向死端口的端点文件。
+   */
+  function shutdownRuntime() {
+    clearEndpoint({ instanceId: identity.instanceId });
+    worker.stop?.();
+    for (const resolve of waiters) resolve();
+    waiters.clear();
+    server.close();
+    server.closeIdleConnections?.();
+  }
+
+  // 外壳被强制退出时收不到 SIGTERM，孤儿运行时会在后台无限期跑下去，
+  // 还占着端点让桌宠无法被 hook 重新拉起。看护管理者：它没了（宽限期
+  // 之后）就收摊。端点清掉之后，下一个 agent 会话会拉起完整的应用。
+  const managerWatch = createManagerWatch({ onManagerGone: shutdownRuntime });
+  managerWatch.start();
+
   // 看门狗与推进定时器都要随服务一起撤——测试里一个进程会起关好几次服务，
   // 留着的话文件监听和定时器会越堆越多。挂着的长轮询也要放掉，
   // 否则 server.close() 会一直等这些请求，测试卡在关闭那一步。
   server.on('close', () => {
+    managerWatch.stop();
     stopHookWatch();
     stopCodexMonitor();
     quotaWorker.stop();

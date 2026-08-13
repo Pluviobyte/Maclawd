@@ -21,7 +21,10 @@ function runSwiftHarness(body) {
   }
 }
 
-nativeTest('Swift 启动协调：身份与版本完全匹配时复用运行时', () => {
+nativeTest('Swift 启动协调：身份与版本完全匹配时复用运行时，并带出认领用的令牌', () => {
+  // 令牌必须随 reuse 决策一起带出来：复用后外壳要立刻 adopt
+  // （/api/runtime/adopt），否则父进程已死的运行时会在管理者看护的
+  // 宽限期后自行退出，把刚接上的外壳晾在一个死端口上。
   const output = runSwiftHarness(`
 import Foundation
 
@@ -35,7 +38,7 @@ let ping = RuntimePing(
 let decision = RuntimeStartupCoordinator.decide(
   endpoint: endpoint, ping: ping, expectedProtocolVersion: 1, expectedBuildId: "build-a"
 )
-print(decision == .reuse(port: 4173) ? "reuse" : "wrong")
+print(decision == .reuse(port: 4173, managementToken: "secret") ? "reuse" : "wrong")
 `);
   assert.equal(output, 'reuse');
 });

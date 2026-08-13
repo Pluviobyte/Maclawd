@@ -135,6 +135,40 @@ Maclawd validates its bundled v2 sprite atlas, then installs only that package a
 replacing it; an unrelated directory at the same path is never overwritten. Refresh
 **Codex Settings → Pets** after installation and select Maclawd.
 
+## 完全卸载 / Uninstall
+
+Maclawd 以 DMG 拖装分发，没有安装器。直接把 `.app` 拖进废纸篓也不会破坏
+任何工具——但会把 Maclawd 写进其他工具的配置条目留成死路径（Claude Code
+状态行会因此消失）。所以推荐的顺序是**先收尾、再删除**：
+
+**第 1 步 · 移除全部外部写入。** 打开面板 → 设置 → 数据 →
+**移除全部外部写入**。这一步会（只针对 Maclawd 自己写入的条目）：
+
+- 移除 Claude Code 的 hooks、权限通道，并卸载状态行——如果安装时串联了
+  你原来的状态行，会把它原样还原；
+- 移除 Codex 的 hooks 与权限通道（`~/.codex/hooks.json`）；
+- 移除 WorkBuddy 的 hooks；
+- 移除 `~/.codex/pets/maclawd` 宠物包（仅在它确实是 Maclawd 的包时）；
+- 注销「登录时启动」，并关闭以上功能的全部开关。
+
+从源码运行的用户可以用 CLI 完成同一件事：`node bin/maclawd-usage.js offboard`
+（登录项请在系统设置 → 通用 → 登录项中移除）。
+
+**第 2 步 · 删除应用。** 把 `Maclawd.app` 拖进废纸篓。
+
+**第 3 步（可选）· 清理本机数据。** 以下内容刻意保留，确认不再需要后手动删除：
+
+| 路径 | 内容 |
+| --- | --- |
+| `~/Library/Application Support/Maclawd/` | 设置、用量统计、会话租约、状态行备份 |
+| `~/Library/Caches/Maclawd/` | 模型价格表缓存 |
+| `~/Library/Preferences/ai.maclawd.desktop.plist` | 菜单栏显示密度、桌宠位置 |
+| `~/.claude/settings.json.maclawd-backup` | 首次修改前的 Claude Code 配置备份 |
+| `~/.codex/hooks.json.maclawd-backup` | 首次修改前的 Codex 配置备份 |
+
+注意：第 3 步要在第 1 步**之后**做——状态行的还原依赖数据目录里的
+备份文件（sidecar），先删数据目录会让你原来的状态行无法自动还原。
+
 ## Character notice
 
 Clawd is the property of [Anthropic](https://www.anthropic.com). Maclawd is an

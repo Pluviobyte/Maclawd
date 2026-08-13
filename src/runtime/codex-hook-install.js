@@ -13,13 +13,17 @@ export const CODEX_HOOK_EVENTS = [
   'SubagentStart', 'SubagentStop', 'PreCompact', 'PostCompact', 'Stop', 'SessionEnd',
 ];
 
+/** Codex 数据目录。offboard 定位宠物包时必须与 hooks 用同一套解析。 */
+export function codexHome() {
+  return process.env.MACLAWD_CODEX_HOME?.trim()
+    || process.env.CODEX_HOME?.trim()
+    || join(homedir(), '.codex');
+}
+
 export function codexHooksPath() {
   const override = process.env.MACLAWD_CODEX_HOOKS_PATH?.trim();
   if (override) return override;
-  const home = process.env.MACLAWD_CODEX_HOME?.trim()
-    || process.env.CODEX_HOME?.trim()
-    || join(homedir(), '.codex');
-  return join(home, 'hooks.json');
+  return join(codexHome(), 'hooks.json');
 }
 
 function isOurs(entry) {

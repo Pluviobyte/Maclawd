@@ -1031,6 +1031,17 @@ final class PanelStore: ObservableObject {
         post("/api/reset", body: [:]) { [weak self] _ in self?.refresh(); done() }
     }
 
+    /// 一键移除全部外部写入（offboarding）。运行时会顺带关掉相关开关，
+    /// 所以完成后要重读设置与 agent 状态，面板才不会显示过期的「已连接」。
+    func offboard(done: @escaping ([String: Any]?) -> Void) {
+        post("/api/offboard", body: [:]) { [weak self] json in
+            self?.loadSettings()
+            self?.refreshAgents()
+            self?.refresh()
+            done(json)
+        }
+    }
+
     func rescan(done: @escaping () -> Void) {
         post("/api/scan", body: [:]) { [weak self] _ in self?.refresh(); done() }
     }

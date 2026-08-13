@@ -55,7 +55,9 @@ struct RuntimeProcessIdentity: Equatable {
 
 enum RuntimeStartupDecision: Equatable {
     case launch
-    case reuse(port: Int)
+    /// 带上管理令牌：复用之后要立刻 adopt（见 RuntimeClient.requestAdoption），
+    /// 否则父进程已死的运行时会在管理者看护的宽限期后自行退出。
+    case reuse(port: Int, managementToken: String)
     case replaceManaged(port: Int, pid: Int32, instanceId: String, managementToken: String)
     case replaceLegacy(port: Int, pid: Int32)
     case untrusted(reason: String)
@@ -123,7 +125,7 @@ enum RuntimeStartupCoordinator {
         }
 
         if pingProtocol == expectedProtocolVersion, pingBuild == expectedBuildId {
-            return .reuse(port: endpoint.port)
+            return .reuse(port: endpoint.port, managementToken: token)
         }
         return .replaceManaged(
             port: endpoint.port,

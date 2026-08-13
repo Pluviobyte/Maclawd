@@ -258,6 +258,10 @@ final class RuntimeClient: ObservableObject {
         task.currentDirectoryURL = repoRoot
         var environment = ProcessInfo.processInfo.environment
         environment["MACLAWD_RUNTIME_BUILD_ID"] = expectedBuildId()
+        // 让运行时知道管理者是谁。外壳被强制退出时收不到终止回调，
+        // 运行时靠看护这个 pid 发现自己成了孤儿，然后自行收摊
+        // （见 src/runtime/manager-watch.js）。
+        environment["MACLAWD_PARENT_PID"] = String(ProcessInfo.processInfo.processIdentifier)
         task.environment = environment
         if let log = openLogHandle() {
             task.standardOutput = log
@@ -378,11 +382,15 @@ final class RuntimeClient: ObservableObject {
         switch decision {
         case .launch:
             launchRuntime(node: node, script: script)
-        case .reuse(let actualPort):
+        case .reuse(let actualPort, let token):
             port = actualPort
             runtimeReady = true
             startupInProgress = false
             lastError = nil
+            // 认领这个运行时：它原来的父进程多半已经死了（否则轮不到
+            // 我们来启动），不认领的话它的管理者看护会在宽限期后把
+            // 自己关掉，把刚接上的外壳晾在一个死端口上。
+            requestAdoption(port: actualPort, token: token)
             startStateStream()
         case .replaceManaged(let oldPort, let pid, let instanceId, let token):
             requestManagedShutdown(port: oldPort, instanceId: instanceId, token: token) { [weak self] accepted in
@@ -405,6 +413,22 @@ final class RuntimeClient: ObservableObject {
             startupInProgress = false
             lastError = "发现无法安全接管的本地运行时：\(reason)。未终止该进程。"
         }
+    }
+
+    /// 复用运行时后认领它，让管理者看护改盯我们的 pid。
+    /// 尽力而为：没有这个接口的旧运行时返回 404 也无妨——
+    /// 它同样没有管理者看护，不会自己退出。
+    private func requestAdoption(port: Int, token: String) {
+        guard let url = URL(string: "http://127.0.0.1:\(port)/api/runtime/adopt") else { return }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 2
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "authorization")
+        request.setValue("application/json", forHTTPHeaderField: "content-type")
+        request.httpBody = try? JSONSerialization.data(
+            withJSONObject: ["pid": Int(ProcessInfo.processInfo.processIdentifier)]
+        )
+        session.dataTask(with: request).resume()
     }
 
     private func requestManagedShutdown(

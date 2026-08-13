@@ -16,6 +16,9 @@ struct SettingsPage: View {
 
     @State private var statuslineBusy = false
     @State private var confirmingReset = false
+    @State private var confirmingOffboard = false
+    @State private var offboardBusy = false
+    @State private var offboardNote: String?
     @State private var rescanNote: String?
     @State private var codexPetState: CodexPetInstallationState = .ready
     @State private var codexPetNote: String?
@@ -385,9 +388,70 @@ struct SettingsPage: View {
                 }
 
                 Divider().padding(.vertical, 2)
+
+                if confirmingOffboard {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("移除 Maclawd 写进其他工具的全部配置：Claude Code / Codex / WorkBuddy"
+                             + " 的 hooks、状态行（还原你原来的）、权限通道、Codex 宠物包，"
+                             + "并注销「登录时启动」。只移除 Maclawd 自己写入的条目，"
+                             + "这些工具的其他配置与本机用量数据不受影响。卸载应用前建议先做这一步。")
+                            .font(.system(size: 10.5)).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        HStack {
+                            Button("确认移除") { runOffboard() }
+                                .font(.system(size: 11))
+                                .disabled(offboardBusy)
+                            Button("取消") { confirmingOffboard = false }
+                                .font(.system(size: 11))
+                        }
+                    }
+                } else {
+                    Button { confirmingOffboard = true } label: {
+                        Text("移除全部外部写入").font(.system(size: 11)).foregroundStyle(.red)
+                    }
+                    .disabled(offboardBusy)
+                }
+                if let note = offboardNote {
+                    Text(note).font(.system(size: 10)).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Divider().padding(.vertical, 2)
                 Button { onQuit() } label: {
                     Text("退出 Maclawd").font(.system(size: 11))
                 }
+            }
+        }
+    }
+
+    /**
+     Offboarding。配置写入的移除全部在运行时里完成（与安装同一套身份
+     判据）；外壳只补运行时够不着的系统侧：登录项注销。
+     */
+    private func runOffboard() {
+        offboardBusy = true
+        offboardNote = "移除中…"
+        store.offboard { result in
+            offboardBusy = false
+            confirmingOffboard = false
+            // 登录项注册在系统侧，运行时够不着，必须由外壳注销。
+            LoginItem.setEnabled(false)
+            refreshCodexPetState()
+
+            guard let result else {
+                offboardNote = "移除失败：运行时未响应。"
+                return
+            }
+            if (result["ok"] as? Bool) == true {
+                let backups = ((result["leftovers"] as? [String: Any])?["backups"] as? [String]) ?? []
+                offboardNote = backups.isEmpty
+                    ? "已移除全部外部写入并注销登录项。"
+                    : "已移除全部外部写入并注销登录项。首次修改前的备份"
+                      + "（*.maclawd-backup）已保留，确认无误后可手动删除。"
+            } else {
+                let messages = ((result["errors"] as? [[String: Any]]) ?? [])
+                    .compactMap { $0["message"] as? String }
+                offboardNote = "部分移除失败：\(messages.joined(separator: "；"))。修复后可再次执行。"
             }
         }
     }
