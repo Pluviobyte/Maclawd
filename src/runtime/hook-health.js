@@ -1,5 +1,6 @@
 import { statSync, watch } from 'node:fs';
 import { hookStatus, installHooks, settingsPath } from './hook-install.js';
+import { loadSettings } from './settings.js';
 
 /**
  * hook 装完就不管了 —— 这是个静默失效点。
@@ -10,7 +11,10 @@ import { hookStatus, installHooks, settingsPath } from './hook-install.js';
  * 「一切正常但很闲」在我们这边长得一模一样。用户唯一能观察到的现象是
  * 「它坏了」，而没有任何线索指向原因。
  *
- * 所以盯着这个文件，掉了就补回去。两条护栏来自 clawd-on-desk 踩过的坑：
+ * 所以盯着这个文件，掉了就补回去。**前提是 hookEnhancement 开关开着**——
+ * 开关是唯一的授权来源：用户关闭开关后条目消失是「撤回授权」，不是故障，
+ * 而这两种情况在文件层面长得一模一样，必须回头问设置才分得开。
+ * 修复行为另有两条护栏，来自 clawd-on-desk 踩过的坑：
  *
  * 1. **文件突然变小就不修。** 别的工具可能正写到一半，或者用户正在重构
  *    自己的配置。这时候按我们的记忆去补，很容易把别人的 hook 覆盖掉。
@@ -53,7 +57,20 @@ export function checkAndRepair(state, {
   repair = installHooks,
   size = sizeOf,
   path = settingsPath(),
+  enabled = () => loadSettings().hookEnhancement === true,
 } = {}) {
+  // 开关是唯一的授权来源，必须最先问。用户关闭开关时 uninstallHooks 会把
+  // 条目移掉，而只看文件的话，「用户撤回了授权」和「被第三方覆盖」
+  // 长得一模一样——看门狗曾经因此把刚卸载的 hook 原样装回去。
+  // 关闭时同时清掉记忆：everHealthy / lastSize 都是开启期间的基线，
+  // 带着它们进入下一次开启会误判。
+  if (!enabled()) {
+    state.everHealthy = false;
+    state.signature = null;
+    state.attempts = 0;
+    state.lastSize = 0;
+    return { action: 'healthy', detail: '开关关闭' };
+  }
   const report = status();
   // 一个都没装 = 用户没开启这个功能，不是「坏了」。自愈只负责
   // 「本来装着、后来掉了」，不负责替用户做开启的决定。
