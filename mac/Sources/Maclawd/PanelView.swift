@@ -169,10 +169,21 @@ private struct SessionsPage: View {
     @ObservedObject var store: PanelStore
     @State private var now = Date()
 
+    /// 说清这一页的数据从哪来，以及为什么有时候看不到自己的窗口。
+    /// 「一个正在跑的会话没出现在这里」是个没有任何线索的现象，
+    /// 用户唯一能得出的结论是「它坏了」——这颗 ⓘ 就是那条线索。
+    static let channelInfo = """
+        实时会话优先来自各 Agent 的 Hooks。请在「设置 → Agent 连接」中\
+        打开对应的 Agent，会话才会稳定、即时地出现，并支持点击跳回终端。
+
+        未连接时不会立刻出现，也可能漏掉刚开始的会话。
+        """
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
+            HStack(spacing: 4) {
                 Text("实时会话").font(.system(size: 13, weight: .semibold))
+                InfoDot(title: "实时会话", info: Self.channelInfo, size: 11)
                 Spacer()
                 Text("\(store.liveSessions.count) 个会话")
                     .font(.system(size: 10))
@@ -737,11 +748,45 @@ private struct DailyBars: View {
     }
 }
 
+/**
+ 标题旁边那颗 ⓘ。
+
+ 抽出来是因为它到了第三处（分区标题、开关行、实时会话标题）。三份各自
+ 维护的 popover 必然漂移——字号、宽度、有没有 accessibility 标签会慢慢
+ 长得不一样，而这类差异没人会专门去查。
+ */
+struct InfoDot: View {
+    /// 无障碍朗读用：「关于\(title)」。视觉上不显示。
+    let title: String
+    let info: String
+    var size: CGFloat = 10
+    @State private var showing = false
+
+    var body: some View {
+        Button { showing.toggle() } label: {
+            Image(systemName: "info.circle")
+                .font(.system(size: size))
+                .foregroundStyle(.secondary)
+        }
+        .buttonStyle(.plain)
+        .help(info)
+        .accessibilityLabel("关于\(title)")
+        .accessibilityHint("显示详细说明")
+        .popover(isPresented: $showing, arrowEdge: .bottom) {
+            Text(info)
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(12)
+                .frame(width: 280, alignment: .leading)
+        }
+    }
+}
+
 struct SectionCard<Content: View>: View {
     let title: String
     var info: String? = nil
     @ViewBuilder var content: Content
-    @State private var showingInfo = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -750,23 +795,7 @@ struct SectionCard<Content: View>: View {
                     .font(.system(size: 10.5, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .textCase(.none)
-                if let info {
-                    Button { showingInfo.toggle() } label: {
-                        Image(systemName: "info.circle")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .help(info)
-                    .popover(isPresented: $showingInfo, arrowEdge: .bottom) {
-                        Text(info)
-                            .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(12)
-                            .frame(width: 280, alignment: .leading)
-                    }
-                }
+                if let info { InfoDot(title: title, info: info) }
             }
             content
         }

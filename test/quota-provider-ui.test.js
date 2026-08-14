@@ -52,10 +52,14 @@ test('额度主开关同时说明 Codex 与 Claude Code，不再冒充为 Claude
   assert.match(quota, /isOn: store\.bool\("quotaTracking"\)/);
   assert.match(quota, /Codex/);
   assert.match(quota, /Claude Code/);
-  assert.match(settingsSource, /Image\(systemName: "info\.circle"\)/,
+  // 说明收进 ⓘ 而不是常驻铺在页面上。ⓘ 本身由 PanelView 的 InfoDot 统一实现，
+  // 这里只验证额度开关确实走了 info 形态（而不是又变回常驻文本）。
+  assert.match(quota, /info:\s*"Codex 通过官方 CLI 自动读取/,
     '额度读取说明应收进原生信息提示，不常驻占用设置页空间');
-  assert.match(settingsSource, /\.help\(info\)/);
-  assert.match(settingsSource, /Button \{ showingInfo\.toggle\(\) \}/,
+  assert.match(panelSource, /struct InfoDot[\s\S]*Image\(systemName: "info\.circle"\)/,
+    'ⓘ 的实现应当只有一份');
+  assert.match(panelSource, /struct InfoDot[\s\S]*\.help\(info\)/);
+  assert.match(panelSource, /struct InfoDot[\s\S]*Button \{ showing\.toggle\(\) \}/,
     '信息提示还应支持键盘聚焦和点击展开');
   assert.doesNotMatch(quota, /Text\("Claude Code 状态行只在交互式界面刷新/,
     '刷新盲区说明不应再直接铺在开关下方');

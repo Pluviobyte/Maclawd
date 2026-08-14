@@ -470,7 +470,6 @@ private struct SwitchRow: View {
     let isOn: Bool
     var enabled: Bool = true
     let onChange: (Bool) -> Void
-    @State private var showingInfo = false
 
     init(title: String, detail: String, isOn: Bool, enabled: Bool = true,
          onChange: @escaping (Bool) -> Void) {
@@ -496,23 +495,7 @@ private struct SwitchRow: View {
                 HStack(spacing: 4) {
                     Text(title).font(.system(size: 12))
                     if case .info(let info) = description {
-                        Button { showingInfo.toggle() } label: {
-                            Image(systemName: "info.circle")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
-                        }
-                        .buttonStyle(.plain)
-                        .help(info)
-                        .accessibilityLabel("关于\(title)")
-                        .accessibilityHint("显示详细说明")
-                        .popover(isPresented: $showingInfo, arrowEdge: .bottom) {
-                            Text(info)
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .padding(12)
-                                .frame(width: 280, alignment: .leading)
-                        }
+                        InfoDot(title: title, info: info, size: 11)
                     }
                 }
                 if case .inline(let detail) = description {
