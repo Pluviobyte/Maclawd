@@ -125,15 +125,44 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 PLIST
 
 # 签名。设了 MACLAWD_SIGN_ID 就走 Developer ID + 硬化运行时，否则 ad-hoc。
+# 必须由内而外逐层签——--deep 不保证顺序，公证时会因内层未签被拒。
+ENTITLEMENTS="$(dirname "$0")/Maclawd.entitlements"
 if [ -n "${MACLAWD_SIGN_ID:-}" ]; then
-  echo "==> Developer ID 签名"
-  codesign --force --deep --options runtime --timestamp \
+  echo "==> Developer ID 签名（分层）"
+  # 1) 打包的 Node 二进制（第三方可执行文件，必须先签）
+  for na in $NODE_ARCHES; do
+    codesign --force --options runtime --timestamp \
+      --entitlements "$ENTITLEMENTS" \
+      --sign "$MACLAWD_SIGN_ID" \
+      "$APP/Contents/Resources/node/$na/bin/node"
+  done
+  # 2) 主可执行文件
+  codesign --force --options runtime --timestamp \
+    --entitlements "$ENTITLEMENTS" \
+    --sign "$MACLAWD_SIGN_ID" \
+    "$APP/Contents/MacOS/Maclawd"
+  # 3) 整个 bundle
+  codesign --force --options runtime --timestamp \
     --sign "$MACLAWD_SIGN_ID" "$APP"
+  # 4) 验证
   codesign --verify --deep --strict --verbose=2 "$APP"
-  echo "    下一步公证："
-  echo "      ditto -c -k --keepParent $APP Maclawd.zip"
-  echo "      xcrun notarytool submit Maclawd.zip --keychain-profile <profile> --wait"
-  echo "      xcrun stapler staple $APP"
+  echo "    签名通过 ✓"
+
+  # 公证。设了 MACLAWD_NOTARIZE_PROFILE 就自动提交，否则只打印手动步骤。
+  # 凭据通过 xcrun notarytool store-credentials 预存在 Keychain 里。
+  if [ -n "${MACLAWD_NOTARIZE_PROFILE:-}" ]; then
+    echo "==> 公证"
+    ditto -c -k --keepParent "$APP" "$WORK/Maclawd.zip"
+    xcrun notarytool submit "$WORK/Maclawd.zip" \
+      --keychain-profile "$MACLAWD_NOTARIZE_PROFILE" --wait
+    xcrun stapler staple "$APP"
+    echo "    公证完成 ✓"
+  else
+    echo "    下一步公证（或设 MACLAWD_NOTARIZE_PROFILE 自动化）："
+    echo "      ditto -c -k --keepParent $APP Maclawd.zip"
+    echo "      xcrun notarytool submit Maclawd.zip --keychain-profile <profile> --wait"
+    echo "      xcrun stapler staple $APP"
+  fi
 else
   echo "==> ad-hoc 签名（仅本机可用，别人下载会被 Gatekeeper 拦）"
   codesign --force --deep --sign - "$APP" >/dev/null 2>&1 || echo "    （签名跳过）"
@@ -155,5 +184,11 @@ if [ "${MACLAWD_DMG:-}" = "1" ]; then
   rm -f Maclawd.dmg
   hdiutil create -volname Maclawd -srcfolder "$STAGE" -ov -format UDZO Maclawd.dmg >/dev/null
   rm -rf "$STAGE"
+  if [ -n "${MACLAWD_SIGN_ID:-}" ] && [ -n "${MACLAWD_NOTARIZE_PROFILE:-}" ]; then
+    echo "    公证 DMG"
+    xcrun notarytool submit Maclawd.dmg \
+      --keychain-profile "$MACLAWD_NOTARIZE_PROFILE" --wait
+    xcrun stapler staple Maclawd.dmg
+  fi
   echo "    $(pwd)/Maclawd.dmg  $(du -h Maclawd.dmg | cut -f1)"
 fi
