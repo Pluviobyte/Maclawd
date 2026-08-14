@@ -176,7 +176,9 @@ private struct SessionsPage: View {
         实时会话优先来自各 Agent 的 Hooks。请在「设置 → Agent 连接」中\
         打开对应的 Agent，会话才会稳定、即时地出现，并支持点击跳回终端。
 
-        未连接时不会立刻出现，也可能漏掉刚开始的会话。
+        未连接时 Maclawd 退回读取本机会话日志：尽力而为，会有几秒延迟，\
+        也只能看到 Maclawd 打开之后发生的活动。关闭「记录 token 用量」\
+        后这条兜底也会一并停止。
         """
 
     var body: some View {

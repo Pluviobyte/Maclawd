@@ -32,6 +32,7 @@ import {
   changeAgentIntegration, supportsAgentIntegration,
 } from './agent-integration-action.js';
 import { createCodexSessionMonitor } from './codex-session-monitor.js';
+import { createClaudeSessionMonitor } from './claude-session-monitor.js';
 import {
   installStatusline, uninstallStatusline, statuslineStatus,
 } from './statusline-install.js';
@@ -442,14 +443,31 @@ export function createUsageServer({
   const engine = createStateEngine({
     onChange: (state) => coverage.observe(state.actionId, Date.now()),
   });
-  let lastCodexHookAt = 0;
-  const stopCodexMonitor = createCodexSessionMonitor({
-    onEvent: (event) => {
-      // Official hooks are authoritative. JSONL is an explicitly best-effort fallback
-      // because Codex documents transcript_path as unstable.
-      if (Date.now() - lastCodexHookAt > 15_000) engine.observeEvent(event, Date.now());
-    },
-  });
+  /**
+   * JSONL 兜底通道：hook 没开时，实时会话仍然看得见。
+   *
+   * **让位是按 agent 分别算的。** 同一台机器上完全可能只连了 Codex 而没连
+   * Claude Code——用一个全局时间戳的话，Codex 的 hook 一活跃就会把
+   * Claude Code 的兜底一起哑掉，而那正是它唯一的可见性来源。
+   *
+   * 只在 hook 沉默超过 15 秒后才接手。hook 是权威通道：它带 pid（点击跳回
+   * 终端）、带权限请求，事件也更准；两条路同时喂同一个会话会打架。
+   */
+  const HOOK_PRIORITY_MS = 15_000;
+  const lastHookAt = new Map();
+  const observeFallback = (event) => {
+    // 读本机日志由「记录 token 用量」统一授权。用户关掉它就是说「别读我的
+    // 日志」，那 transcript 也一样不能读——只让用量守这条线、实时通道绕过去，
+    // 是把同一个承诺执行了一半。
+    if (!usageEnabled()) return;
+    if (Date.now() - (lastHookAt.get(event.agentId) ?? 0) <= HOOK_PRIORITY_MS) return;
+    engine.observeEvent(event, Date.now());
+  };
+  const stopSessionMonitors = [
+    createCodexSessionMonitor({ onEvent: observeFallback }),
+    createClaudeSessionMonitor({ agentId: 'claude-code', onEvent: observeFallback }),
+    createClaudeSessionMonitor({ agentId: 'workbuddy', onEvent: observeFallback }),
+  ];
   // 桌宠没开的那段时间里，hook 写的租约是唯一留下的痕迹。启动时读回来，
   // 免得一个任务跑到一半时桌宠从 idle 开始演。
   // 失败不能挡住启动——租约是尽力而为的增强，不是必要条件。
@@ -766,7 +784,8 @@ export function createUsageServer({
       if (pathname === '/api/event' && req.method === 'POST') {
         // hook 写入器将来往这里投事件；现在先让面板可以手动触发以验证状态机。
         const event = JSON.parse((await readBody(req)) || '{}');
-        if (event.agentId === 'codex' && event.channel === 'hook') lastCodexHookAt = Date.now();
+        // 记下这个 agent 的 hook 最近什么时候说过话，兜底通道据此让位。
+        if (event.channel === 'hook' && event.agentId) lastHookAt.set(event.agentId, Date.now());
         // 尺寸模式不经过状态引擎——见 setMiniMode 上方的说明。
         if (event.type === 'shell.miniEnter' || event.type === 'shell.miniExit') {
           setMiniMode(event.type === 'shell.miniEnter', Date.now());
@@ -1267,7 +1286,7 @@ export function createUsageServer({
   server.on('close', () => {
     managerWatch.stop();
     stopHookWatch();
-    stopCodexMonitor();
+    for (const stop of stopSessionMonitors) stop();
     quotaWorker.stop();
     cursorQuotaWorker.stop();
     grokQuotaWorker.stop();
