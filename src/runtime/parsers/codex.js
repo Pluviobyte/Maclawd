@@ -90,6 +90,24 @@ function snapshotKey(total, last) {
   return createHash('sha1').update(parts.join('|')).digest('hex').slice(0, 20);
 }
 
+/**
+ * Payload 指纹：token_count 整个 payload 的 SHA256 前缀。
+ *
+ * 这是 snapshotKey 的兜底。snapshotKey 依赖 total_token_usage 的累计值，
+ * 而 fork 子进程在某些版本中会从零开始计累计——此时同一条被复制的 API 响应，
+ * 在父子文件里的 snapshotKey 不同，snapshotKey 去重失效。
+ *
+ * payload 指纹直接对 token_count 的原始 payload 取摘要，不含外层 timestamp
+ * （Codex 复制时会给外层打新时间戳，但 payload 原样保留），所以在父子文件
+ * 之间一定相同。用它做第二把键，vibe-usage 也是这个思路。
+ */
+function payloadFingerprint(payload) {
+  return createHash('sha256')
+    .update(JSON.stringify(payload))
+    .digest('base64url')
+    .slice(0, 16);
+}
+
 function projectFromCwd(cwd) {
   if (typeof cwd !== 'string') return null;
   const trimmed = cwd.trim().replace(/[\\/]+$/, '');
@@ -275,10 +293,17 @@ export function createFileParser({ state, candidate } = {}) {
       const nonCachedInput = Math.max(inputTotal - cachedInput - cacheWrite, 0);
       if (nonCachedInput + output + cachedInput + cacheWrite === 0) return;
 
-      // 全零快照没有区分度，退回文件内唯一键，避免跨文件误合并。
-      const hasSnapshot = typeof cumulativeTotal === 'number' && cumulativeTotal > 0;
-      const dedupeKey = hasSnapshot
-        ? snapshotKey(curr, info.last_token_usage)
+      // payload 指纹：对 token_count 的原始 payload 取摘要。Codex 复制父记录
+      // 时会重写外层 timestamp 但保留 payload 原样，所以父子文件里同一条被复制的
+      // API 响应，其指纹一定相同。这比依赖 total_token_usage 累计值的 snapshotKey
+      // 更鲁棒——fork 子进程在某些版本中会从零开始计累计，导致 snapshotKey 失效。
+      // vibe-usage 也用 SHA256(JSON.stringify(payload)) 做去重指纹。
+      //
+      // 全零快照（所有 usage 字段都是 0 或缺失）退回文件内唯一键，
+      // 避免不同文件中无意义的全零记录被跨文件误合并。
+      const hasPayload = typeof cumulativeTotal === 'number' && cumulativeTotal > 0;
+      const dedupeKey = hasPayload
+        ? payloadFingerprint(payload)
         : `${candidate?.path ?? ''}#${ordinal}`;
 
       records.push({
@@ -286,14 +311,12 @@ export function createFileParser({ state, candidate } = {}) {
         input: nonCachedInput,
         output,
         cacheRead: cachedInput,
-        // Codex 单列缓存写字段，无 TTL 分档，全部记进 5m 档。
         write5m: cacheWrite,
         write1h: 0,
         reasoning: Math.min(reasoning, output),
         model: info.model || payload.model || turnContextModel || UNKNOWN_MODEL,
         cwd: sessionCwd,
         ts: timestamp.getTime(),
-        // 快照键交给通用去重器：跨文件的重放前缀会自然折叠成一条。
         messageId: dedupeKey,
         requestId: null,
         uuid: null,

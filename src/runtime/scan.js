@@ -33,10 +33,26 @@ import { usageEnabled } from './settings.js';
  *
  * 10: 重建 Claude UUID 去重、Desktop Cowork roots、Codex 重放边界，并给
  *     缓存条目写入 source，以便 discovery 瞬时失败时安全回落。
+ * 11: Codex 去重键从 snapshotKey（依赖累计值）换成 payloadFingerprint
+ *     （依赖原始 payload），fork 子进程累计基线不同时不再失效。
+ *     新增 5 个解析器（MiMoCode/Alma/DimAgent/OMP/CraftAgent）。
+ *     扫描审计轮转：每 30 天随机抽一个缓存文件全量重读验证正确性。
  */
-const CACHE_VERSION = 10;
+const CACHE_VERSION = 11;
 const MAX_WARNINGS = 20;
 const DEFAULT_BUDGET_MS = 20_000;
+
+/**
+ * 审计轮转间隔。每隔这么久随机抽一个已缓存的文件全量重读，比对结果与缓存
+ * 是否一致。不一致时静默更新缓存即可——审计的目的是**发现**漂移，不是**报警**。
+ *
+ * 只在全部文件都已索引完（没有 deferred）时才抽审：冷建和追赶阶段每一点
+ * 预算都应该花在还没读过的文件上，不是去校验已有的。
+ *
+ * 和 vibe-usage 一样取 30 天。过短浪费 IO，过长就失去了纠偏的意义。
+ */
+const AUDIT_INTERVAL_MS = 30 * 24 * 60 * 60 * 1000;
+const AUDIT_MAX_BYTES = 64 * 1024 * 1024;
 
 function budgetFromEnv() {
   const raw = Number(process.env.MACLAWD_SCAN_BUDGET_MS);
@@ -254,7 +270,7 @@ export async function scanAll({
   const livePaths = new Set();
   const projectPaths = {};
   let cacheChanged = false;
-  const stats = { reused: 0, appended: 0, full: 0, deferred: 0, bytesRead: 0 };
+  const stats = { reused: 0, appended: 0, full: 0, deferred: 0, bytesRead: 0, audited: 0 };
   const sourceStatus = {};
 
   const warn = (message) => {
@@ -344,7 +360,13 @@ export async function scanAll({
       const sig = `${candidate.mtimeMs}:${candidate.size}`;
 
       // ---- 第 1 级：签名未变，零读取 ----
-      if (entry && entry.sig === sig && entry.packed) {
+      // 审计轮转：全部文件都已建完后，如果某个缓存条目超过 30 天没被全量重读过，
+      // 强制跳过缓存走全量。每轮最多审一个文件，把 IO 开销分摊到多轮里。
+      const auditDue = entry && entry.sig === sig && entry.packed
+        && candidate.size <= AUDIT_MAX_BYTES
+        && typeof entry.auditedAt === 'number'
+        && clock() - entry.auditedAt > AUDIT_INTERVAL_MS;
+      if (entry && entry.sig === sig && entry.packed && !auditDue) {
         stats.reused++;
         status.indexedFiles++;
         for (const record of unpackRecords(entry.packed, parser.id, entry.project)) {
@@ -420,6 +442,7 @@ export async function scanAll({
                 state: result.state,
                 session: result.session ?? null,
                 packed: packRecords(merged),
+                auditedAt: clock(),
               };
               cacheChanged = true;
               stats.appended++;
@@ -488,9 +511,11 @@ export async function scanAll({
           state: result.state,
           session: result.session ?? null,
           packed: packRecords(result.records),
+          auditedAt: clock(),
         };
         cacheChanged = true;
         stats.full++;
+        if (auditDue) stats.audited++;
         if (partial) {
           stats.deferred++;
           status.deferredFiles++;
