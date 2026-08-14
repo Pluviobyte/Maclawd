@@ -156,33 +156,22 @@ Maclawd 把缓存写拆成 `write5m` / `write1h`（两档单价不同），vibe-
 已在 `8c99611` 中预注册 `reasoning: toCount(usage.reasoning_tokens)`。
 目前全是 0，一旦 Claude Code JSONL 开始携带该字段立即生效。
 
-#### 2b. Codex fork/replay 检测
+#### ~~2b. Codex fork/replay 检测~~ → 已完成
 
-**现状**：Maclawd 的 Codex 解析器用 `total_token_usage` 差分避免累计值双计，
-但没有检测 fork 子 agent 重放父 agent 历史的情况。
+已在 `983f9f4` 中把 Codex 的去重键从 `snapshotKey`（依赖累计值）换成
+`payloadFingerprint`（依赖原始 payload 的 SHA256）。fork 子进程从零开始计累计
+时 snapshotKey 会失效，但 Codex 复制父记录时 payload 原样保留，payloadFingerprint
+一定匹配。这是 vibe-usage 相同思路的简化实现，不需要多趟 KMP 匹配。
 
-**影响**：如果用户频繁使用 Codex 的 fork 功能，重放的历史 token 会被重复计入，
-导致用量偏高。vibe-usage 用 SHA256 token 指纹 + KMP 模式匹配来识别和排除。
+### ~~优先级 3：扫描性能（中期）~~ → 已完成
 
-**建议**：这是一个精度优化，不是 bug。可以等收到「Codex 数据偏高」的反馈后再做。
-vibe-usage 的实现相当复杂（约 200 行），移植需要仔细验证。
+#### ~~3a. 解析缓存 / 尾部缓存~~ → Maclawd 本就已有 + 已增加审计轮转
 
-### 优先级 3：扫描性能（中期）
+**复盘**：写此方案时低估了 Maclawd 现有能力。`scan.js` 已经实现了三级读取策略
+（签名缓存 → 尾部增量 → 全量重读），不逊于 vibe-usage 的位置缓存方案。
 
-#### 3a. 解析缓存 / 尾部缓存
-
-**现状**：Maclawd 每次扫描都从头读所有文件。对于 Claude Code 这种可能有
-几千个 JSONL 文件的目录，重复 IO 是浪费。
-
-**vibe-usage 的做法**：
-- 记住每个文件上次读到的字节位置（`parsedBytes`）
-- 用 guard hash（文件头 + 尾各 512 字节的 SHA256）检测文件是否被覆写
-- 下次扫描只读新增部分
-- 每 30 天强制全量重读一次，防止静默漂移
-
-**建议**：Maclawd 的 `daemon.js` 已经有 `createCollector` 做定时扫描，
-但没有位置缓存。这是一个独立的性能优化，可以在用户反馈「扫描慢」时做。
-目前实测扫描时间在秒级，还不是瓶颈。
+**新增**（`983f9f4`）：审计轮转。全部文件索引完毕后，每 30 天抽一个已缓存
+文件全量重读验证正确性，防止缓存静默漂移。冷建期间不审计。
 
 ### 不需要做的
 
