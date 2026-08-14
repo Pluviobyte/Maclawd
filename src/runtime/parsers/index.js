@@ -18,6 +18,11 @@ import * as zcode from './zcode.js';
 import * as hermes from './hermes.js';
 import * as kiro from './kiro.js';
 import * as antigravity from './antigravity.js';
+import * as mimocode from './mimocode.js';
+import * as alma from './alma.js';
+import * as dimagent from './dimagent.js';
+import * as omp from './omp.js';
+import * as craftAgent from './craft-agent.js';
 import * as cursor from './cursor.js';
 
 /**
@@ -59,6 +64,11 @@ export const parsers = [
   hermes,
   kiro,
   antigravity,
+  mimocode,
+  alma,
+  dimagent,
+  omp,
+  craftAgent,
   // 唯一需要联网的解析器，由 cursorCloud 设置显式开启，默认关闭
   cursor,
 ];

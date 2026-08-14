@@ -91,8 +91,10 @@ export function parseObject(obj) {
     cacheRead: toCount(usage.cache_read_input_tokens),
     write5m,
     write1h,
-    // Claude Code 日志不单独上报推理 token；它已包含在 output_tokens 里（不变量 2）。
-    reasoning: 0,
+    // Claude Code 日志已经把推理包含在 output_tokens 里（不变量 2），但 Anthropic API
+    // 自 2025 年起也会在 usage 里返回 reasoning_tokens。一旦 Claude Code 的 JSONL 开始
+    // 携带这个字段，这里立即生效；在那之前 toCount 返回 0，不影响现有行为。
+    reasoning: toCount(usage.reasoning_tokens),
     model: rawModel || UNKNOWN_MODEL,
     cwd: typeof obj.cwd === 'string' && obj.cwd.trim() ? obj.cwd : null,
     // epoch 毫秒而非 Date：解析缓存要序列化，数字最省且无时区歧义。
