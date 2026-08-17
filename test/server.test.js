@@ -289,6 +289,46 @@ test('WorkBuddy 设置开关会真正安装和卸载状态 Hooks', async () => {
   assert.equal(Object.hasOwn(cleaned, 'hooks'), false);
 });
 
+test('/api/offboard 走真实 HTTP 往返：真装真拆三个 agent，设置在服务端也同步关闭', async () => {
+  // offboard.test.js 已经把 offboard() 这个函数本身测得很细（第三方条目保留、
+  // 局部失败隔离等）。这里补的是它够不着的那层：真正走 HTTP 路由，且用
+  // 真实安装路径装起来（而不是手写 fixture），才能验证「面板点按钮」
+  // 那条完整链路——包括 sendJson 序列化和 Swift 客户端实际读取的字段名。
+  await post('/api/settings', {
+    hookEnhancement: true,
+    codexHookEnhancement: true,
+    workBuddyHookEnhancement: true,
+  });
+  const codexHooksPath = join(process.env.MACLAWD_CODEX_HOME, 'hooks.json');
+  assert.ok(Object.hasOwn(JSON.parse(readFileSync(CLAUDE_SETTINGS, 'utf8')), 'hooks'),
+    '装之后 Claude hooks 应该在');
+  assert.ok(Object.hasOwn(JSON.parse(readFileSync(codexHooksPath, 'utf8')), 'hooks'),
+    '装之后 Codex hooks 应该在');
+  assert.ok(Object.hasOwn(JSON.parse(readFileSync(process.env.MACLAWD_WORKBUDDY_SETTINGS, 'utf8')), 'hooks'),
+    '装之后 WorkBuddy hooks 应该在');
+
+  const result = await post('/api/offboard', {});
+
+  // PanelSettings.swift 的 runOffboard() 正是按这几个字段读的：字段名或
+  // 类型对不上，面板只会显示「移除失败：运行时未响应」，看不出真正原因。
+  assert.equal(result.ok, true, JSON.stringify(result.errors));
+  assert.ok(Array.isArray(result.errors), 'errors 必须是数组——Swift 侧用 compactMap 取 message');
+  assert.ok(Array.isArray(result.leftovers?.backups), 'leftovers.backups 必须是数组——Swift 侧直接渲染');
+
+  assert.equal(Object.hasOwn(JSON.parse(readFileSync(CLAUDE_SETTINGS, 'utf8')), 'hooks'), false);
+  assert.equal(Object.hasOwn(JSON.parse(readFileSync(codexHooksPath, 'utf8')), 'hooks'), false);
+  assert.equal(
+    Object.hasOwn(JSON.parse(readFileSync(process.env.MACLAWD_WORKBUDDY_SETTINGS, 'utf8')), 'hooks'), false,
+  );
+
+  // 开关必须在 HTTP 可见的一侧也真的翻回去——不能是磁盘文件改了，
+  // 但服务端另一条读路径给出的还是旧值。
+  const after = await post('/api/settings', {});
+  for (const key of ['hookEnhancement', 'codexHookEnhancement', 'workBuddyHookEnhancement']) {
+    assert.equal(after.settings[key], false, `${key} 必须在 HTTP 可见的一侧也已关闭`);
+  }
+});
+
 test('开启额度读取时自动兼容 Claude HUD，关闭后完整恢复', async () => {
   const claudeHud = {
     type: 'command',
