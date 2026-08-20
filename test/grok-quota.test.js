@@ -14,6 +14,37 @@ const { clearQuota, readQuota, recordQuota } = await import('../src/runtime/acco
 
 const NOW = 1_785_800_000_000;
 
+function encodeVarint(value) {
+  const bytes = [];
+  let remaining = value;
+  while (remaining > 0x7F) {
+    bytes.push((remaining & 0x7F) | 0x80);
+    remaining >>>= 7;
+  }
+  bytes.push(remaining & 0x7F);
+  return Buffer.from(bytes);
+}
+
+function protoVarint(field, value) {
+  return Buffer.concat([encodeVarint(field << 3), encodeVarint(value)]);
+}
+
+function protoMessage(field, payload) {
+  return Buffer.concat([
+    encodeVarint((field << 3) | 2),
+    encodeVarint(payload.length),
+    payload,
+  ]);
+}
+
+function grpcFrame(payload, flags = 0) {
+  const frame = Buffer.alloc(5 + payload.length);
+  frame[0] = flags;
+  frame.writeUInt32BE(payload.length, 1);
+  payload.copy(frame, 5);
+  return frame;
+}
+
 test.after(() => rmSync(data, { recursive: true, force: true }));
 test.beforeEach(() => clearQuota());
 
@@ -127,6 +158,77 @@ test('protobuf 中没有合法 float32 时 usedPercent 为 null', () => {
   assert.equal(result.resetsAt, 1_786_000_000);
 });
 
+test('gRPC billing 同时包含周期开始和结束时选择结束时间', () => {
+  const periodStart = 1_785_000_000;
+  const periodEnd = 1_786_000_000;
+  const overallUsage = Buffer.alloc(5);
+  overallUsage[0] = (1 << 3) | 5;
+  overallUsage.writeFloatLE(58, 1);
+  const config = Buffer.concat([
+    overallUsage,
+    protoMessage(4, protoVarint(1, periodStart)),
+    protoMessage(5, protoVarint(1, periodEnd)),
+  ]);
+
+  const result = parseGrpcBillingResponse(grpcFrame(protoMessage(1, config)));
+
+  assert.equal(result.usedPercent, 58);
+  assert.equal(result.resetsAt, periodEnd);
+});
+
+test('gRPC billing 支持 typed period 结束时间且总使用率字段省略时视为 0', () => {
+  const periodEnd = 1_786_100_000;
+  const productUsage = Buffer.alloc(5);
+  productUsage[0] = (1 << 3) | 5;
+  productUsage.writeFloatLE(73, 1);
+  const typedPeriod = Buffer.concat([
+    protoVarint(1, 2),
+    protoMessage(3, protoVarint(1, periodEnd)),
+  ]);
+  const config = Buffer.concat([
+    protoMessage(7, productUsage),
+    protoMessage(8, typedPeriod),
+  ]);
+
+  const result = parseGrpcBillingResponse(grpcFrame(protoMessage(1, config)));
+
+  assert.equal(result.usedPercent, 0);
+  assert.equal(result.resetsAt, periodEnd);
+});
+
+test('gRPC-web 解析后续数据帧并校验成功 trailer', () => {
+  const periodEnd = 1_786_200_000;
+  const overallUsage = Buffer.alloc(5);
+  overallUsage[0] = (1 << 3) | 5;
+  overallUsage.writeFloatLE(44, 1);
+  const config = Buffer.concat([
+    overallUsage,
+    protoMessage(5, protoVarint(1, periodEnd)),
+  ]);
+  const response = Buffer.concat([
+    grpcFrame(protoVarint(2, 7)),
+    grpcFrame(protoMessage(1, config)),
+    grpcFrame(Buffer.from('grpc-status: 0\r\n'), 0x80),
+  ]);
+
+  const result = parseGrpcBillingResponse(response);
+
+  assert.equal(result.usedPercent, 44);
+  assert.equal(result.resetsAt, periodEnd);
+});
+
+test('gRPC-web 非零 trailer status 不当成成功响应', () => {
+  const response = Buffer.concat([
+    grpcFrame(Buffer.from([0x0d, 0, 0, 0, 0])),
+    grpcFrame(Buffer.from('grpc-status: 16\r\n'), 0x80),
+  ]);
+
+  assert.throws(
+    () => parseGrpcBillingResponse(response),
+    (error) => error.code === 'EGRPC',
+  );
+});
+
 test('gRPC 响应过短时抛出 EPROTO', () => {
   assert.throws(
     () => parseGrpcBillingResponse(Buffer.from([0x00, 0x00])),
@@ -135,6 +237,135 @@ test('gRPC 响应过短时抛出 EPROTO', () => {
 });
 
 // ---- readGrokBilling HTTP 流程 ----
+
+test('readGrokBilling 优先读取官方 JSON billing 的周期结束时间', async () => {
+  const authDir = mkdtempSync(join(tmpdir(), 'maclawd-grok-json-billing-'));
+  const authPath = join(authDir, 'auth.json');
+  writeFileSync(authPath, JSON.stringify({
+    'https://auth.x.ai::openid': {
+      key: 'json-bearer-token',
+      user_id: 'user-123',
+    },
+  }));
+  const resetAt = new Date(Date.now() + 86_400_000).toISOString();
+  const calls = [];
+
+  try {
+    const report = await readGrokBilling({
+      authPath,
+      fetchImpl: async (url, options) => {
+        calls.push({ url, ...options });
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            config: {
+              creditUsagePercent: 58,
+              currentPeriod: {
+                type: 'USAGE_PERIOD_TYPE_WEEKLY',
+                start: new Date(Date.now() - 6 * 86_400_000).toISOString(),
+                end: resetAt,
+              },
+            },
+          }),
+        };
+      },
+    });
+
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, 'https://cli-chat-proxy.grok.com/v1/billing?format=credits');
+    assert.equal(calls[0].method, 'GET');
+    assert.equal(calls[0].headers.Authorization, 'Bearer json-bearer-token');
+    assert.equal(calls[0].headers['X-XAI-Token-Auth'], 'xai-grok-cli');
+    assert.equal(calls[0].headers['x-userid'], 'user-123');
+    assert.equal(report.windows.billing_cycle.usedPercent, 58);
+    assert.equal(report.windows.billing_cycle.resetAt, Date.parse(resetAt));
+  } finally {
+    rmSync(authDir, { recursive: true, force: true });
+  }
+});
+
+test('readGrokBilling 兼容 JSON billingPeriodEnd 旧字段', async () => {
+  const authDir = mkdtempSync(join(tmpdir(), 'maclawd-grok-json-legacy-'));
+  const authPath = join(authDir, 'auth.json');
+  writeFileSync(authPath, JSON.stringify({
+    'https://auth.x.ai::openid': { key: 'legacy-json-token', user_id: 'user-legacy' },
+  }));
+  const resetAt = new Date(Date.now() + 172_800_000).toISOString();
+
+  try {
+    const report = await readGrokBilling({
+      authPath,
+      fetchImpl: async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          config: { creditUsagePercent: 12.5, billingPeriodEnd: resetAt },
+        }),
+      }),
+    });
+
+    assert.equal(report.windows.billing_cycle.usedPercent, 12.5);
+    assert.equal(report.windows.billing_cycle.resetAt, Date.parse(resetAt));
+  } finally {
+    rmSync(authDir, { recursive: true, force: true });
+  }
+});
+
+test('JSON billing 失败后回退 gRPC 并仍返回周期结束时间', async () => {
+  const authDir = mkdtempSync(join(tmpdir(), 'maclawd-grok-json-fallback-'));
+  const authPath = join(authDir, 'auth.json');
+  writeFileSync(authPath, JSON.stringify({
+    'https://auth.x.ai::openid': { key: 'fallback-token', user_id: 'user-456' },
+  }));
+  const periodStart = Math.floor(Date.now() / 1000) - 6 * 86_400;
+  const periodEnd = Math.floor(Date.now() / 1000) + 86_400;
+  const overallUsage = Buffer.alloc(5);
+  overallUsage[0] = (1 << 3) | 5;
+  overallUsage.writeFloatLE(37, 1);
+  const config = Buffer.concat([
+    overallUsage,
+    protoMessage(4, protoVarint(1, periodStart)),
+    protoMessage(5, protoVarint(1, periodEnd)),
+  ]);
+  const responseBuffer = grpcFrame(protoMessage(1, config));
+  const calls = [];
+
+  try {
+    const report = await readGrokBilling({
+      authPath,
+      fetchImpl: async (url) => {
+        calls.push(url);
+        if (url.includes('cli-chat-proxy')) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              config: {
+                creditUsagePercent: 37,
+                currentPeriod: { end: new Date(Date.now() - 86_400_000).toISOString() },
+              },
+            }),
+          };
+        }
+        return {
+          ok: true,
+          status: 200,
+          arrayBuffer: async () => responseBuffer.buffer.slice(
+            responseBuffer.byteOffset,
+            responseBuffer.byteOffset + responseBuffer.byteLength,
+          ),
+        };
+      },
+    });
+
+    assert.equal(calls.length, 2);
+    assert.equal(report.windows.billing_cycle.usedPercent, 37);
+    assert.equal(report.windows.billing_cycle.resetAt, periodEnd * 1000);
+  } finally {
+    rmSync(authDir, { recursive: true, force: true });
+  }
+});
 
 test('readGrokBilling 发送正确的 gRPC-web 请求并返回额度报告', async () => {
   const authDir = mkdtempSync(join(tmpdir(), 'maclawd-grok-billing-'));

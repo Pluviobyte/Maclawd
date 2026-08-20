@@ -1,9 +1,8 @@
 /**
- * Grok Build 的 gRPC-web 计费端点 → Maclawd 通用额度上报。
+ * Grok Build 的计费端点 → Maclawd 通用额度上报。
  *
- * 读取 ~/.grok/auth.json 里的 Bearer Token，向 grok.com 的
- * GetGrokCreditsConfig 发一个空帧，从 protobuf 响应里扫出
- * usedPercent（float32）和 resetsAt（varint epoch 秒）。
+ * 优先读取官方 CLI JSON billing 接口；不可用时回退到 grok.com
+ * 的 gRPC-web GetGrokCreditsConfig 接口。
  */
 
 import { readFileSync } from 'node:fs';
@@ -14,7 +13,8 @@ import { loadSettings } from './settings.js';
 
 const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 const DEFAULT_REFRESH_MS = 10 * 60 * 1000;
-const BILLING_URL = 'https://grok.com/grok_api_v2.GrokBuildBilling/GetGrokCreditsConfig';
+const JSON_BILLING_URL = 'https://cli-chat-proxy.grok.com/v1/billing?format=credits';
+const GRPC_BILLING_URL = 'https://grok.com/grok_api_v2.GrokBuildBilling/GetGrokCreditsConfig';
 const EMPTY_GRPC_FRAME = Buffer.from([0x00, 0x00, 0x00, 0x00, 0x00]);
 
 function quotaError(code, message) {
@@ -28,6 +28,10 @@ function quotaError(code, message) {
  * 取 entry 的 `key` 字段作为 Bearer Token。
  */
 export function readGrokToken({ authPath } = {}) {
+  return readGrokCredentials({ authPath }).token;
+}
+
+function readGrokCredentials({ authPath } = {}) {
   const file = authPath ?? join(grokHome(), 'auth.json');
   let raw;
   try {
@@ -45,20 +49,24 @@ export function readGrokToken({ authPath } = {}) {
     throw quotaError('ENOAUTH', 'Grok 认证文件内容为空');
   }
 
-  let oidcToken = null;
-  let legacyToken = null;
+  let oidcCredentials = null;
+  let legacyCredentials = null;
   for (const [scope, entry] of Object.entries(data)) {
     const key = typeof entry?.key === 'string' ? entry.key.trim() : null;
     if (!key) continue;
+    const credentials = {
+      token: key,
+      userId: typeof entry?.user_id === 'string' ? entry.user_id.trim() : '',
+    };
     if (scope.startsWith('https://auth.x.ai::')) {
-      oidcToken = key;
-    } else if (scope === 'https://accounts.x.ai/sign-in' && !legacyToken) {
-      legacyToken = key;
+      oidcCredentials = credentials;
+    } else if (scope === 'https://accounts.x.ai/sign-in' && !legacyCredentials) {
+      legacyCredentials = credentials;
     }
   }
-  const token = oidcToken ?? legacyToken;
-  if (!token) throw quotaError('ENOAUTH', 'Grok 认证文件中未找到有效 Token');
-  return token;
+  const credentials = oidcCredentials ?? legacyCredentials;
+  if (!credentials) throw quotaError('ENOAUTH', 'Grok 认证文件中未找到有效 Token');
+  return credentials;
 }
 
 /**
@@ -67,31 +75,30 @@ export function readGrokToken({ authPath } = {}) {
  * wire type 5（fixed32）→ 读 4 字节 float32 LE，0 ≤ val ≤ 100 视为 usedPercent 候选；
  * wire type 0（varint）→ 解码后若在合理的 epoch 秒范围内视为 resetsAt 候选。
  */
-export function parseGrpcBillingResponse(buffer) {
+export function parseGrpcBillingResponse(buffer, { now = Date.now() } = {}) {
   if (buffer.length < 5) throw quotaError('EPROTO', 'gRPC 响应过短');
-  const frameLength = buffer.readUInt32BE(1);
-  if (5 + frameLength > buffer.length) throw quotaError('EPROTO', 'gRPC 帧长度超出响应');
-  const proto = buffer.subarray(5, 5 + frameLength);
 
-  let usedPercent = null;
-  let resetsAt = null;
+  const percentCandidates = [];
+  const epochCandidates = [];
 
   // 递归扫描所有层级，float32 和 varint 候选可能在任意嵌套深度
-  function scan(buf) {
+  function scan(buf, parentPath = []) {
     let offset = 0;
     while (offset < buf.length) {
       const tagResult = decodeVarint(buf, offset);
       if (!tagResult) break;
       offset = tagResult.offset;
       const wireType = tagResult.value & 0x07;
+      const field = tagResult.value >>> 3;
+      const path = [...parentPath, field];
 
       if (wireType === 0) {
         const varintResult = decodeVarint(buf, offset);
         if (!varintResult) break;
         offset = varintResult.offset;
         const value = varintResult.value;
-        if (resetsAt === null && value > 1_700_000_000 && value < 2_100_000_000) {
-          resetsAt = value;
+        if (value > 1_700_000_000 && value < 2_100_000_000) {
+          epochCandidates.push({ path, value });
         }
       } else if (wireType === 1) {
         if (offset + 8 > buf.length) break;
@@ -103,14 +110,13 @@ export function parseGrpcBillingResponse(buffer) {
         if (offset + lenResult.value > buf.length) break;
         const sub = buf.subarray(offset, offset + lenResult.value);
         offset += lenResult.value;
-        if (sub.length > 0) scan(sub);
+        if (sub.length > 0) scan(sub, path);
       } else if (wireType === 5) {
         if (offset + 4 > buf.length) break;
         const floatVal = buf.readFloatLE(offset);
         offset += 4;
-        if (usedPercent === null && Number.isFinite(floatVal)
-            && floatVal >= 0 && floatVal <= 100) {
-          usedPercent = floatVal;
+        if (Number.isFinite(floatVal) && floatVal >= 0 && floatVal <= 100) {
+          percentCandidates.push({ path, value: floatVal });
         }
       } else {
         break;
@@ -118,7 +124,48 @@ export function parseGrpcBillingResponse(buffer) {
     }
   }
 
-  scan(proto);
+  let frameOffset = 0;
+  let dataFrames = 0;
+  while (frameOffset < buffer.length) {
+    if (frameOffset + 5 > buffer.length) throw quotaError('EPROTO', 'gRPC 帧头不完整');
+    const flags = buffer[frameOffset];
+    const frameLength = buffer.readUInt32BE(frameOffset + 1);
+    const payloadStart = frameOffset + 5;
+    const payloadEnd = payloadStart + frameLength;
+    if (payloadEnd > buffer.length) throw quotaError('EPROTO', 'gRPC 帧长度超出响应');
+    const payload = buffer.subarray(payloadStart, payloadEnd);
+    frameOffset = payloadEnd;
+
+    if ((flags & 0x80) !== 0) {
+      const trailer = payload.toString('utf8');
+      const status = /^grpc-status:\s*(\d+)\s*$/im.exec(trailer)?.[1];
+      if (status !== undefined && status !== '0') {
+        throw quotaError('EGRPC', `Grok gRPC 服务返回状态 ${status}`);
+      }
+      continue;
+    }
+    if ((flags & 0x01) !== 0) throw quotaError('EPROTO', '暂不支持压缩的 gRPC 数据帧');
+    dataFrames++;
+    scan(payload);
+  }
+  if (dataFrames === 0) throw quotaError('EPROTO', 'gRPC 响应中没有数据帧');
+
+  const samePath = (candidate, expected) => candidate.path.length === expected.length
+    && candidate.path.every((part, index) => part === expected[index]);
+  const exactPercent = percentCandidates.find((candidate) => samePath(candidate, [1, 1]));
+  const fallbackPercent = percentCandidates
+    .filter((candidate) => candidate.path.at(-1) === 1)
+    .sort((left, right) => left.path.length - right.path.length)[0];
+  const exactReset = epochCandidates.find((candidate) => samePath(candidate, [1, 5, 1]))
+    ?? epochCandidates.find((candidate) => samePath(candidate, [1, 8, 3, 1]));
+  // proto3 会省略值为 0 的 fixed32。仅在识别到官方周期结束字段时将缺失解释为 0，
+  // 避免把任意无百分比的 protobuf 响应误报成有效额度。
+  const usedPercent = exactPercent?.value ?? (exactReset ? 0 : fallbackPercent?.value ?? null);
+  const nowSeconds = Math.floor(now / 1000);
+  const futureReset = epochCandidates
+    .filter((candidate) => candidate.value > nowSeconds)
+    .sort((left, right) => left.value - right.value)[0];
+  const resetsAt = (exactReset ?? futureReset)?.value ?? epochCandidates[0]?.value ?? null;
   return { usedPercent, resetsAt };
 }
 
@@ -143,7 +190,7 @@ export async function readGrokBilling({
 } = {}) {
   if (typeof fetchImpl !== 'function') throw quotaError('ENETWORK', '当前运行时不支持网络请求');
 
-  const token = readGrokToken({ authPath });
+  const { token, userId } = readGrokCredentials({ authPath });
 
   const controller = new AbortController();
   const abortFromCaller = () => controller.abort();
@@ -153,7 +200,35 @@ export async function readGrokBilling({
   timeout.unref?.();
 
   try {
-    const response = await fetchImpl(BILLING_URL, {
+    if (userId) {
+      try {
+        const response = await fetchImpl(JSON_BILLING_URL, {
+          method: 'GET',
+          headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${token}`,
+            'X-XAI-Token-Auth': 'xai-grok-cli',
+            'x-userid': userId,
+            'x-grok-client-version': 'maclawd/0.1.0',
+            'x-grok-client-mode': 'interactive',
+          },
+          signal: controller.signal,
+        });
+        if (!response?.ok) {
+          if (response?.status === 401 || response?.status === 403) {
+            throw quotaError('EAUTH', 'Grok 登录状态已失效');
+          }
+          throw quotaError('EHTTP', `Grok JSON 计费服务返回 HTTP ${response?.status ?? '?'}`);
+        }
+        const payload = await readBoundedJson(response);
+        return reportFromJsonBilling(payload);
+      } catch (error) {
+        if (controller.signal.aborted) throw error;
+        // 官方 JSON 端点可能不支持旧登录态或发生契约漂移，继续尝试 gRPC。
+      }
+    }
+
+    const response = await fetchImpl(GRPC_BILLING_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/grpc-web+proto',
@@ -217,6 +292,45 @@ export async function readGrokBilling({
   } finally {
     clearTimeout(timeout);
     signal?.removeEventListener?.('abort', abortFromCaller);
+  }
+}
+
+function reportFromJsonBilling(payload) {
+  const config = payload?.config;
+  const usedPercent = config?.creditUsagePercent;
+  if (typeof usedPercent !== 'number' || !Number.isFinite(usedPercent)
+      || usedPercent < 0 || usedPercent > 100) {
+    throw quotaError('ENODATA', 'Grok JSON 计费响应中未找到用量百分比');
+  }
+  const resetText = config?.currentPeriod?.end ?? config?.billingPeriodEnd;
+  const parsedResetAt = typeof resetText === 'string' ? Date.parse(resetText) : NaN;
+  if (!Number.isFinite(parsedResetAt) || parsedResetAt <= Date.now()) {
+    throw quotaError('ENODATA', 'Grok JSON 计费响应中未找到有效周期结束时间');
+  }
+  return {
+    source: 'grok',
+    sourceLabel: 'Grok Build',
+    completeSnapshot: true,
+    windows: {
+      billing_cycle: {
+        usedPercent,
+        resetAt: parsedResetAt,
+        label: '计费周期',
+      },
+    },
+  };
+}
+
+async function readBoundedJson(response) {
+  if (typeof response?.arrayBuffer !== 'function') return response.json();
+  const body = await response.arrayBuffer();
+  if (body.byteLength > MAX_RESPONSE_BYTES) {
+    throw quotaError('EOVERFLOW', 'Grok JSON 计费响应过大');
+  }
+  try {
+    return JSON.parse(Buffer.from(body).toString('utf8'));
+  } catch {
+    throw quotaError('EPROTO', 'Grok JSON 计费响应格式无效');
   }
 }
 
