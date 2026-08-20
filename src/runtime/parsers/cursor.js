@@ -1,6 +1,7 @@
-import { statSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { join } from 'node:path';
+import { homedir } from 'node:os';
+import { basename, join } from 'node:path';
 import { toCount, UNKNOWN_MODEL } from '../usage-record.js';
 import { queryDbJson } from './sqlite.js';
 import { hostRoots } from './vscode-forks.js';
@@ -12,24 +13,30 @@ export const label = 'Cursor';
 export const readMode = 'none';
 export const lineFilter = null;
 // 云端 CSV 会在本地 state.vscdb 不变时继续增长，不能只按文件签名缓存。
-export const cacheTtlMs = 10 * 60 * 1000;
+export function cacheTtlMs(candidate) {
+  return candidate?.kind === 'cloud-db' ? 10 * 60 * 1000 : null;
+}
 
 /**
- * ⚠️ Cursor 是唯一需要联网的解析器，**默认关闭**。
+ * Cursor 有两条互相独立的数据通道：
  *
- * 它在本地只存一个登录 token，用量数据全在云端——这与本项目「纯本地」的不可变
- * 原则 1 冲突。所以它由独立设置项 `cursorCloud` 显式开启，关闭时一个请求都不发。
+ * 1. 本地 Cursor hook 执行日志。stop 事件包含精确的 input/output/cache token，
+ *    默认读取、完全离线；没有配置任何 Cursor/Claude 兼容 hook 时不会生成这类日志。
+ * 2. dashboard CSV。由 `cursorCloud` 显式切换启用，用于需要完整历史的场景。
  *
- * 数据来自 Cursor 自家 dashboard 的 CSV 导出接口，用本机已有的登录态读取。
- * 记录使用云端行内容的稳定指纹，避免多个 Cursor 配置根重复计入同一份账号数据。
- *
- * ⚠️ 未在真实数据上验证（开发机未安装 Cursor）。
+ * 云端 CSV 没有 generation id，不能与本地事件逐条安全去重。因此两条通道是互斥
+ * 的：默认只读本地；打开 `cursorCloud` 后改读云端，而不是把两份数据相加。
  */
 const CSV_URL = 'https://cursor.com/api/dashboard/export-usage-events-csv?strategy=tokens';
 const TOKEN_KEY = 'cursorAuth/accessToken';
 
 export function enabled() {
   return loadSettings().cursorCloud === true;
+}
+
+export function cursorLogsDir() {
+  return process.env.MACLAWD_CURSOR_LOG_DIR?.trim()
+    || join(homedir(), 'Library', 'Application Support', 'Cursor', 'logs');
 }
 
 function stateDbPaths() {
@@ -48,14 +55,100 @@ function stateDbPaths() {
 }
 
 export function dataDirs() {
-  return stateDbPaths().map((p) => p.path);
+  return [cursorLogsDir(), ...stateDbPaths().map((p) => p.path)];
 }
 
-export function discover() {
-  if (!enabled()) return [];
-  return stateDbPaths().map(({ path, size, mtimeMs, ino }) => ({
-    path, size, mtimeMs, ino, sessionId: path, fallbackProject: null,
-  }));
+export function discover({ listJsonl }) {
+  if (enabled()) {
+    return stateDbPaths().map(({ path, size, mtimeMs, ino }) => ({
+      path, size, mtimeMs, ino, sessionId: 'cursor-cloud-account', fallbackProject: null,
+      kind: 'cloud-db',
+    }));
+  }
+  const local = listJsonl(cursorLogsDir(), { extensions: ['.log'] })
+    .filter(({ path }) => basename(path).startsWith('cursor.hooks.'))
+    .map(({ path, size, mtimeMs, ino }) => ({
+      path, size, mtimeMs, ino, sessionId: path, fallbackProject: null,
+      kind: 'local-hook-log',
+    }));
+  return local;
+}
+
+function localRecord(payload, ts, fallbackKey) {
+  if (payload?.hook_event_name !== 'stop') return null;
+  const rawInput = toCount(payload.input_tokens);
+  const output = toCount(payload.output_tokens);
+  const cacheRead = toCount(payload.cache_read_tokens);
+  const cacheWrite = toCount(payload.cache_write_tokens);
+  // 真机日志关系：input_tokens == 非缓存输入 + cache read + cache write。
+  // 例如 106447 == 4 + 52462 + 53981；统计合同要求四项互斥。
+  const input = Math.max(0, rawInput - cacheRead - cacheWrite);
+  if (input + output + cacheRead + cacheWrite === 0) return null;
+
+  const generation = typeof payload.generation_id === 'string'
+    && payload.generation_id.trim() ? payload.generation_id.trim() : fallbackKey;
+  const rawModel = String(payload.model_id ?? payload.model ?? '').trim();
+  const model = rawModel && rawModel !== 'default' ? rawModel : UNKNOWN_MODEL;
+  const cwd = Array.isArray(payload.workspace_roots)
+    && typeof payload.workspace_roots[0] === 'string'
+    ? payload.workspace_roots[0] : null;
+
+  return {
+    source: id,
+    input,
+    output,
+    cacheRead,
+    // Cursor 只给一个 cache_write_tokens 总数，没有 5m/1h TTL 维度。
+    write5m: cacheWrite,
+    write1h: 0,
+    reasoning: 0,
+    model,
+    cwd,
+    ts,
+    messageId: `cursor-local|${generation}`,
+    requestId: generation,
+    uuid: null,
+    sidechain: false,
+  };
+}
+
+/**
+ * Cursor 的 hook 输出日志不是 JSONL，而是带分隔线的文本块。只认 stop 请求后紧邻的
+ * INPUT JSON；命令输出、prompt、transcript 等其他内容一律不解析。
+ */
+export function parseCursorHookLog(text) {
+  const marker = /\[([^\]]+)] Hook step requested: stop\s*$/gm;
+  const records = [];
+  const seen = new Set();
+  let match;
+  while ((match = marker.exec(text)) !== null) {
+    const ts = new Date(match[1]).getTime();
+    if (!Number.isFinite(ts)) continue;
+
+    const nextStop = text.indexOf('Hook step requested:', marker.lastIndex);
+    const boundary = nextStop === -1 ? text.length : nextStop;
+    const inputAt = text.indexOf('\nINPUT:\n', marker.lastIndex);
+    if (inputAt === -1 || inputAt >= boundary) continue;
+    const outputAt = text.indexOf('\nOUTPUT:', inputAt + 8);
+    if (outputAt === -1 || outputAt >= boundary) continue;
+    const jsonStart = text.indexOf('{', inputAt + 8);
+    const jsonEnd = text.lastIndexOf('}', outputAt);
+    if (jsonStart === -1 || jsonEnd < jsonStart) continue;
+
+    let payload;
+    try {
+      payload = JSON.parse(text.slice(jsonStart, jsonEnd + 1));
+    } catch {
+      continue;
+    }
+    const fallbackKey = createHash('sha256')
+      .update(text.slice(match.index, outputAt)).digest('hex').slice(0, 24);
+    const record = localRecord(payload, ts, fallbackKey);
+    if (!record || seen.has(record.messageId)) continue;
+    seen.add(record.messageId);
+    records.push(record);
+  }
+  return records;
 }
 
 function readToken(dbPath) {
@@ -199,7 +292,10 @@ export function createFileParser({ candidate } = {}) {
   return {
     onObject() { /* 不走行解析 */ },
     async finish() {
-      if (!enabled()) return { records: [], state: null };
+      if (candidate?.kind === 'local-hook-log') {
+        return { records: parseCursorHookLog(readFileSync(candidate.path, 'utf8')), state: null };
+      }
+      if (!enabled() || candidate?.kind !== 'cloud-db') return { records: [], state: null };
       return { records: await fetchRecords(candidate.path), state: null };
     },
   };

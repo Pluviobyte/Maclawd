@@ -302,10 +302,13 @@ test('Cursor 记录身份不依赖云端 CSV 的行顺序', () => {
   );
 });
 
-test('Cursor 默认关闭时不产出任何候选（一个请求都不发）', () => {
+test('Cursor 云端默认关闭时仍允许本地日志候选', () => {
+  const local = {
+    path: '/tmp/cursor.hooks.workspaceId-test.log', size: 1, mtimeMs: 2, ino: 3,
+  };
   assert.deepEqual(
-    parsers.find((p) => p.id === 'cursor').discover({ listJsonl: () => [] }),
-    [],
+    parsers.find((p) => p.id === 'cursor').discover({ listJsonl: () => [local] }),
+    [{ ...local, sessionId: local.path, fallbackProject: null, kind: 'local-hook-log' }],
   );
 });
 

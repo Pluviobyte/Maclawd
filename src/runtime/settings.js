@@ -49,8 +49,8 @@ export const DEFAULTS = {
   permissionBubble: false,
   // 局域网只读镜像（手机上看一眼）。默认关闭，开启后必须配对令牌。
   lanMirror: false,
-  // Cursor 本地不存用量，只能联网拉云端 CSV。与「纯本地」原则冲突，所以
-  // 单独一个开关且默认关闭；关闭时它一个请求都不发。
+  // Cursor 默认离线读取本地 hook 日志；此开关改为联网读取 dashboard 完整历史。
+  // 两者互斥，避免同一请求因缺少共同 ID 而重复累计。默认关闭。
   cursorCloud: false,
   // 项目名在面板上隐藏（本地隐私，不影响统计）。
   hiddenProjects: [],

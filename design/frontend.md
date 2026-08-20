@@ -150,7 +150,7 @@ bin/maclawd-usage serve   →  src/runtime/server.js (node:http, 只绑 127.0.0.
    `recordUsage` 在 `scanAll` / `tailer.poll` 的源头设闸（关闭后零磁盘读）、
    `petEnergy` 控制体力是否影响 idle 权重与 away 阈值、`reducedMotion` 进入编排
    计划的 `motion` 字段、`hiddenProjects` / `pinnedProjects` 在项目足迹里生效、
-   `cursorCloud` 控制唯一的联网解析器。
+   `cursorCloud` 在本地 hook 日志与 Cursor dashboard 完整历史之间切换，二者不叠加。
 4. **hook 通道未实现**，等状态集稳定（用户明确要求先空着）。宠物管理页有
    `/api/event` 的手动触发按钮，可以先验证状态机与仲裁优先级。
 5. **macOS 外壳未开始** —— 透明桌宠窗口、菜单栏控制器、点击穿透、签名公证

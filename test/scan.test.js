@@ -476,7 +476,9 @@ test('云端解析器的缓存 TTL 到期后重新拉取，未到期时复用', 
   const parser = {
     id: 'cloud-source',
     readMode: 'none',
-    cacheTtlMs: 10 * 60 * 1000,
+    cacheTtlMs: (candidate) => (
+      candidate.path === file ? 10 * 60 * 1000 : null
+    ),
     discover: () => {
       const stat = statSync(file);
       return [{ path: file, size: stat.size, mtimeMs: stat.mtimeMs, ino: stat.ino }];

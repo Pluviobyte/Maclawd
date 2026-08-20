@@ -69,7 +69,7 @@ export const parsers = [
   dimagent,
   omp,
   craftAgent,
-  // 唯一需要联网的解析器，由 cursorCloud 设置显式开启，默认关闭
+  // 本地 hook 日志默认读取；云端历史由 cursorCloud 显式开启
   cursor,
 ];
 
@@ -82,6 +82,9 @@ export const VERIFIED_SOURCES = new Set([
   // 用开发机上的真实记录核对过：1 条 message 用量、项目名取自旁挂的
   // .trajectory.jsonl，且已确认 model.completed 与 message 的双计陷阱。
   'openclaw',
+  // 用本机 Cursor 真实 hook 日志核对过：stop 事件的四类 token 均为非零，
+  // generation_id 可稳定去重；数据库 bubble token 字段为 0，刻意不读取。
+  'cursor',
 ]);
 
 export function parserById(id) {

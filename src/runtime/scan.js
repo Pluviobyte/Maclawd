@@ -37,8 +37,9 @@ import { usageEnabled } from './settings.js';
  *     （依赖原始 payload），fork 子进程累计基线不同时不再失效。
  *     新增 5 个解析器（MiMoCode/Alma/DimAgent/OMP/CraftAgent）。
  *     扫描审计轮转：每 30 天随机抽一个缓存文件全量重读验证正确性。
+ * 12: Cursor 从云端-only 改为默认解析本地 hook 日志，存量缓存必须重建。
  */
-const CACHE_VERSION = 11;
+const CACHE_VERSION = 12;
 const MAX_WARNINGS = 20;
 const DEFAULT_BUDGET_MS = 20_000;
 
@@ -366,9 +367,11 @@ export async function scanAll({
         && candidate.size <= AUDIT_MAX_BYTES
         && typeof entry.auditedAt === 'number'
         && clock() - entry.auditedAt > AUDIT_INTERVAL_MS;
+      const configuredCacheTtl = typeof parser.cacheTtlMs === 'function'
+        ? parser.cacheTtlMs(candidate) : parser.cacheTtlMs;
       const cacheTtlDue = entry && entry.sig === sig && entry.packed
-        && Number.isFinite(parser.cacheTtlMs) && parser.cacheTtlMs > 0
-        && clock() - (entry.refreshedAt ?? 0) >= parser.cacheTtlMs;
+        && Number.isFinite(configuredCacheTtl) && configuredCacheTtl > 0
+        && clock() - (entry.refreshedAt ?? 0) >= configuredCacheTtl;
       if (entry && entry.sig === sig && entry.packed && !auditDue && !cacheTtlDue) {
         stats.reused++;
         status.indexedFiles++;
@@ -446,7 +449,7 @@ export async function scanAll({
                 session: result.session ?? null,
                 packed: packRecords(merged),
                 auditedAt: clock(),
-                ...(Number.isFinite(parser.cacheTtlMs) && parser.cacheTtlMs > 0
+                ...(Number.isFinite(configuredCacheTtl) && configuredCacheTtl > 0
                   ? { refreshedAt: clock() } : {}),
               };
               cacheChanged = true;
@@ -517,7 +520,7 @@ export async function scanAll({
           session: result.session ?? null,
           packed: packRecords(result.records),
           auditedAt: clock(),
-          ...(Number.isFinite(parser.cacheTtlMs) && parser.cacheTtlMs > 0
+          ...(Number.isFinite(configuredCacheTtl) && configuredCacheTtl > 0
             ? { refreshedAt: clock() } : {}),
         };
         cacheChanged = true;
