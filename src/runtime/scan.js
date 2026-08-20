@@ -366,7 +366,10 @@ export async function scanAll({
         && candidate.size <= AUDIT_MAX_BYTES
         && typeof entry.auditedAt === 'number'
         && clock() - entry.auditedAt > AUDIT_INTERVAL_MS;
-      if (entry && entry.sig === sig && entry.packed && !auditDue) {
+      const cacheTtlDue = entry && entry.sig === sig && entry.packed
+        && Number.isFinite(parser.cacheTtlMs) && parser.cacheTtlMs > 0
+        && clock() - (entry.refreshedAt ?? 0) >= parser.cacheTtlMs;
+      if (entry && entry.sig === sig && entry.packed && !auditDue && !cacheTtlDue) {
         stats.reused++;
         status.indexedFiles++;
         for (const record of unpackRecords(entry.packed, parser.id, entry.project)) {
@@ -443,6 +446,8 @@ export async function scanAll({
                 session: result.session ?? null,
                 packed: packRecords(merged),
                 auditedAt: clock(),
+                ...(Number.isFinite(parser.cacheTtlMs) && parser.cacheTtlMs > 0
+                  ? { refreshedAt: clock() } : {}),
               };
               cacheChanged = true;
               stats.appended++;
@@ -512,6 +517,8 @@ export async function scanAll({
           session: result.session ?? null,
           packed: packRecords(result.records),
           auditedAt: clock(),
+          ...(Number.isFinite(parser.cacheTtlMs) && parser.cacheTtlMs > 0
+            ? { refreshedAt: clock() } : {}),
         };
         cacheChanged = true;
         stats.full++;

@@ -9,7 +9,7 @@ import * as openclaw from '../src/runtime/parsers/openclaw.js';
 import * as droid from '../src/runtime/parsers/droid.js';
 import * as amp from '../src/runtime/parsers/amp.js';
 import { taskToRecord } from '../src/runtime/parsers/vscode-forks.js';
-import { parseCsv } from '../src/runtime/parsers/cursor.js';
+import { parseCsv, parseCursorUsageCsv } from '../src/runtime/parsers/cursor.js';
 import { parsers, VERIFIED_SOURCES } from '../src/runtime/parsers/index.js';
 import { billable, throughput } from '../src/runtime/usage-record.js';
 
@@ -268,6 +268,38 @@ test('Cursor CSV 解析支持引号与转义', () => {
   assert.equal(rows[0].Model, 'gpt-5');
   assert.equal(rows[0]['Input Tokens'], '1,000');
   assert.equal(rows[1].Date, 'a"b');
+});
+
+test('Cursor 按 dashboard 真实表头拆分输入、缓存读与输出', () => {
+  const records = parseCursorUsageCsv([
+    'Date,Model,Input (w/ Cache Write),Input (w/o Cache Write),Cache Read,Output Tokens',
+    '2026-07-30,gpt-5,100,20,"1,000",30',
+    '2026-07-30,gpt-5,100,20,"1,000",30',
+  ].join('\n'));
+
+  assert.equal(records.length, 2, '相同用量的两次请求不能被错误去重');
+  assert.deepEqual(
+    records.map(({ input, output, cacheRead, write5m }) => ({ input, output, cacheRead, write5m })),
+    [
+      { input: 120, output: 30, cacheRead: 1000, write5m: 0 },
+      { input: 120, output: 30, cacheRead: 1000, write5m: 0 },
+    ],
+  );
+  assert.notEqual(records[0].messageId, records[1].messageId);
+  assert.equal(records[0].ts, Date.parse('2026-07-30T00:00:00Z'));
+});
+
+test('Cursor 记录身份不依赖云端 CSV 的行顺序', () => {
+  const header = 'Date,Model,Input (w/ Cache Write),Input (w/o Cache Write),Cache Read,Output Tokens';
+  const a = '2026-07-30,gpt-5,100,20,1000,30';
+  const b = '2026-07-31,claude-4,200,40,2000,60';
+  const first = parseCursorUsageCsv([header, a, b].join('\n'));
+  const reordered = parseCursorUsageCsv([header, b, a].join('\n'));
+
+  assert.deepEqual(
+    first.map((record) => record.messageId).sort(),
+    reordered.map((record) => record.messageId).sort(),
+  );
 });
 
 test('Cursor 默认关闭时不产出任何候选（一个请求都不发）', () => {

@@ -1,14 +1,18 @@
 import { statSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { toCount, UNKNOWN_MODEL } from '../usage-record.js';
 import { queryDbJson } from './sqlite.js';
 import { hostRoots } from './vscode-forks.js';
 import { loadSettings } from '../settings.js';
+import { cursorDashboardHeaders, fetchCursorWithAuth } from '../cursor-auth.js';
 
 export const id = 'cursor';
 export const label = 'Cursor';
 export const readMode = 'none';
 export const lineFilter = null;
+// 云端 CSV 会在本地 state.vscdb 不变时继续增长，不能只按文件签名缓存。
+export const cacheTtlMs = 10 * 60 * 1000;
 
 /**
  * ⚠️ Cursor 是唯一需要联网的解析器，**默认关闭**。
@@ -17,7 +21,7 @@ export const lineFilter = null;
  * 原则 1 冲突。所以它由独立设置项 `cursorCloud` 显式开启，关闭时一个请求都不发。
  *
  * 数据来自 Cursor 自家 dashboard 的 CSV 导出接口，用本机已有的登录态读取。
- * 云端数据会打上固定 hostname `cursor-cloud`，避免多台机器把同一份账号数据重复计入。
+ * 记录使用云端行内容的稳定指纹，避免多个 Cursor 配置根重复计入同一份账号数据。
  *
  * ⚠️ 未在真实数据上验证（开发机未安装 Cursor）。
  */
@@ -99,13 +103,68 @@ export function parseCsv(text) {
     .map((r) => Object.fromEntries(header.map((h, i) => [h, r[i]])));
 }
 
+function normalizedHeader(value) {
+  return String(value).toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
 function pick(row, ...names) {
   for (const name of names) {
     for (const key of Object.keys(row)) {
-      if (key.toLowerCase().replace(/[\s_]/g, '') === name) return row[key];
+      if (normalizedHeader(key) === normalizedHeader(name)) return row[key];
     }
   }
   return undefined;
+}
+
+function cursorCount(value) {
+  return toCount(typeof value === 'string' ? value.replace(/,/g, '') : value);
+}
+
+export function parseCursorUsageCsv(text) {
+  const rows = parseCsv(text);
+  const records = [];
+  const occurrences = new Map();
+  for (const row of rows) {
+    const stamp = pick(row, 'date', 'timestamp', 'createdat', 'time');
+    const date = String(stamp ?? '').trim();
+    const ts = /^\d{4}-\d{2}-\d{2}$/.test(date)
+      ? Date.parse(`${date}T00:00:00Z`)
+      : new Date(date).getTime();
+    if (!Number.isFinite(ts)) continue;
+
+    const inputWithCacheWrite = cursorCount(pick(row, 'Input (w/ Cache Write)'));
+    const inputWithoutCacheWrite = cursorCount(pick(row, 'Input (w/o Cache Write)'));
+    const legacyInput = cursorCount(pick(row, 'inputtokens', 'input', 'prompttokens'));
+    const input = inputWithCacheWrite + inputWithoutCacheWrite || legacyInput;
+    const output = cursorCount(pick(row, 'outputtokens', 'output', 'completiontokens'));
+    const cacheRead = cursorCount(pick(row, 'Cache Read', 'cachereadtokens', 'cacheread'));
+    if (input + output + cacheRead === 0) continue;
+
+    const model = String(pick(row, 'model') ?? UNKNOWN_MODEL).trim() || UNKNOWN_MODEL;
+    const fingerprint = createHash('sha256').update(JSON.stringify(row)).digest('hex').slice(0, 24);
+    const occurrence = occurrences.get(fingerprint) ?? 0;
+    occurrences.set(fingerprint, occurrence + 1);
+
+    records.push({
+      source: id,
+      input,
+      output,
+      cacheRead,
+      // Cursor 的这一列是“发生 cache write 时的 input”，不是 cache write token 数。
+      write5m: 0,
+      write1h: 0,
+      reasoning: 0,
+      model,
+      cwd: null,
+      ts,
+      // 指纹跨快照排序稳定；出现次序保留数值完全相同的合法请求。
+      messageId: `cursor-cloud|${fingerprint}|${occurrence}`,
+      requestId: null,
+      uuid: null,
+      sidechain: false,
+    });
+  }
+  return records;
 }
 
 async function fetchRecords(dbPath) {
@@ -114,56 +173,26 @@ async function fetchRecords(dbPath) {
 
   let response;
   try {
-    response = await fetch(CSV_URL, {
-      headers: {
-        Cookie: `WorkosCursorSessionToken=${token}`,
-        Accept: 'text/csv,*/*;q=0.8',
-        Origin: 'https://cursor.com',
-        Referer: 'https://cursor.com/dashboard?tab=usage',
-      },
+    response = await fetchCursorWithAuth(CSV_URL, {
+      token,
+      headers: cursorDashboardHeaders('text/csv,*/*;q=0.8'),
       // 单个卡住的主机不能拖住整次扫描
       signal: AbortSignal.timeout(20_000),
     });
   } catch (err) {
+    if (err?.code === 'EAUTH') throw err;
     // 网络问题是瞬时的，不该让这个 source 的历史数据被判为消失
     const error = new Error(`Cursor 云端请求失败: ${err.message}`);
     error.transient = true;
     throw error;
   }
-  if (!response.ok) throw new Error(`Cursor 云端返回 HTTP ${response.status}`);
-
-  const rows = parseCsv(await response.text());
-  const records = [];
-  for (const row of rows) {
-    const stamp = pick(row, 'date', 'timestamp', 'createdat', 'time');
-    const ts = new Date(stamp).getTime();
-    if (!Number.isFinite(ts)) continue;
-
-    const input = toCount(pick(row, 'inputtokens', 'input', 'prompttokens'));
-    const output = toCount(pick(row, 'outputtokens', 'output', 'completiontokens'));
-    const cacheRead = toCount(pick(row, 'cachereadtokens', 'cacheread'));
-    const cacheWrite = toCount(pick(row, 'cachewritetokens', 'cachewrite'));
-    if (input + output + cacheRead + cacheWrite === 0) continue;
-
-    records.push({
-      source: id,
-      input,
-      output,
-      cacheRead,
-      write5m: cacheWrite,
-      write1h: 0,
-      reasoning: 0,
-      model: String(pick(row, 'model') ?? UNKNOWN_MODEL).trim() || UNKNOWN_MODEL,
-      cwd: null,
-      ts,
-      // 云端数据每台机器拉到的是同一份，用内容做键让它们自然折叠。
-      messageId: `cursor-cloud|${ts}|${pick(row, 'model') ?? ''}|${input}|${output}`,
-      requestId: null,
-      uuid: null,
-      sidechain: false,
-    });
+  if (!response.ok) {
+    const error = new Error(`Cursor 云端返回 HTTP ${response.status}`);
+    error.transient = response.status === 429 || response.status >= 500;
+    throw error;
   }
-  return records;
+
+  return parseCursorUsageCsv(await response.text());
 }
 
 export function createFileParser({ candidate } = {}) {
