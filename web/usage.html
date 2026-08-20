@@ -234,6 +234,13 @@ const exactTrendMetricText = (row) => {
   if (state.trendMetric === 'active') return exactDur(row.activeSeconds);
   return exactTokens(row.totalTokens);
 };
+const heatPeriodLabel = (cell) => {
+  if (!cell.dateStart || !cell.dateEnd || !cell.dateCount) return `周${cell.weekday}`;
+  const sameYear = cell.dateStart.slice(0, 4) === cell.dateEnd.slice(0, 4);
+  const start = sameYear ? cell.dateStart.slice(5) : cell.dateStart;
+  const end = sameYear ? cell.dateEnd.slice(5) : cell.dateEnd;
+  return cell.dateStart === cell.dateEnd ? start : `${start}–${end} · ${cell.dateCount} 个日期`;
+};
 const trendValue = (row) => state.trendMetric === 'cost' ? Number(row.estimatedCost||0)
   : state.trendMetric === 'active' ? Number(row.activeSeconds||0) : Number(row.totalTokens||0);
 const distributionValue = (row) => state.distributionMetric === 'cost'
@@ -395,7 +402,7 @@ function render(){
         const v = cell ? trendValue(cell) : 0;
         const alpha = v === 0 ? 0 : 0.18 + 0.82*Math.pow(v/heatMax, .45);
         const tooltip = cell
-          ? `周${cell.weekday} ${String(cell.hour).padStart(2, '0')}:00 · ${exactTrendMetricText(cell)}`
+          ? `${heatPeriodLabel(cell)} ${String(cell.hour).padStart(2, '0')}:00 · ${exactTrendMetricText(cell)}`
           : `周${weekday+1} ${String(hour).padStart(2, '0')}:00 · —`;
         return `<i style="background:${v?`rgba(222,136,109,${alpha.toFixed(2)})`:'rgba(30,30,46,.06)'}" data-tooltip="${esc(tooltip)}"></i>`;
       }).join('')).join('');

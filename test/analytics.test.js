@@ -88,6 +88,28 @@ test('筛选会同时作用于总量、7×24 热力图、分布与 30 分钟明�
   assert.equal(page2.records.nextCursor, null);
 });
 
+test('超过 7 天的热力格提供实际汇总日期范围，短区间继续显示周几', () => {
+  const now = new Date(2026, 7, 20, 12);
+  const rollup = buildRollup([
+    record(at(2026, 8, 3, 10)),
+    record(at(2026, 8, 10, 10)),
+  ]);
+
+  const longRange = queryUsageAnalytics(rollup, { range: '30d', now });
+  const monday10 = longRange.heatmap.find((x) => x.weekday === 1 && x.hour === 10);
+  assert.deepEqual(
+    { dateStart: monday10.dateStart, dateEnd: monday10.dateEnd, dateCount: monday10.dateCount },
+    { dateStart: '2026-07-27', dateEnd: '2026-08-17', dateCount: 4 },
+    '一格汇总多个自然日时，悬浮文案必须有真实日期上下文',
+  );
+
+  const shortRange = queryUsageAnalytics(rollup, { range: '7d', now });
+  const shortMonday = shortRange.heatmap.find((x) => x.weekday === 1 && x.hour === 10);
+  assert.equal(shortMonday.dateStart, undefined);
+  assert.equal(shortMonday.dateEnd, undefined);
+  assert.equal(shortMonday.dateCount, undefined);
+});
+
 test('费用、覆盖率、每日趋势与会话指标由同一查询统一计算', () => {
   const now = new Date(2026, 7, 3, 12);
   const sessions = {

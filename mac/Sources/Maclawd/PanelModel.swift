@@ -418,6 +418,9 @@ struct AnalyticsHeatCell: Identifiable, Equatable {
     var id: String { "\(weekday)-\(hour)" }
     let weekday: Int
     let hour: Int
+    let dateStart: String?
+    let dateEnd: String?
+    let dateCount: Int?
     let totalTokens: Double
     let estimatedCost: Double?
     let activeSeconds: Int
@@ -426,6 +429,9 @@ struct AnalyticsHeatCell: Identifiable, Equatable {
         guard raw["weekday"] != nil, raw["hour"] != nil else { return nil }
         weekday = jsonInt(raw["weekday"])
         hour = jsonInt(raw["hour"])
+        dateStart = raw["dateStart"] as? String
+        dateEnd = raw["dateEnd"] as? String
+        dateCount = raw["dateCount"] == nil ? nil : jsonInt(raw["dateCount"])
         totalTokens = jsonDouble(raw["totalTokens"])
         estimatedCost = jsonOptionalDouble(raw["estimatedCost"])
         activeSeconds = jsonInt(raw["activeSeconds"])

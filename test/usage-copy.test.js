@@ -102,7 +102,8 @@ test('原生每日趋势在图表内显示悬浮读数，不叠加系统提示',
 test('网页和原生热力图都在图内即时显示逐点悬浮数据', () => {
   const html = readFileSync(new URL('../web/usage.html', import.meta.url), 'utf8');
   assert.match(html, /id="heatTooltip"/);
-  assert.match(html, /cell\.weekday.*cell\.hour.*exactTrendMetricText\(cell\)/s);
+  assert.match(html, /heatPeriodLabel\(cell\).*cell\.hour.*exactTrendMetricText\(cell\)/s);
+  assert.match(html, /cell\.dateStart.*cell\.dateEnd.*cell\.dateCount/s);
   assert.match(html, /bindPointTooltip\('heat', 'heatPlot', 'heatTooltip'\)/);
   assert.match(html, /if \(!point\)\{ tooltip\.hidden = true; return; \}/);
   assert.match(html, /point\.dataset\.tooltip/);
@@ -116,6 +117,7 @@ test('网页和原生热力图都在图内即时显示逐点悬浮数据', () =>
   );
   assert.match(heatmap, /@State private var hoveredCellID/);
   assert.match(heatmap, /cells\.first\(where:/);
+  assert.match(heatmap, /cell\.dateStart.*cell\.dateEnd.*cell\.dateCount/s);
   assert.match(heatmap, /onHover/);
   assert.doesNotMatch(heatmap, /\.help\(/);
 });

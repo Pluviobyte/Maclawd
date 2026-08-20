@@ -554,7 +554,20 @@ struct AnalyticsHeatmap: View {
     }
 
     private func heatText(_ cell: AnalyticsHeatCell) -> String {
-        let prefix = String(format: "周%d %02d:00 · ", cell.weekday, cell.hour)
+        let period: String
+        if let start = cell.dateStart, let end = cell.dateEnd, let count = cell.dateCount {
+            let startParts = start.split(separator: "-")
+            let endParts = end.split(separator: "-")
+            let sameYear = startParts.first == endParts.first
+            let shownStart = sameYear && startParts.count == 3
+                ? startParts.dropFirst().joined(separator: "-") : start
+            let shownEnd = sameYear && endParts.count == 3
+                ? endParts.dropFirst().joined(separator: "-") : end
+            period = start == end ? shownStart : "\(shownStart)–\(shownEnd) · \(count) 个日期"
+        } else {
+            period = "周\(cell.weekday)"
+        }
+        let prefix = String(format: "%@ %02d:00 · ", period, cell.hour)
         return prefix + metric.exactText(totalTokens: cell.totalTokens,
                                          estimatedCost: cell.estimatedCost,
                                          activeSeconds: cell.activeSeconds)
