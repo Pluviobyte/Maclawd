@@ -630,24 +630,31 @@ private struct QuotaBlock: View {
             .buttonStyle(.plain)
 
             if workBuddyBonusExpanded {
-                VStack(alignment: .leading, spacing: 7) {
-                    ForEach(Array(presentation.bonusDetails.enumerated()), id: \.element.id) { index, window in
-                        VStack(alignment: .leading, spacing: 2) {
-                            QuotaRow(
-                                window: window,
-                                labelOverride: "额外包 \(index + 1)",
-                                deadlineAction: .expire
-                            )
-                            Text(window.label)
-                                .font(.system(size: 9.5))
-                                .foregroundStyle(.tertiary)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .padding(.leading, 78)
+                ScrollView(.vertical, showsIndicators: presentation.bonusDetails.count > 3) {
+                    LazyVStack(alignment: .leading, spacing: 7) {
+                        ForEach(Array(presentation.bonusDetails.enumerated()), id: \.element.id) { index, window in
+                            VStack(alignment: .leading, spacing: 2) {
+                                QuotaRow(
+                                    window: window,
+                                    labelOverride: "额外包 \(index + 1)",
+                                    deadlineAction: .expire
+                                )
+                                Text(window.label)
+                                    .font(.system(size: 9.5))
+                                    .foregroundStyle(.tertiary)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                                    .help(window.label)
+                                    .padding(.leading, 78)
+                            }
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                // 明细数量由活动决定，不能让它无限撑高概览页；三行以上在此区域内滚动。
+                .frame(height: min(CGFloat(presentation.bonusDetails.count) * 52, 168))
                 .padding(.top, 6)
-                .transition(.opacity.combined(with: .move(edge: .top)))
+                .transition(.opacity)
             }
         }
     }

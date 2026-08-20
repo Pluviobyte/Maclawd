@@ -120,6 +120,19 @@ test('WorkBuddy 订阅与额外额度对齐显示，额外积分包可展开查�
   assert.match(block, /数据暂不完整/, '无法汇总时不能静默隐藏额度');
 });
 
+test('WorkBuddy 额外积分包在有限的独立滚动区展开，不撑乱整个概览页', () => {
+  const block = panelSource.slice(
+    panelSource.indexOf('if workBuddyBonusExpanded'),
+    panelSource.indexOf('private var workBuddyStatus'),
+  );
+  assert.match(block, /ScrollView\(\.vertical/,
+    '额外包明细必须使用自己的纵向滚动区，不能全部塞进概览外层滚动区');
+  assert.match(block, /\.frame\(height:\s*min\(/,
+    '明细视口高度必须有上限，积分包数量不能无限拉长概览页');
+  assert.match(block, /Text\(window\.label\)[\s\S]*\.lineLimit\(1\)[\s\S]*\.help\(window\.label\)/,
+    '固定行高要求包名不换行，同时必须通过悬停保留完整名称');
+});
+
 test('额度窗口没有返回截止时间时不再静默留白', () => {
   const row = panelSource.slice(
     panelSource.indexOf('private struct QuotaRow'),
