@@ -11,14 +11,12 @@ PROGRESS.md 阶段一要求「定义公共事件适配器，映射可靠的 Code
 本方案就是那个适配器的第一个真实数据源：Claude Code 的本机日志与 hook 事件，
 一路驱动 38 个动作，一路汇总成可查看的用量。
 
-范围内：
-- Claude Code 的 token 计数、成本估算、项目与模型拆分
-- Claude Code hook 事件 → Maclawd 状态
-- 纯本地存储与展示
+最初 v1 以 Claude Code 为基准；当前实现还覆盖 Codex、Cursor、WorkBuddy 等来源。
+其中 Cursor 可选安装 `stop` hook，把四类 Token 白名单写入 Maclawd 自有 JSONL；
+安装前的历史不会在本机补写。所有来源在解析边缘归一到下文同一统计合同。
 
-范围外（v1 不做）：
-- Codex / Cursor / 其他工具（只有 Claude Code 有 hook 通道，先把一条链做透）
-- 任何云端、账号、上传
+默认路径仍是纯本地存储与展示。Cursor dashboard 历史属于用户显式开启的可选云端
+通道，与本地事件互斥，不会静默联网或把两份数据相加。
 - 配额/额度百分比（需要读 Claude Desktop 的 Chromium 缓存，脆弱且与本方案正交）
 
 ## 不可变原则
@@ -40,6 +38,7 @@ PROGRESS.md 阶段一要求「定义公共事件适配器，映射可靠的 Code
 | --- | --- | --- |
 | **B 层（读本机日志）** | **开** | 纯只读，不写任何不属于 Maclawd 的文件，不联网。桌宠开箱即有感知。 |
 | **A 层（Claude Code hooks）** | **关**，首次引导时询问 | 要写 `~/.claude/settings.json`，且每次 `PostToolUse` 都会拉起一个进程。这是在改用户另一个工具的运行时，不能默认替他决定。 |
+| **Cursor 本地精确 hook** | **关**，在 Agent 连接中启用 | 要写 `~/.cursor/hooks.json`。只记录安装后 `stop` 事件的 Token 白名单，不保存 prompt、回复、工作区或 transcript。 |
 
 即：**开箱即用的是「读日志」，hook 是可选增强。** 没有 hook 时状态从 token 速率
 推断，桌宠完整可用，只是无法区分 thinking / delegating / compacting。

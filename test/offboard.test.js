@@ -20,6 +20,7 @@ const CLAUDE_SETTINGS = join(root, 'claude', 'settings.json');
 const CODEX_HOME = join(root, 'codex');
 const CODEX_HOOKS = join(CODEX_HOME, 'hooks.json');
 const WORKBUDDY_SETTINGS = join(root, 'workbuddy', 'settings.json');
+const CURSOR_HOOKS = join(root, 'cursor', 'hooks.json');
 const DATA_DIR = join(root, 'data');
 
 process.env.MACLAWD_DATA_DIR = DATA_DIR;
@@ -27,6 +28,7 @@ process.env.MACLAWD_CLAUDE_SETTINGS = CLAUDE_SETTINGS;
 process.env.MACLAWD_CODEX_HOME = CODEX_HOME;
 process.env.MACLAWD_CODEX_HOOKS_PATH = CODEX_HOOKS;
 process.env.MACLAWD_WORKBUDDY_SETTINGS = WORKBUDDY_SETTINGS;
+process.env.MACLAWD_CURSOR_HOOKS_PATH = CURSOR_HOOKS;
 
 const { offboard, removeCodexPet, codexPetDir } = await import('../src/runtime/offboard.js');
 const { loadSettings } = await import('../src/runtime/settings.js');
@@ -84,6 +86,16 @@ function resetFixtures() {
     },
   });
 
+  writeJson(CURSOR_HOOKS, {
+    version: 1,
+    hooks: {
+      stop: [
+        { command: '"/x/node" "/app/hooks/maclawd-cursor-hook.js"' },
+        foreign,
+      ],
+    },
+  });
+
   // chain 模式的 sidecar：用户原来的状态行压在 Maclawd 数据目录里
   mkdirSync(DATA_DIR, { recursive: true });
   writeJson(join(DATA_DIR, 'statusline-chain.json'), { type: 'command', command: '/usr/local/bin/myline' });
@@ -93,6 +105,7 @@ function resetFixtures() {
     hookEnhancement: true,
     codexHookEnhancement: true,
     workBuddyHookEnhancement: true,
+    cursorHookEnhancement: true,
     permissionBubble: true,
     quotaStatusline: true,
     quotaTracking: true,
@@ -126,10 +139,14 @@ test('完整 offboard：自己的全移除，别人的全保留，开关全关',
   const workbuddy = JSON.parse(readFileSync(WORKBUDDY_SETTINGS, 'utf-8'));
   assert.equal(workbuddy.hooks, undefined, 'WorkBuddy 的条目要清空');
 
+  const cursor = JSON.parse(readFileSync(CURSOR_HOOKS, 'utf-8'));
+  assert.deepEqual(cursor.hooks.stop, [foreign], 'Cursor 里只保留第三方 stop hook');
+
   assert.equal(existsSync(codexPetDir()), false, '可识别的宠物包要移除');
 
   const settings = loadSettings();
   for (const key of ['hookEnhancement', 'codexHookEnhancement', 'workBuddyHookEnhancement',
+    'cursorHookEnhancement',
     'permissionBubble', 'quotaStatusline', 'quotaTracking']) {
     assert.equal(settings[key], false, `${key} 必须已关闭`);
   }

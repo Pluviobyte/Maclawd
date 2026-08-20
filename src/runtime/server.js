@@ -27,6 +27,7 @@ import {
 import {
   installWorkBuddyHooks, uninstallWorkBuddyHooks,
 } from './workbuddy-hook-install.js';
+import { installCursorHook, uninstallCursorHook } from './cursor-hook-install.js';
 import { agentConnections, runAgentDoctor } from './agent-registry.js';
 import {
   changeAgentIntegration, supportsAgentIntegration,
@@ -1064,6 +1065,15 @@ export function createUsageServer({
                 effects.push(`已移除 ${r.removed.length} 个 WorkBuddy 状态事件`);
               }
             }
+            if (next.cursorHookEnhancement !== before.cursorHookEnhancement) {
+              if (next.cursorHookEnhancement) {
+                const r = installCursorHook();
+                effects.push(r.installed ? '已安装 Cursor 本地用量 hook' : '已更新 Cursor 本地用量 hook');
+              } else {
+                const r = uninstallCursorHook();
+                effects.push(r.removed ? '已移除 Cursor 本地用量 hook' : 'Cursor 本地用量 hook 未安装');
+              }
+            }
             if (next.permissionBubble !== before.permissionBubble) {
               if (next.permissionBubble) {
                 installPermissionHook({ port: currentPort });
@@ -1152,6 +1162,8 @@ export function createUsageServer({
               if (before.codexHookEnhancement) installCodexHooks(); else uninstallCodexHooks();
               if (before.workBuddyHookEnhancement) installWorkBuddyHooks();
               else uninstallWorkBuddyHooks();
+              if (before.cursorHookEnhancement) installCursorHook();
+              else uninstallCursorHook();
               if (before.permissionBubble) {
                 installPermissionHook({ port: currentPort });
                 installCodexPermissionHook();
@@ -1178,6 +1190,18 @@ export function createUsageServer({
         // 用户主动点击视为一次显式授权，force 绕过主开关只此一次。
         const result = await worker.scanNow({ force: true });
         sendJson(res, 200, result ?? { error: '扫描进行中' });
+        return;
+      }
+
+      // Cursor stop hook 只需要“告诉运行时有新数据”，不能为了等一次完整扫描
+      // 把 Agent 的退出阶段卡住。先立即确认，再在后台刷新今日汇总。
+      if (pathname === '/api/scan/kick' && req.method === 'POST') {
+        sendJson(res, 202, { accepted: true });
+        if (typeof worker.requestScan === 'function') {
+          worker.requestScan();
+        } else if (!worker.status().scanning) {
+          queueMicrotask(() => { void Promise.resolve(worker.scanNow()).catch(() => {}); });
+        }
         return;
       }
 

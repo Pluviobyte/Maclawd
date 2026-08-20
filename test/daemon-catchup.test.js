@@ -235,3 +235,35 @@ test('首轮扫描中停止再重启，不泄漏尾读定时器', async () => {
     globalThis.setInterval = originalSetInterval;
   }
 });
+
+test('hook 通知落在扫描期间时，当前轮结束后保证补扫一次', async () => {
+  let calls = 0;
+  let releaseFirst;
+  const firstBlocked = new Promise((resolve) => { releaseFirst = resolve; });
+  const scan = async () => {
+    calls++;
+    if (calls === 1) await firstBlocked;
+    return {
+      records: [], sessionsBySource: {}, projectPaths: {}, warnings: [], elapsedMs: 1,
+      stats: { reused: 0, appended: 0, full: 0, deferred: 0, bytesRead: 0 },
+      sourceStatus: {}, indexing: null,
+    };
+  };
+  const collector = createCollector({
+    scan, scanIntervalMs: 60_000, tailIntervalMs: 60_000,
+  });
+  try {
+    const starting = collector.start();
+    while (calls === 0) await new Promise((resolve) => setTimeout(resolve, 1));
+    assert.equal(collector.requestScan(), true);
+    releaseFirst();
+    await starting;
+    const deadline = Date.now() + 100;
+    while (calls < 2 && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+    assert.equal(calls, 2, '扫描中的通知不能被丢弃，也不能等普通周期');
+  } finally {
+    collector.stop();
+  }
+});

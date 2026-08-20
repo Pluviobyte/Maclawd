@@ -28,6 +28,9 @@ export function createTailer({
   const files = new Map(Object.entries(loaded?.files ?? {}));
   // 环形样本：[时刻, throughput]。窗口外的样本每次 poll 时丢弃。
   let samples = [];
+  // 每个解析器分别建立首轮 discover 基线；某个来源首次探测失败不能被别的来源
+  // “代替初始化”，否则它恢复时会把已有整份文件误当成运行中新建。
+  const initializedParsers = new WeakSet();
 
   const save = () => {
     if (!persist) return;
@@ -59,12 +62,19 @@ export function createTailer({
       }
 
       for (const candidate of candidates) {
-        const prev = files.get(candidate.path);
-
-        // 首次见到：从当前末尾开始，不回溯。
-        if (!prev) {
-          files.set(candidate.path, { ino: candidate.ino, offset: candidate.size });
+        if (typeof parser.tailCandidate === 'function' && !parser.tailCandidate(candidate)) {
           continue;
+        }
+        let prev = files.get(candidate.path);
+
+        // 首轮启动只建立基线，不回放历史。运行期间新出现的、由解析器明确声明
+        // 可安全从头读取的文件（例如 Cursor 当天第一条事件创建的 JSONL）则从 0 跟读。
+        if (!prev) {
+          const fromStart = initializedParsers.has(parser)
+            && parser.tailNewCandidateFromStart?.(candidate) === true;
+          prev = { ino: candidate.ino, offset: fromStart ? 0 : candidate.size };
+          files.set(candidate.path, prev);
+          if (!fromStart || candidate.size === 0) continue;
         }
 
         // inode 变了或文件缩小 → 轮转/截断，从头开始重新跟。
@@ -85,7 +95,7 @@ export function createTailer({
           continue;
         }
 
-        const fileParser = parser.createFileParser({ state: null, candidate });
+        const fileParser = parser.createFileParser({ state: null, candidate, mode: 'tail' });
         const filter = parser.lineFilter;
         const accept = typeof filter === 'function'
           ? filter
@@ -119,9 +129,21 @@ export function createTailer({
           tail: await tailFingerprint(candidate.path, boundary),
         });
       }
+      initializedParsers.add(parser);
     }
 
+    const existingKeys = new Set(samples.map(([, , record]) => {
+      if (!record?.messageId) return null;
+      return [record.source, record.messageId, record.requestId ?? '', record.uuid ?? ''].join('|');
+    }).filter(Boolean));
+    const uniqueFresh = [];
     for (const record of fresh) {
+      const key = record?.messageId
+        ? [record.source, record.messageId, record.requestId ?? '', record.uuid ?? ''].join('|')
+        : null;
+      if (key && existingKeys.has(key)) continue;
+      if (key) existingKeys.add(key);
+      uniqueFresh.push(record);
       // 记录时间戳可能略微超前于本机时钟，钳到 now，避免样本落在窗口之外。
       samples.push([Math.min(record.ts, now), throughput(record), record]);
     }
@@ -138,7 +160,7 @@ export function createTailer({
     }
 
     return {
-      fresh,
+      fresh: uniqueFresh,
       tokensPerMin: Math.round(windowTokens / minutes),
       tokensPerMinBySource: Object.fromEntries(Object.entries(tokensBySource)
         .map(([source, tokens]) => [source, Math.round(tokens / minutes)])),

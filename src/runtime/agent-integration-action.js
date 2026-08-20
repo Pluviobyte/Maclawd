@@ -8,6 +8,7 @@ import {
 import {
   installWorkBuddyHooks, uninstallWorkBuddyHooks,
 } from './workbuddy-hook-install.js';
+import { installCursorHook, uninstallCursorHook } from './cursor-hook-install.js';
 import { loadSettings, saveSettings } from './settings.js';
 
 const AGENTS = {
@@ -37,6 +38,11 @@ const AGENTS = {
     settingKey: 'workBuddyHookEnhancement',
     install: () => installWorkBuddyHooks(),
     uninstall: () => uninstallWorkBuddyHooks(),
+  },
+  cursor: {
+    settingKey: 'cursorHookEnhancement',
+    install: () => installCursorHook(),
+    uninstall: () => uninstallCursorHook(),
   },
 };
 

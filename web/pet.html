@@ -280,7 +280,7 @@ const SETTING_ROWS = [
   ['reducedMotion','减弱动效','道具与身体动作停止，只保留低频眨眼。动作时长由契约锁定，不会因此改变。',null],
   ['permissionBubble','在桌宠上批准权限','拦截 Claude Code 的权限请求并在桌宠上给出 Allow / Deny。这是很重的行为，默认关闭；超时或未开启时一律不表态，决策原样交回 Claude Code。需要单独安装 HTTP hook。',null],
   ['lanMirror','局域网只读镜像','允许同一 Wi-Fi 的手机打开只读页面查看桌宠状态与今日用量。开启后服务才会监听外部地址，且需要配对令牌。',null],
-  ['cursorCloud','改用 Cursor 云端历史','默认从本机 Cursor hook 日志读取精确 Token，完全离线。开启后将改为联网读取 Cursor dashboard 完整历史；两者不会相加，避免重叠用量重复计算。',null],
+  ['cursorCloud','改用 Cursor 云端历史','默认从 Maclawd 自有 Cursor stop hook JSONL 读取精确 Token，完全离线且只落盘 Token 白名单。开启后将改为联网读取 Cursor dashboard 完整历史；两者不会相加，避免重叠用量重复计算。',null],
 ];
 const EVENTS = [
   ['提问', { type: 'UserPromptSubmit' }],

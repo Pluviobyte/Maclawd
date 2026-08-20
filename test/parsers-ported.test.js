@@ -306,8 +306,11 @@ test('Cursor 云端默认关闭时仍允许本地日志候选', () => {
   const local = {
     path: '/tmp/cursor.hooks.workspaceId-test.log', size: 1, mtimeMs: 2, ino: 3,
   };
+  const cursorParser = parsers.find((p) => p.id === 'cursor');
   assert.deepEqual(
-    parsers.find((p) => p.id === 'cursor').discover({ listJsonl: () => [local] }),
+    cursorParser.discover({
+      listJsonl: (dir) => (dir === cursorParser.cursorLogsDir() ? [local] : []),
+    }),
     [{ ...local, sessionId: local.path, fallbackProject: null, kind: 'local-hook-log' }],
   );
 });
