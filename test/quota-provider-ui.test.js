@@ -130,14 +130,16 @@ test('额度窗口没有返回截止时间时不再静默留白', () => {
     'Grok 等未返回 resetAt 的来源也必须显示时间说明');
 });
 
-test('订阅额度标题右侧可选择这张卡显示的工具', () => {
+test('订阅额度标题右侧可多选这张卡显示的工具', () => {
   const block = panelSource.slice(
     panelSource.indexOf('private struct QuotaBlock'),
     panelSource.indexOf('private struct QuotaRow'),
   );
-  assert.match(block, /@AppStorage\("overviewQuotaSource"\)/);
-  assert.match(block, /Picker\("显示工具"/);
-  assert.match(block, /Text\("全部"\)/);
+  assert.match(block, /@AppStorage\("overviewQuotaHiddenSources"\)/);
+  assert.match(block, /Toggle\(source\.label, isOn: sourceVisibility\(source\.id\)\)/);
+  assert.match(block, /Button\("全选"\)/);
+  assert.ok(block.includes('return "已选 \\(visibleSources.count) 个"'));
+  assert.match(block, /未选择要显示的工具/);
   assert.match(block, /accessory: store\.quota\.sources\.count > 1/);
   assert.match(block, /ForEach\(visibleSources\)/);
   assert.doesNotMatch(block, /setSetting|\/api\/settings/,

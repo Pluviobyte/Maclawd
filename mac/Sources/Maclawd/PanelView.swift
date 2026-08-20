@@ -483,42 +483,68 @@ private struct OverviewPage: View {
 // MARK: - 额度
 
 private struct QuotaBlock: View {
-    private static let allSources = "__all__"
-
     @ObservedObject var store: PanelStore
     @State private var workBuddyBonusExpanded = false
+    @State private var showingSourcePicker = false
     /// 只是概览页这张卡的展示偏好；不能借此停掉采集或额度提醒。
-    @AppStorage("overviewQuotaSource") private var selectedSource = Self.allSources
+    @AppStorage("overviewQuotaHiddenSources") private var hiddenSources = ""
 
-    private var visibleSources: [QuotaSource] {
-        guard selectedSource != Self.allSources,
-              store.quota.sources.contains(where: { $0.id == selectedSource })
-        else { return store.quota.sources }
-        return store.quota.sources.filter { $0.id == selectedSource }
+    private var hiddenSourceIDs: Set<String> {
+        Set(hiddenSources.split(separator: ",").map(String.init))
     }
 
-    private var sourceSelection: Binding<String> {
+    private var visibleSources: [QuotaSource] {
+        store.quota.sources.filter { !hiddenSourceIDs.contains($0.id) }
+    }
+
+    private func sourceVisibility(_ id: String) -> Binding<Bool> {
         Binding(
-            get: {
-                store.quota.sources.contains(where: { $0.id == selectedSource })
-                    ? selectedSource : Self.allSources
-            },
-            set: { selectedSource = $0 }
+            get: { !hiddenSourceIDs.contains(id) },
+            set: { visible in
+                var hidden = hiddenSourceIDs
+                if visible { hidden.remove(id) } else { hidden.insert(id) }
+                hiddenSources = hidden.sorted().joined(separator: ",")
+            }
         )
     }
 
+    private var sourcePickerLabel: String {
+        if visibleSources.count == store.quota.sources.count { return "全部" }
+        if visibleSources.isEmpty { return "未选择" }
+        return "已选 \(visibleSources.count) 个"
+    }
+
     private var sourcePicker: some View {
-        Picker("显示工具", selection: sourceSelection) {
-            Text("全部").tag(Self.allSources)
-            ForEach(store.quota.sources) { source in
-                Text(source.label).tag(source.id)
+        Button { showingSourcePicker.toggle() } label: {
+            HStack(spacing: 3) {
+                Text(sourcePickerLabel)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .semibold))
             }
         }
-        .labelsHidden()
-        .pickerStyle(.menu)
+        .buttonStyle(.plain)
+        .font(.system(size: 10.5, weight: .medium))
+        .foregroundStyle(.secondary)
         .controlSize(.small)
-        .fixedSize()
         .help("选择这张订阅额度卡中显示的工具")
+        .popover(isPresented: $showingSourcePicker, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("显示工具")
+                    .font(.system(size: 11, weight: .semibold))
+                ForEach(store.quota.sources) { source in
+                    Toggle(source.label, isOn: sourceVisibility(source.id))
+                        .toggleStyle(.checkbox)
+                        .font(.system(size: 11))
+                }
+                Divider()
+                Button("全选") { hiddenSources = "" }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 10.5, weight: .medium))
+                    .foregroundStyle(PanelTheme.accent)
+            }
+            .padding(12)
+            .frame(width: 190, alignment: .leading)
+        }
     }
 
     var body: some View {
@@ -529,6 +555,10 @@ private struct QuotaBlock: View {
             VStack(alignment: .leading, spacing: 10) {
                 if store.quota.empty {
                     emptyState
+                } else if visibleSources.isEmpty {
+                    Text("未选择要显示的工具")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
                 } else {
                     ForEach(visibleSources) { source in
                         VStack(alignment: .leading, spacing: 7) {
