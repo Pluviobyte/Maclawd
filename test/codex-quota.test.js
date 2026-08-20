@@ -60,7 +60,7 @@ test('Codex 官方额度响应只读取订阅 codex 桶并与 Claude 独立展�
 
   const snapshot = readQuota({ now: NOW });
   assert.deepEqual(snapshot.sources.map((source) => source.label), [
-    'Claude Code', 'Codex',
+    'Claude', 'Codex',
   ]);
   const codex = snapshot.sources.find((source) => source.id === 'codex');
   assert.equal(codex.windows[0].label, '本周');

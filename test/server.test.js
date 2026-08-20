@@ -254,7 +254,7 @@ test('/api/quota 刷新 Codex 与 WorkBuddy 后和 Claude Code 按服务商分�
     await new Promise((resolve) => setTimeout(resolve, 5));
   } while (Date.now() < deadline);
 
-  assert.deepEqual(snapshot.sources.map((source) => source.label), ['Claude Code', 'Codex', 'WorkBuddy']);
+  assert.deepEqual(snapshot.sources.map((source) => source.label), ['Claude', 'Codex', 'WorkBuddy']);
   assert.equal(snapshot.sources.find((source) => source.id === 'codex').windows[0].usedPercent, 51);
   assert.equal(snapshot.sources.find((source) => source.id === 'workbuddy').windows[0].remaining, 75);
   assert.equal(snapshot.workBuddy.lastError, null);

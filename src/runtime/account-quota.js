@@ -79,7 +79,7 @@ function orderedWindowKeys(source, windows) {
 }
 
 export const SOURCE_LABELS = {
-  'claude-code': 'Claude Code',
+  'claude-code': 'Claude',
   codex: 'Codex',
   cursor: 'Cursor',
   grok: 'Grok Build',

@@ -46,7 +46,7 @@ test('真实 payload 存得进、读得出', () => {
   assert.equal(snap.sources.length, 1);
   const src = snap.sources[0];
   assert.equal(src.id, 'claude-code');
-  assert.equal(src.label, 'Claude Code');
+  assert.equal(src.label, 'Claude');
   assert.equal(src.context.usedPercent, 4);
   assert.equal(src.context.windowSize, 1_000_000);
   assert.equal(src.model, 'claude-opus-4-6[1m]');
@@ -284,7 +284,7 @@ test('提醒里带着足够拼出文案的信息', () => {
   }, { now: T0 });
 
   const [alert] = pendingAlerts({ threshold: 85, now: T0 });
-  assert.equal(alert.sourceLabel, 'Claude Code');
+  assert.equal(alert.sourceLabel, 'Claude');
   assert.equal(alert.windowLabel, '5 小时');
   assert.equal(alert.usedPercent, 88);
   assert.equal(alert.resetAt, T0 + HOUR);
