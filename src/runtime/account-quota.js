@@ -48,11 +48,14 @@ export const WINDOW_LABELS = {
 };
 /** 面板里的显示顺序。短窗口在前——它才是「现在能不能开大活」的那个。 */
 export const WINDOW_ORDER = ['five_hour', 'seven_day'];
+const CURSOR_WINDOW_ORDER = [
+  'current_period_total', 'current_period_auto', 'current_period_api', 'monthly_requests',
+];
 
 function validWindowKey(source, key) {
   if (WINDOW_ORDER.includes(key)) return true;
   if (source === 'grok' && key === 'billing_cycle') return true;
-  if (source === 'cursor') return key === 'monthly_requests';
+  if (source === 'cursor') return CURSOR_WINDOW_ORDER.includes(key);
   if (source === 'workbuddy') return /^(base|bonus)_\d+$/.test(key);
   return (source === 'codex' || source.startsWith('codex:'))
     && (/^duration_\d+$/.test(key) || /^codex_(primary|secondary)$/.test(key));
@@ -68,6 +71,9 @@ function orderedWindowKeys(source, windows) {
         const kindOrder = { base: 0, bonus: 1 };
         return (kindOrder[aKind] ?? 2) - (kindOrder[bKind] ?? 2)
           || Number(aIndex) - Number(bIndex);
+      }
+      if (source === 'cursor') {
+        return CURSOR_WINDOW_ORDER.indexOf(a) - CURSOR_WINDOW_ORDER.indexOf(b);
       }
       const aDuration = num(windows[a]?.durationMinutes);
       const bDuration = num(windows[b]?.durationMinutes);

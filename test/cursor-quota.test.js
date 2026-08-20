@@ -8,7 +8,8 @@ const data = mkdtempSync(join(tmpdir(), 'maclawd-cursor-quota-'));
 process.env.MACLAWD_DATA_DIR = data;
 
 const {
-  parseCursorToken, cursorUsageReport, readCursorUsage, createCursorQuotaCollector,
+  parseCursorToken, cursorUsageReport, cursorCurrentPeriodReport,
+  readCursorAuth, readCursorUsage, createCursorQuotaCollector,
 } = await import('../src/runtime/cursor-quota.js');
 const { cursorAuthAttempts } = await import('../src/runtime/cursor-auth.js');
 const { clearQuota, readQuota, recordQuota } = await import('../src/runtime/account-quota.js');
@@ -25,6 +26,19 @@ test('从 sqlite3 输出解析 Cursor access token', () => {
   assert.equal(parseCursorToken('\n'), null);
   assert.equal(parseCursorToken(null), null);
   assert.equal(parseCursorToken(undefined), null);
+});
+
+test('从 Cursor SQLite 一次读取 access 与 refresh token', async () => {
+  const auth = await readCursorAuth({
+    dbPath: '/tmp/fake-cursor.vscdb',
+    exists: () => true,
+    execFileImpl: (_command, args, _options, callback) => {
+      assert.match(args[1], /cursorAuth\/accessToken/);
+      assert.match(args[1], /cursorAuth\/refreshToken/);
+      callback(null, 'cursorAuth/accessToken\taccess-token\ncursorAuth/refreshToken\trefresh-token\n');
+    },
+  });
+  assert.deepEqual(auth, { accessToken: 'access-token', refreshToken: 'refresh-token' });
 });
 
 test('Cursor usage API 响应按 premium 模型聚合为月度请求窗口', () => {
@@ -46,6 +60,55 @@ test('Cursor usage API 响应按 premium 模型聚合为月度请求窗口', () 
   assert.equal(report.windows.monthly_requests.resetAt, new Date('2026-09-01T00:00:00.000Z').getTime());
 });
 
+test('Cursor 当前计费周期映射总计与两个用量池百分比', () => {
+  const report = cursorCurrentPeriodReport({
+    billingCycleStart: '1785456000000',
+    billingCycleEnd: '1788134400000',
+    planUsage: {
+      totalSpend: 1250,
+      limit: 2000,
+      remaining: 750,
+      totalPercentUsed: 62.5,
+      autoPercentUsed: 40,
+      apiPercentUsed: 75,
+    },
+  });
+
+  assert.equal(report.source, 'cursor');
+  assert.equal(report.completeSnapshot, true);
+  assert.deepEqual(report.windows.current_period_total, {
+    label: '本周期总额度', usedPercent: 62.5,
+    resetAt: 1_788_134_400_000, durationMinutes: 44_640,
+  });
+  assert.equal(report.windows.current_period_auto.label, 'Cursor Models');
+  assert.equal(report.windows.current_period_auto.usedPercent, 40);
+  assert.equal(report.windows.current_period_api.label, 'Other Models');
+  assert.equal(report.windows.current_period_api.usedPercent, 75);
+});
+
+test('Cursor 当前周期缺总百分比时由 spend/limit 计算，百分比夹在 0–100', () => {
+  const report = cursorCurrentPeriodReport({
+    billingCycleEnd: 1_788_134_400_000,
+    planUsage: { totalSpend: 2500, limit: 2000 },
+  });
+  assert.equal(report.windows.current_period_total.usedPercent, 100);
+  assert.equal(report.windows.current_period_auto, undefined);
+  assert.equal(report.windows.current_period_api, undefined);
+});
+
+test('Cursor 当前周期三个窗口按总计、Cursor Models、Other Models 顺序进入概览', () => {
+  const report = cursorCurrentPeriodReport({
+    billingCycleEnd: 1_788_134_400_000,
+    planUsage: { totalPercentUsed: 30, autoPercentUsed: 10, apiPercentUsed: 50 },
+  });
+  recordQuota(report, { now: NOW });
+  const cursor = readQuota({ now: NOW }).sources.find((source) => source.id === 'cursor');
+  assert.deepEqual(cursor.windows.map((window) => window.id), [
+    'current_period_total', 'current_period_auto', 'current_period_api',
+  ]);
+  assert.deepEqual(cursor.windows.map((window) => window.usedPercent), [30, 10, 50]);
+});
+
 test('Cursor usage 中没有限额的模型不计入聚合', () => {
   const report = cursorUsageReport({
     'gpt-4': { numRequests: 100, numRequestsTotal: 500 },
@@ -56,6 +119,15 @@ test('Cursor usage 中没有限额的模型不计入聚合', () => {
   assert.equal(report.windows.monthly_requests.used, 100);
   assert.equal(report.windows.monthly_requests.limit, 500);
   assert.equal(report.windows.monthly_requests.usedPercent, 20);
+});
+
+test('Cursor 旧版请求额度优先使用 maxRequestUsage，而不是当前累计 numRequestsTotal', () => {
+  const report = cursorUsageReport({
+    'gpt-4': { numRequests: 39, numRequestsTotal: 39, maxRequestUsage: 500 },
+  });
+  assert.equal(report.windows.monthly_requests.used, 39);
+  assert.equal(report.windows.monthly_requests.limit, 500);
+  assert.equal(report.windows.monthly_requests.usedPercent, 7.8);
 });
 
 test('Cursor usage 全部模型限额为零时返回 null', () => {
@@ -108,12 +180,15 @@ test('readCursorUsage 在 Cursor 未安装时优雅失败', async () => {
   }), { code: 'ENOENT' });
 });
 
-test('readCursorUsage 请求 usage API 并返回额度报告', async () => {
+test('readCursorUsage 用 Bearer 请求当前周期 RPC 并返回三个额度百分比', async () => {
   const calls = [];
   const responseBody = {
-    'gpt-4': { numRequests: 50, numRequestsTotal: 500 },
-    'claude-3.5-sonnet': { numRequests: 150, numRequestsTotal: 500 },
-    startOfMonth: '2026-08-01T00:00:00.000Z',
+    billingCycleStart: '1785456000000',
+    billingCycleEnd: '1788134400000',
+    planUsage: {
+      totalPercentUsed: 25, autoPercentUsed: 10, apiPercentUsed: 40,
+      totalSpend: 500, limit: 2000, remaining: 1500,
+    },
   };
 
   const report = await readCursorUsage({
@@ -125,12 +200,16 @@ test('readCursorUsage 请求 usage API 并返回额度报告', async () => {
   });
 
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].url, 'https://cursor.com/api/usage');
-  assert.equal(calls[0].options.method, 'GET');
-  assert.ok(calls[0].options.headers.Cookie.includes('WorkosCursorSessionToken='));
-  assert.ok(calls[0].options.headers.Cookie.includes('test-token-abc'));
+  assert.equal(calls[0].url,
+    'https://api2.cursor.sh/aiserver.v1.DashboardService/GetCurrentPeriodUsage');
+  assert.equal(calls[0].options.method, 'POST');
+  assert.equal(calls[0].options.headers.Authorization, 'Bearer test-token-abc');
+  assert.equal(calls[0].options.headers['Connect-Protocol-Version'], '1');
+  assert.equal(calls[0].options.body, '{}');
   assert.equal(report.source, 'cursor');
-  assert.equal(report.windows.monthly_requests.used, 200);
+  assert.equal(report.windows.current_period_total.usedPercent, 25);
+  assert.equal(report.windows.current_period_auto.usedPercent, 10);
+  assert.equal(report.windows.current_period_api.usedPercent, 40);
 });
 
 test('Cursor 认证优先使用 JWT sub 组成的 dashboard Cookie', () => {
@@ -149,28 +228,88 @@ test('Cursor 认证优先使用 JWT sub 组成的 dashboard Cookie', () => {
   assert.equal(attempts.at(-1).Authorization, `Bearer ${token}`);
 });
 
-test('readCursorUsage 在完整 sub Cookie 被拒绝时会回退 user id Cookie', async () => {
-  const payload = Buffer.from(JSON.stringify({ sub: 'auth0|user-123' })).toString('base64url');
-  const token = `header.${payload}.signature`;
-  const cookies = [];
+test('readCursorUsage 遇到 401 时刷新 access token 并只重试一次', async () => {
+  const calls = [];
   const report = await readCursorUsage({
-    tokenReader: async () => token,
-    fetchImpl: async (_url, options) => {
-      cookies.push(options.headers.Cookie ?? null);
-      if (cookies.length === 1) return { ok: false, status: 401, text: async () => '' };
+    tokenReader: async () => ({ accessToken: 'stale-token', refreshToken: 'refresh-token' }),
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith('/oauth/token')) {
+        return {
+          ok: true, status: 200,
+          text: async () => JSON.stringify({ access_token: 'fresh-token' }),
+        };
+      }
+      if (options.headers.Authorization === 'Bearer stale-token') {
+        return { ok: false, status: 401, text: async () => '' };
+      }
       return {
         ok: true,
         status: 200,
         text: async () => JSON.stringify({
-          'gpt-5': { numRequests: 1, numRequestsTotal: 500 },
-          startOfMonth: '2026-08-01T00:00:00.000Z',
+          billingCycleEnd: '1788134400000',
+          planUsage: { totalPercentUsed: 12 },
         }),
       };
     },
   });
 
-  assert.equal(cookies.length, 2);
-  assert.equal(report.windows.monthly_requests.used, 1);
+  assert.equal(calls.length, 3);
+  assert.equal(calls[1].url, 'https://api2.cursor.sh/oauth/token');
+  assert.equal(JSON.parse(calls[1].options.body).refresh_token, 'refresh-token');
+  assert.equal(calls[2].options.headers.Authorization, 'Bearer fresh-token');
+  assert.equal(report.windows.current_period_total.usedPercent, 12);
+});
+
+test('readCursorUsage 在 JWT 临近过期时先刷新再请求额度', async () => {
+  const expiresSoon = Math.floor(Date.now() / 1000) + 60;
+  const payload = Buffer.from(JSON.stringify({ exp: expiresSoon })).toString('base64url');
+  const calls = [];
+  const report = await readCursorUsage({
+    tokenReader: async () => ({
+      accessToken: `header.${payload}.signature`, refreshToken: 'refresh-token',
+    }),
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith('/oauth/token')) {
+        return { ok: true, status: 200, text: async () => JSON.stringify({ access_token: 'fresh-token' }) };
+      }
+      return {
+        ok: true, status: 200,
+        text: async () => JSON.stringify({ planUsage: { totalPercentUsed: 7 } }),
+      };
+    },
+  });
+  assert.equal(calls.length, 2);
+  assert.equal(calls[0].url, 'https://api2.cursor.sh/oauth/token');
+  assert.equal(calls[1].options.headers.Authorization, 'Bearer fresh-token');
+  assert.equal(report.windows.current_period_total.usedPercent, 7);
+});
+
+test('现代额度不可用时回退 Cursor 旧版请求额度', async () => {
+  const calls = [];
+  const payload = Buffer.from(JSON.stringify({ sub: 'auth0|user-123' })).toString('base64url');
+  const token = `header.${payload}.signature`;
+  const report = await readCursorUsage({
+    tokenReader: async () => token,
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      if (url.includes('GetCurrentPeriodUsage')) {
+        return { ok: true, status: 200, text: async () => JSON.stringify({ enabled: false }) };
+      }
+      return {
+        ok: true, status: 200,
+        text: async () => JSON.stringify({
+          'gpt-4': { numRequests: 10, numRequestsTotal: 10, maxRequestUsage: 100 },
+          startOfMonth: '2026-08-01T00:00:00.000Z',
+        }),
+      };
+    },
+  });
+  assert.equal(calls.length, 2);
+  assert.equal(calls[1].url, 'https://cursor.com/api/usage?user=user-123');
+  assert.match(calls[1].options.headers.Cookie, /WorkosCursorSessionToken=/);
+  assert.equal(report.windows.monthly_requests.usedPercent, 10);
 });
 
 test('readCursorUsage 对 401/403 报鉴权失败', async () => {
