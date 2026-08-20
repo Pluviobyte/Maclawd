@@ -148,6 +148,7 @@ Maclawd 以 DMG 拖装分发，没有安装器。直接把 `.app` 拖进废纸�
   你原来的状态行，会把它原样还原；
 - 移除 Codex 的 hooks 与权限通道（`~/.codex/hooks.json`）；
 - 移除 WorkBuddy 的 hooks；
+- 移除 Cursor 本地精确用量 hook（`~/.cursor/hooks.json`）；
 - 移除 `~/.codex/pets/maclawd` 宠物包（仅在它确实是 Maclawd 的包时）；
 - 注销「登录时启动」，并关闭以上功能的全部开关。
 
@@ -165,6 +166,7 @@ Maclawd 以 DMG 拖装分发，没有安装器。直接把 `.app` 拖进废纸�
 | `~/Library/Preferences/ai.maclawd.desktop.plist` | 菜单栏显示密度、桌宠位置 |
 | `~/.claude/settings.json.maclawd-backup` | 首次修改前的 Claude Code 配置备份 |
 | `~/.codex/hooks.json.maclawd-backup` | 首次修改前的 Codex 配置备份 |
+| `~/.cursor/hooks.json.maclawd-backup` | 首次修改前的 Cursor 配置备份 |
 
 注意：第 3 步要在第 1 步**之后**做——状态行的还原依赖数据目录里的
 备份文件（sidecar），先删数据目录会让你原来的状态行无法自动还原。

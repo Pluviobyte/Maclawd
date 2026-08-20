@@ -3,18 +3,22 @@ import { parsers, VERIFIED_SOURCES } from './parsers/index.js';
 import { hookStatus, permissionHookStatus } from './hook-install.js';
 import { codexHookStatus } from './codex-hook-install.js';
 import { workBuddyHookStatus } from './workbuddy-hook-install.js';
+import { cursorHookStatus } from './cursor-hook-install.js';
 
 const REALTIME = new Set(['claude-code', 'codex', 'workbuddy']);
+const MANAGED = new Set([...REALTIME, 'cursor']);
 
 export function agentConnections() {
   const claude = hookStatus();
   const codex = codexHookStatus();
   const workBuddy = workBuddyHookStatus();
+  const cursor = cursorHookStatus();
   return parsers.map((parser) => {
     const realtime = REALTIME.has(parser.id);
     const status = parser.id === 'claude-code' ? claude
       : parser.id === 'codex' ? codex
-        : parser.id === 'workbuddy' ? workBuddy : null;
+        : parser.id === 'workbuddy' ? workBuddy
+          : parser.id === 'cursor' ? cursor : null;
     const ready = status ? status.missing.length === 0 : false;
     return {
       id: parser.id,
@@ -24,12 +28,13 @@ export function agentConnections() {
       capabilities: {
         usage: true,
         realtime,
+        localCapture: parser.id === 'cursor',
         permissions: realtime && parser.id !== 'workbuddy',
         terminalFocus: realtime,
         // WorkBuddy 额度来自本机登录凭据 + 计费查询，不依赖 Hooks 是否开启。
         quota: parser.id === 'claude-code' || parser.id === 'codex' || parser.id === 'workbuddy',
       },
-      integration: realtime ? {
+      integration: MANAGED.has(parser.id) ? {
         status: ready ? 'connected' : status.installed?.length ? 'partial' : 'available',
         installedEvents: status.installed?.length ?? 0,
         missingEvents: status.missing?.length ?? 0,
@@ -44,16 +49,19 @@ export function agentConnections() {
 }
 
 export function runAgentDoctor(settings = {}) {
-  const agents = agentConnections().filter((a) => a.capabilities.realtime);
+  const agents = agentConnections().filter((a) => MANAGED.has(a.id));
   const checks = [];
   for (const agent of agents) {
     const expected = agent.id === 'codex' ? settings.codexHookEnhancement
       : agent.id === 'workbuddy' ? settings.workBuddyHookEnhancement
-        : settings.hookEnhancement;
+        : agent.id === 'cursor' ? settings.cursorHookEnhancement
+          : settings.hookEnhancement;
+    const checkLabel = agent.id === 'cursor'
+      ? `${agent.label} 本地精确用量` : `${agent.label} 实时事件`;
     checks.push({
       id: `${agent.id}:realtime`,
       agentId: agent.id,
-      label: `${agent.label} 实时事件`,
+      label: checkLabel,
       level: !expected || agent.integration.status === 'connected' ? 'ok' : 'warning',
       message: !expected ? '未启用' : agent.integration.status === 'connected'
         ? '已连接' : `缺少 ${agent.integration.missingEvents} 个 hook`,
@@ -75,5 +83,5 @@ export function runAgentDoctor(settings = {}) {
     }
   }
   const warnings = checks.filter((c) => c.level === 'warning').length;
-  return { summary: warnings ? `${warnings} 项需要修复` : '已启用的实时连接配置完整', warnings, checks };
+  return { summary: warnings ? `${warnings} 项需要修复` : '已启用的 Agent 连接配置完整', warnings, checks };
 }

@@ -84,7 +84,7 @@ node bin/maclawd-usage.js probe --diff
 | **Hermes** | 问一句 | `~/.hermes/state.db`（多 profile 在 `profiles/*/state.db`） |
 | **Kiro** | 问一句 | `~/Library/Application Support/kiro-cli/data.sqlite3` |
 | **Antigravity** | 对话一轮 | `~/.gemini/antigravity*/conversations/*.db` |
-| **Cursor** | 在 Cursor Agent 中完成一轮；至少配置一个 `stop` hook 才会生成精确本地事件 | `~/Library/Application Support/Cursor/logs/**/cursor.hooks.*.log`；可选切换为云端 CSV 完整历史，两者不叠加 |
+| **Cursor** | 在 Maclawd 的 Agent 连接中启用「本地精确」，再于 Cursor Agent 完成一轮 | `~/Library/Application Support/Maclawd/usage/cursor-hooks/*.jsonl`；只含 Token 白名单。Cursor 内部 hook 日志是兼容回退；可选云端 CSV 与本地通道互斥 |
 
 ### 几个特别注意的
 
@@ -138,7 +138,7 @@ node bin/maclawd-usage.js probe <source> --diff   # 2. 与操作前的差异
 | Amp | 项目归属 | thread 文件里没有工作目录 |
 | Gemini CLI | 项目归属 | `tmp/` 下是路径哈希目录，反推不出真实路径 |
 | Kiro | 从正文估算 token 的那条路径 | **有意不实现**——估算值混进「非缓存读取量」会让这个口径失去意义 |
-| Cursor | 本地用量 | 它本地只存登录态，用量全在云端 |
+| Cursor | 安装 hook 之前的本地精确用量 | stop hook 只能记录安装后完成的新回合；旧回合需显式切换云端历史，无法从本机倒推 |
 
 ---
 

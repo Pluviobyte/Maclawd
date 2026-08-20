@@ -26,7 +26,7 @@ test('Agent 注册表把 WorkBuddy 暴露为无权限接管的实时来源', asy
     const check = doctor.checks.find((item) => item.agentId === 'workbuddy');
     assert.equal(check.level, 'warning');
     assert.equal(check.repairable, true);
-    assert.match(runAgentDoctor({}).summary, /已启用的实时连接配置完整/,
+    assert.match(runAgentDoctor({}).summary, /已启用的 Agent 连接配置完整/,
       'Doctor 的成功文案不能暗示 Agent 正在运行或事件已经送达');
   } finally {
     delete process.env.MACLAWD_WORKBUDDY_DIR;

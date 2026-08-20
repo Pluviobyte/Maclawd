@@ -9,6 +9,7 @@ import {
 import {
   uninstallWorkBuddyHooks, workBuddySettingsPath,
 } from './workbuddy-hook-install.js';
+import { cursorHooksPath, uninstallCursorHook } from './cursor-hook-install.js';
 import { uninstallStatusline } from './statusline-install.js';
 import { saveSettings } from './settings.js';
 import { dataDir, pricingCacheDir } from './paths.js';
@@ -82,6 +83,7 @@ export function offboard() {
     hookEnhancement: false,
     codexHookEnhancement: false,
     workBuddyHookEnhancement: false,
+    cursorHookEnhancement: false,
     permissionBubble: false,
     quotaStatusline: false,
     quotaTracking: false,
@@ -103,6 +105,7 @@ export function offboard() {
   attempt('codexHooks', () => uninstallCodexHooks());
   attempt('codexPermission', () => uninstallCodexPermissionHook());
   attempt('workBuddyHooks', () => uninstallWorkBuddyHooks());
+  attempt('cursorHook', () => uninstallCursorHook());
   attempt('codexPet', () => removeCodexPet());
 
   // 备份文件只报告存在的：让 UI 有的放矢，而不是甩一串可能不存在的路径。
@@ -110,6 +113,7 @@ export function offboard() {
     `${claudeSettingsPath()}.maclawd-backup`,
     `${codexHooksPath()}.maclawd-backup`,
     `${workBuddySettingsPath()}.maclawd-backup`,
+    `${cursorHooksPath()}.maclawd-backup`,
   ].filter((path) => existsSync(path));
 
   return {

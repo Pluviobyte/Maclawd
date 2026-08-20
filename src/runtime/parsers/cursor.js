@@ -6,6 +6,7 @@ import { toCount, UNKNOWN_MODEL } from '../usage-record.js';
 import { queryDbJson } from './sqlite.js';
 import { hostRoots } from './vscode-forks.js';
 import { loadSettings } from '../settings.js';
+import { usageDir } from '../paths.js';
 import { cursorDashboardHeaders, fetchCursorWithAuth } from '../cursor-auth.js';
 
 export const id = 'cursor';
@@ -17,11 +18,22 @@ export function cacheTtlMs(candidate) {
   return candidate?.kind === 'cloud-db' ? 10 * 60 * 1000 : null;
 }
 
+/** 实时尾读只认 Maclawd 自有 JSONL；Cursor 内部文本日志与云端候选只走全量扫描。 */
+export function tailCandidate(candidate) {
+  return candidate?.kind === 'local-hook-jsonl';
+}
+
+/** 运行期间新建的每日文件要从首行跟读；启动时已存在的文件仍由 tailer 跳到末尾。 */
+export function tailNewCandidateFromStart(candidate) {
+  return candidate?.kind === 'local-hook-jsonl';
+}
+
 /**
  * Cursor 有两条互相独立的数据通道：
  *
- * 1. 本地 Cursor hook 执行日志。stop 事件包含精确的 input/output/cache token，
- *    默认读取、完全离线；没有配置任何 Cursor/Claude 兼容 hook 时不会生成这类日志。
+ * 1. 本地 Cursor stop hook。Maclawd 自有 hook 把 Token 白名单写入自己的 JSONL，
+ *    Cursor 内部 hook 执行日志则作为兼容回退。二者都完全离线；未安装 hook 时
+ *    不会产生新的精确事件。
  * 2. dashboard CSV。由 `cursorCloud` 显式切换启用，用于需要完整历史的场景。
  *
  * 云端 CSV 没有 generation id，不能与本地事件逐条安全去重。因此两条通道是互斥
@@ -37,6 +49,11 @@ export function enabled() {
 export function cursorLogsDir() {
   return process.env.MACLAWD_CURSOR_LOG_DIR?.trim()
     || join(homedir(), 'Library', 'Application Support', 'Cursor', 'logs');
+}
+
+export function cursorHookUsageDir() {
+  return process.env.MACLAWD_CURSOR_USAGE_DIR?.trim()
+    || join(usageDir(), 'cursor-hooks');
 }
 
 function stateDbPaths() {
@@ -55,7 +72,7 @@ function stateDbPaths() {
 }
 
 export function dataDirs() {
-  return [cursorLogsDir(), ...stateDbPaths().map((p) => p.path)];
+  return [cursorHookUsageDir(), cursorLogsDir(), ...stateDbPaths().map((p) => p.path)];
 }
 
 export function discover({ listJsonl }) {
@@ -65,13 +82,18 @@ export function discover({ listJsonl }) {
       kind: 'cloud-db',
     }));
   }
-  const local = listJsonl(cursorLogsDir(), { extensions: ['.log'] })
+  const owned = listJsonl(cursorHookUsageDir())
+    .map(({ path, size, mtimeMs, ino }) => ({
+      path, size, mtimeMs, ino, sessionId: path, fallbackProject: null,
+      kind: 'local-hook-jsonl',
+    }));
+  const legacy = listJsonl(cursorLogsDir(), { extensions: ['.log'] })
     .filter(({ path }) => basename(path).startsWith('cursor.hooks.'))
     .map(({ path, size, mtimeMs, ino }) => ({
       path, size, mtimeMs, ino, sessionId: path, fallbackProject: null,
       kind: 'local-hook-log',
     }));
-  return local;
+  return owned.concat(legacy);
 }
 
 function localRecord(payload, ts, fallbackKey) {
@@ -149,6 +171,38 @@ export function parseCursorHookLog(text) {
     records.push(record);
   }
   return records;
+}
+
+/** Maclawd 自己的 stop hook 白名单 JSONL。 */
+export function parseCursorHookJsonl(text) {
+  const records = [];
+  const seen = new Set();
+  for (const line of text.split('\n')) {
+    if (!line.trim()) continue;
+    let event;
+    try { event = JSON.parse(line); } catch { continue; }
+    const record = ownedEventRecord(event, line);
+    if (!record || seen.has(record.messageId)) continue;
+    seen.add(record.messageId);
+    records.push(record);
+  }
+  return records;
+}
+
+function ownedEventRecord(event, fallbackText = '') {
+  if (event?.source !== id || !Number.isFinite(event.ts)) return null;
+  const payload = {
+    hook_event_name: 'stop',
+    generation_id: event.generationId,
+    model: event.model,
+    input_tokens: event.inputTokens,
+    output_tokens: event.outputTokens,
+    cache_read_tokens: event.cacheReadTokens,
+    cache_write_tokens: event.cacheWriteTokens,
+  };
+  const fallbackKey = createHash('sha256')
+    .update(fallbackText || JSON.stringify(event)).digest('hex').slice(0, 24);
+  return localRecord(payload, event.ts, fallbackKey);
 }
 
 function readToken(dbPath) {
@@ -288,15 +342,24 @@ async function fetchRecords(dbPath) {
   return parseCursorUsageCsv(await response.text());
 }
 
-export function createFileParser({ candidate } = {}) {
+export function createFileParser({ candidate, mode = 'scan' } = {}) {
+  const streamedRecords = [];
   return {
-    onObject() { /* 不走行解析 */ },
-    async finish() {
+    onObject(obj) {
+      if (candidate?.kind !== 'local-hook-jsonl') return;
+      const record = ownedEventRecord(obj);
+      if (record) streamedRecords.push(record);
+    },
+    finish() {
       if (candidate?.kind === 'local-hook-log') {
         return { records: parseCursorHookLog(readFileSync(candidate.path, 'utf8')), state: null };
       }
+      if (candidate?.kind === 'local-hook-jsonl') {
+        if (mode === 'tail') return { records: streamedRecords, state: null };
+        return { records: parseCursorHookJsonl(readFileSync(candidate.path, 'utf8')), state: null };
+      }
       if (!enabled() || candidate?.kind !== 'cloud-db') return { records: [], state: null };
-      return { records: await fetchRecords(candidate.path), state: null };
+      return fetchRecords(candidate.path).then((records) => ({ records, state: null }));
     },
   };
 }

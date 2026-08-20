@@ -21,6 +21,9 @@ export const DEFAULTS = {
   codexHookEnhancement: false,
   // WorkBuddy 的 Claude Code 兼容 Hooks。独立授权，且只上报状态，不处理权限。
   workBuddyHookEnhancement: false,
+  // Cursor stop hook 只写精确 Token 白名单到 Maclawd 本地目录。会修改
+  // ~/.cursor/hooks.json，因此与纯只读的 recordUsage 分开授权、默认关闭。
+  cursorHookEnhancement: false,
   // A 层，但**必须与 hookEnhancement 分开**：hooks 是按事件分组的数组，
   // 往里加一条谁也不影响；statusLine 是**单槽位**，占了就把用户原来的挤掉。
   // 用户完全可能愿意加 hooks 却不愿意让出状态行，那是两个独立的信任决定。

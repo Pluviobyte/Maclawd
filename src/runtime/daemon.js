@@ -52,6 +52,9 @@ export function createCollector({
   let reconcileTimer = null;
   let nextScanAt = null;
   let scanning = false;
+  let scanRequested = false;
+  let requestedForce = false;
+  let requestScheduled = false;
   let stopped = true;
   let lifecycle = 0;
 
@@ -113,6 +116,28 @@ export function createCollector({
     reconcileTimer.unref?.();
   }
 
+  function scheduleRequestedScan() {
+    if (stopped || scanning || requestScheduled || !scanRequested) return;
+    requestScheduled = true;
+    queueMicrotask(async () => {
+      requestScheduled = false;
+      if (stopped || scanning || !scanRequested) return;
+      const force = requestedForce;
+      scanRequested = false;
+      requestedForce = false;
+      await runScan({ force });
+      scheduleRequestedScan();
+    });
+  }
+
+  function requestScan({ force = false } = {}) {
+    if (stopped) return false;
+    scanRequested = true;
+    requestedForce ||= force;
+    scheduleRequestedScan();
+    return true;
+  }
+
   async function runScan({ force = false } = {}) {
     if (scanning) return null;
     if (!force && !usageEnabled()) {
@@ -150,6 +175,7 @@ export function createCollector({
       const hasBacklog = Boolean(lastScan?.indexing)
         || (lastScan?.stats?.deferred ?? 0) > 0;
       scheduleScan(hasBacklog ? catchUpIntervalMs : scanIntervalMs);
+      scheduleRequestedScan();
     }
   }
 
@@ -193,10 +219,15 @@ export function createCollector({
       scanTimer = null;
       reconcileTimer = null;
       nextScanAt = null;
+      scanRequested = false;
+      requestedForce = false;
+      requestScheduled = false;
     },
 
     /** 用户点「重新扫描」时用 force，绕过开关只此一次。 */
     scanNow: (options) => runScan(options),
+    /** Hook 写入通知：合并并发请求；若正在扫描，当前轮结束后保证再扫一次。 */
+    requestScan,
     status: () => ({
       running: !stopped,
       scanning,

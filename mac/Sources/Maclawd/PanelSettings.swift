@@ -44,8 +44,8 @@ struct SettingsPage: View {
     }
 
     private var agentConnectionSection: some View {
-        SectionCard(title: "Agent 连接", info: "连接后，Maclawd 通过 Hooks 实时接收 Agent 的运行事件，"
-                    + "桌宠的动作和状态判断从被动推测变为精确响应。\n\n"
+        SectionCard(title: "Agent 连接", info: "连接后，Maclawd 通过 Hooks 接收 Agent 事件；"
+                    + "Claude Code、Codex 与 WorkBuddy 用于实时状态，Cursor 用于本地精确 Token。\n\n"
                     + "开启会向对应 Agent 的配置文件添加 hooks，关闭会移除；"
                     + "不覆盖已有配置，也不处理权限。") {
             VStack(alignment: .leading, spacing: 10) {
@@ -70,7 +70,7 @@ struct SettingsPage: View {
                         HStack {
                             Text(agent.label).font(.system(size: 11.5, weight: .semibold))
                             Spacer()
-                            if agent.realtime {
+                            if agent.realtime || agent.localCapture {
                                 Toggle("", isOn: Binding(
                                     get: { agent.status == "connected" },
                                     set: { on in
@@ -84,17 +84,27 @@ struct SettingsPage: View {
                         }
                         HStack(spacing: 5) {
                             capability("用量", active: true)
-                            capability("实时", active: agent.status == "connected",
-                                       hint: "开启右侧连接后生效")
-                            capability("权限", active: agent.permissions)
-                            capability("跳转", active: agent.status == "connected",
-                                       hint: "开启右侧连接后生效")
+                            if agent.localCapture {
+                                capability("本地精确", active: agent.status == "connected",
+                                           hint: "开启右侧连接后生效")
+                            } else {
+                                capability("实时", active: agent.status == "connected",
+                                           hint: "开启右侧连接后生效")
+                                capability("权限", active: agent.permissions)
+                                capability("跳转", active: agent.status == "connected",
+                                           hint: "开启右侧连接后生效")
+                            }
                             capability("额度", active: agent.quota)
                             if agent.verified { Text("已验证").font(.system(size: 8.5)).foregroundStyle(PanelTheme.accent) }
                         }
                         if agent.id == "codex", agent.trustReviewRequired {
                             Text("安装后请在 Codex /hooks 中确认一次信任。JSONL 仅作尽力而为的后备通道。")
                                 .font(.system(size: 9.5)).foregroundStyle(.tertiary)
+                        }
+                        if agent.id == "cursor" {
+                            Text("开启会向 ~/.cursor/hooks.json 安全合并一个 stop hook；只记录 Token 白名单。仅覆盖安装后产生的新回合，之前的本地用量无法倒推。")
+                                .font(.system(size: 9.5)).foregroundStyle(.tertiary)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                 }
@@ -391,7 +401,7 @@ struct SettingsPage: View {
 
                 if confirmingOffboard {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("移除 Maclawd 写进其他工具的全部配置：Claude Code / Codex / WorkBuddy"
+                        Text("移除 Maclawd 写进其他工具的全部配置：Claude Code / Codex / WorkBuddy / Cursor"
                              + " 的 hooks、状态行（还原你原来的）、权限通道、Codex 宠物包，"
                              + "并注销「登录时启动」。只移除 Maclawd 自己写入的条目，"
                              + "这些工具的其他配置与本机用量数据不受影响。卸载应用前建议先做这一步。")

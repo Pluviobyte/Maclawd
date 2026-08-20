@@ -727,6 +727,7 @@ struct AgentConnection: Identifiable {
     let label: String
     let status: String
     let realtime: Bool
+    let localCapture: Bool
     let installed: Bool
     let permissions: Bool
     let quota: Bool
@@ -743,6 +744,7 @@ struct AgentConnection: Identifiable {
         installed = json["installed"] as? Bool ?? false
         let capabilities = json["capabilities"] as? [String: Any] ?? [:]
         realtime = capabilities["realtime"] as? Bool ?? false
+        localCapture = capabilities["localCapture"] as? Bool ?? false
         permissions = capabilities["permissions"] as? Bool ?? false
         quota = capabilities["quota"] as? Bool ?? false
         terminalFocus = capabilities["terminalFocus"] as? Bool ?? false

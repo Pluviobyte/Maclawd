@@ -18,6 +18,7 @@ process.env.MACLAWD_CLAUDE_DIRS = join(root, 'empty-claude');
 process.env.MACLAWD_CODEX_HOME = join(root, 'empty-codex');
 process.env.MACLAWD_WORKBUDDY_DIR = join(root, 'empty-wb');
 process.env.MACLAWD_WORKBUDDY_SETTINGS = join(root, 'workbuddy-settings.json');
+process.env.MACLAWD_CURSOR_HOOKS_PATH = join(root, 'cursor-hooks.json');
 process.env.MACLAWD_KIMI_CODE_DIR = join(root, 'empty-kimi');
 process.env.MACLAWD_KIMI_LEGACY_DIR = join(root, 'empty-kimi2');
 process.env.MACLAWD_QWEN_DIR = join(root, 'empty-qwen');
@@ -36,6 +37,7 @@ let server;
 let base;
 let quotaWorker;
 let workBuddyQuotaWorker;
+let scanCalls = 0;
 const collectorLive = {
   tokensPerMin: 0,
   tokensPerMinBySource: {},
@@ -83,7 +85,10 @@ before(async () => {
     collector: {
       live: () => ({ ...collectorLive }),
       status: () => ({ running: false, scanning: false, enabled: true, live: {}, lastScan: null }),
-      scanNow: async () => ({ records: 0, elapsedMs: 0, stats: {}, warnings: [] }),
+      scanNow: async () => {
+        scanCalls++;
+        return { records: 0, elapsedMs: 0, stats: {}, warnings: [] };
+      },
       start: async () => {},
       stop: () => {},
     },
@@ -121,6 +126,17 @@ test('/api/ping 暴露可校验的运行时身份与协议版本', async () => {
   assert.ok(Number.isInteger(ping.port) && ping.port > 0);
   assert.match(ping.instanceId, /^[a-f0-9]{32}$/);
   assert.ok(Number.isFinite(ping.startedAt) && ping.startedAt <= Date.now());
+});
+
+test('/api/scan/kick 立即接收 Cursor hook 通知并在后台触发汇总', async () => {
+  const before = scanCalls;
+  const response = await fetch(`${base}/api/scan/kick`, { method: 'POST' });
+  assert.equal(response.status, 202);
+  const deadline = Date.now() + 100;
+  while (scanCalls === before && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+  assert.equal(scanCalls, before + 1);
 });
 
 test('Codex GUI 真实事件不被 5 分钟 Token 速率覆盖', async () => {
@@ -289,7 +305,7 @@ test('WorkBuddy 设置开关会真正安装和卸载状态 Hooks', async () => {
   assert.equal(Object.hasOwn(cleaned, 'hooks'), false);
 });
 
-test('/api/offboard 走真实 HTTP 往返：真装真拆三个 agent，设置在服务端也同步关闭', async () => {
+test('/api/offboard 走真实 HTTP 往返：真装真拆四个 agent，设置在服务端也同步关闭', async () => {
   // offboard.test.js 已经把 offboard() 这个函数本身测得很细（第三方条目保留、
   // 局部失败隔离等）。这里补的是它够不着的那层：真正走 HTTP 路由，且用
   // 真实安装路径装起来（而不是手写 fixture），才能验证「面板点按钮」
@@ -298,6 +314,7 @@ test('/api/offboard 走真实 HTTP 往返：真装真拆三个 agent，设置在
     hookEnhancement: true,
     codexHookEnhancement: true,
     workBuddyHookEnhancement: true,
+    cursorHookEnhancement: true,
   });
   const codexHooksPath = join(process.env.MACLAWD_CODEX_HOME, 'hooks.json');
   assert.ok(Object.hasOwn(JSON.parse(readFileSync(CLAUDE_SETTINGS, 'utf8')), 'hooks'),
@@ -306,6 +323,8 @@ test('/api/offboard 走真实 HTTP 往返：真装真拆三个 agent，设置在
     '装之后 Codex hooks 应该在');
   assert.ok(Object.hasOwn(JSON.parse(readFileSync(process.env.MACLAWD_WORKBUDDY_SETTINGS, 'utf8')), 'hooks'),
     '装之后 WorkBuddy hooks 应该在');
+  assert.ok(Object.hasOwn(JSON.parse(readFileSync(process.env.MACLAWD_CURSOR_HOOKS_PATH, 'utf8')), 'hooks'),
+    '装之后 Cursor hooks 应该在');
 
   const result = await post('/api/offboard', {});
 
@@ -320,11 +339,16 @@ test('/api/offboard 走真实 HTTP 往返：真装真拆三个 agent，设置在
   assert.equal(
     Object.hasOwn(JSON.parse(readFileSync(process.env.MACLAWD_WORKBUDDY_SETTINGS, 'utf8')), 'hooks'), false,
   );
+  assert.equal(
+    Object.hasOwn(JSON.parse(readFileSync(process.env.MACLAWD_CURSOR_HOOKS_PATH, 'utf8')), 'hooks'), false,
+  );
 
   // 开关必须在 HTTP 可见的一侧也真的翻回去——不能是磁盘文件改了，
   // 但服务端另一条读路径给出的还是旧值。
   const after = await post('/api/settings', {});
-  for (const key of ['hookEnhancement', 'codexHookEnhancement', 'workBuddyHookEnhancement']) {
+  for (const key of [
+    'hookEnhancement', 'codexHookEnhancement', 'workBuddyHookEnhancement', 'cursorHookEnhancement',
+  ]) {
     assert.equal(after.settings[key], false, `${key} 必须在 HTTP 可见的一侧也已关闭`);
   }
 });
