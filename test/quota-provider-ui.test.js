@@ -119,3 +119,27 @@ test('WorkBuddy 订阅与额外额度对齐显示，额外积分包可展开查�
   assert.match(block, /Text\(window\.label\)/, '展开后必须保留 WorkBuddy 返回的真实包名');
   assert.match(block, /数据暂不完整/, '无法汇总时不能静默隐藏额度');
 });
+
+test('额度窗口没有返回截止时间时不再静默留白', () => {
+  const row = panelSource.slice(
+    panelSource.indexOf('private struct QuotaRow'),
+    panelSource.indexOf('// MARK: - 小图形'),
+  );
+  assert.match(row, /Fmt\.until\(window\.resetAt, action: deadlineAction\)/);
+  assert.match(row, /deadlineAction\.label\)时间暂未提供/,
+    'Grok 等未返回 resetAt 的来源也必须显示时间说明');
+});
+
+test('订阅额度标题右侧可选择这张卡显示的工具', () => {
+  const block = panelSource.slice(
+    panelSource.indexOf('private struct QuotaBlock'),
+    panelSource.indexOf('private struct QuotaRow'),
+  );
+  assert.match(block, /@AppStorage\("overviewQuotaSource"\)/);
+  assert.match(block, /Picker\("显示工具"/);
+  assert.match(block, /Text\("全部"\)/);
+  assert.match(block, /accessory: store\.quota\.sources\.count > 1/);
+  assert.match(block, /ForEach\(visibleSources\)/);
+  assert.doesNotMatch(block, /setSetting|\/api\/settings/,
+    '卡片筛选不应改变额度采集设置');
+});

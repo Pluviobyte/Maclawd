@@ -483,16 +483,54 @@ private struct OverviewPage: View {
 // MARK: - 额度
 
 private struct QuotaBlock: View {
+    private static let allSources = "__all__"
+
     @ObservedObject var store: PanelStore
     @State private var workBuddyBonusExpanded = false
+    /// 只是概览页这张卡的展示偏好；不能借此停掉采集或额度提醒。
+    @AppStorage("overviewQuotaSource") private var selectedSource = Self.allSources
+
+    private var visibleSources: [QuotaSource] {
+        guard selectedSource != Self.allSources,
+              store.quota.sources.contains(where: { $0.id == selectedSource })
+        else { return store.quota.sources }
+        return store.quota.sources.filter { $0.id == selectedSource }
+    }
+
+    private var sourceSelection: Binding<String> {
+        Binding(
+            get: {
+                store.quota.sources.contains(where: { $0.id == selectedSource })
+                    ? selectedSource : Self.allSources
+            },
+            set: { selectedSource = $0 }
+        )
+    }
+
+    private var sourcePicker: some View {
+        Picker("显示工具", selection: sourceSelection) {
+            Text("全部").tag(Self.allSources)
+            ForEach(store.quota.sources) { source in
+                Text(source.label).tag(source.id)
+            }
+        }
+        .labelsHidden()
+        .pickerStyle(.menu)
+        .controlSize(.small)
+        .fixedSize()
+        .help("选择这张订阅额度卡中显示的工具")
+    }
 
     var body: some View {
-        SectionCard(title: "订阅额度") {
+        SectionCard(
+            title: "订阅额度",
+            accessory: store.quota.sources.count > 1 ? AnyView(sourcePicker) : nil
+        ) {
             VStack(alignment: .leading, spacing: 10) {
                 if store.quota.empty {
                     emptyState
                 } else {
-                    ForEach(store.quota.sources) { source in
+                    ForEach(visibleSources) { source in
                         VStack(alignment: .leading, spacing: 7) {
                             // 来源是额度的一部分，不是只有多来源时才需要的分组标题。
                             // 只显示「本周 51%」会让用户无法判断它属于 Claude 还是 Codex。
@@ -684,8 +722,9 @@ private struct QuotaRow: View {
                 if let remaining = window.remaining, let limit = window.limit {
                     Text("\(Fmt.credits(remaining)) / \(Fmt.credits(limit)) Credits")
                 }
-                if let until = Fmt.until(window.resetAt, action: deadlineAction), !window.isReset {
-                    Text(until)
+                if !window.isReset {
+                    Text(Fmt.until(window.resetAt, action: deadlineAction)
+                         ?? "\(deadlineAction.label)时间暂未提供")
                 }
                 // 状态行只在交互式界面渲染，`claude -p` 与 CI 都不触发。
                 // 所以必须老实标出「这不是实时的」，否则用户会当它是。
@@ -787,8 +826,21 @@ struct InfoDot: View {
 
 struct SectionCard<Content: View>: View {
     let title: String
-    var info: String? = nil
-    @ViewBuilder var content: Content
+    let info: String?
+    let accessory: AnyView?
+    let content: Content
+
+    init(
+        title: String,
+        info: String? = nil,
+        accessory: AnyView? = nil,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.title = title
+        self.info = info
+        self.accessory = accessory
+        self.content = content()
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -798,6 +850,8 @@ struct SectionCard<Content: View>: View {
                     .foregroundStyle(.secondary)
                     .textCase(.none)
                 if let info { InfoDot(title: title, info: info) }
+                Spacer(minLength: 8)
+                if let accessory { accessory }
             }
             content
         }
