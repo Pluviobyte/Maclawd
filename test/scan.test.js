@@ -465,6 +465,55 @@ test('discover 瞬时失败时保留该来源缓存，不发布空值也不逐�
   }
 });
 
+test('云端解析器的缓存 TTL 到期后重新拉取，未到期时复用', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'maclawd-cloud-ttl-'));
+  const previous = process.env.MACLAWD_DATA_DIR;
+  process.env.MACLAWD_DATA_DIR = join(root, 'data');
+  const file = join(root, 'state.vscdb');
+  writeFileSync(file, 'stable');
+  let now = 1_800_000_000_000;
+  let pulls = 0;
+  const parser = {
+    id: 'cloud-source',
+    readMode: 'none',
+    cacheTtlMs: 10 * 60 * 1000,
+    discover: () => {
+      const stat = statSync(file);
+      return [{ path: file, size: stat.size, mtimeMs: stat.mtimeMs, ino: stat.ino }];
+    },
+    createFileParser: () => ({
+      finish: () => ({
+        records: [{
+          source: 'cloud-source', model: 'm', ts: now, input: ++pulls,
+          output: 0, cacheRead: 0, write5m: 0, write1h: 0, reasoning: 0,
+          messageId: `pull-${pulls}`, requestId: null, uuid: null, sidechain: false,
+        }],
+      }),
+    }),
+  };
+  const { scanAll } = await import('../src/runtime/scan.js');
+  const scan = () => scanAll({
+    parsers: [parser], budgetMs: 1000, ignoreSettings: true, clock: () => now,
+  });
+
+  try {
+    const first = await scan();
+    assert.equal(first.bySource['cloud-source'][0].input, 1);
+    now += 9 * 60 * 1000;
+    const cached = await scan();
+    assert.equal(cached.stats.reused, 1);
+    assert.equal(cached.bySource['cloud-source'][0].input, 1);
+    now += 2 * 60 * 1000;
+    const refreshed = await scan();
+    assert.equal(refreshed.stats.full, 1);
+    assert.equal(refreshed.bySource['cloud-source'][0].input, 2);
+  } finally {
+    if (previous === undefined) delete process.env.MACLAWD_DATA_DIR;
+    else process.env.MACLAWD_DATA_DIR = previous;
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('会话时长跨增量尾读保持连续', async () => {
   await withFixture(async ({ file, scan }) => {
     writeFileSync(

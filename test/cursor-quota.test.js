@@ -10,6 +10,7 @@ process.env.MACLAWD_DATA_DIR = data;
 const {
   parseCursorToken, cursorUsageReport, readCursorUsage, createCursorQuotaCollector,
 } = await import('../src/runtime/cursor-quota.js');
+const { cursorAuthAttempts } = await import('../src/runtime/cursor-auth.js');
 const { clearQuota, readQuota, recordQuota } = await import('../src/runtime/account-quota.js');
 
 const NOW = 1_785_800_000_000;
@@ -124,12 +125,52 @@ test('readCursorUsage 请求 usage API 并返回额度报告', async () => {
   });
 
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].url, 'https://www.cursor.com/api/usage');
+  assert.equal(calls[0].url, 'https://cursor.com/api/usage');
   assert.equal(calls[0].options.method, 'GET');
   assert.ok(calls[0].options.headers.Cookie.includes('WorkosCursorSessionToken='));
   assert.ok(calls[0].options.headers.Cookie.includes('test-token-abc'));
   assert.equal(report.source, 'cursor');
   assert.equal(report.windows.monthly_requests.used, 200);
+});
+
+test('Cursor 认证优先使用 JWT sub 组成的 dashboard Cookie', () => {
+  const payload = Buffer.from(JSON.stringify({ sub: 'auth0|user-123' })).toString('base64url');
+  const token = `header.${payload}.signature`;
+  const attempts = cursorAuthAttempts(token);
+
+  assert.equal(
+    attempts[0].Cookie,
+    `WorkosCursorSessionToken=auth0|user-123%3A%3A${token}`,
+  );
+  assert.equal(
+    attempts[1].Cookie,
+    `WorkosCursorSessionToken=user-123%3A%3A${token}`,
+  );
+  assert.equal(attempts.at(-1).Authorization, `Bearer ${token}`);
+});
+
+test('readCursorUsage 在完整 sub Cookie 被拒绝时会回退 user id Cookie', async () => {
+  const payload = Buffer.from(JSON.stringify({ sub: 'auth0|user-123' })).toString('base64url');
+  const token = `header.${payload}.signature`;
+  const cookies = [];
+  const report = await readCursorUsage({
+    tokenReader: async () => token,
+    fetchImpl: async (_url, options) => {
+      cookies.push(options.headers.Cookie ?? null);
+      if (cookies.length === 1) return { ok: false, status: 401, text: async () => '' };
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({
+          'gpt-5': { numRequests: 1, numRequestsTotal: 500 },
+          startOfMonth: '2026-08-01T00:00:00.000Z',
+        }),
+      };
+    },
+  });
+
+  assert.equal(cookies.length, 2);
+  assert.equal(report.windows.monthly_requests.used, 1);
 });
 
 test('readCursorUsage 对 401/403 报鉴权失败', async () => {

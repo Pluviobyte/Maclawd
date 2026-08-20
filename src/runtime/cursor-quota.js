@@ -11,6 +11,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { recordQuota } from './account-quota.js';
 import { loadSettings } from './settings.js';
+import { cursorDashboardHeaders, fetchCursorWithAuth } from './cursor-auth.js';
 
 const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 const DEFAULT_REFRESH_MS = 10 * 60 * 1000;
@@ -158,13 +159,12 @@ export async function readCursorUsage({
   timeout.unref?.();
 
   try {
-    const cookieValue = `WorkosCursorSessionToken=${encodeURIComponent(token)}`;
-    const response = await fetchImpl('https://www.cursor.com/api/usage', {
+    // www.cursor.com 会跳转到 cursor.com，跨 host 跳转会丢失 Cookie/Authorization。
+    const response = await fetchCursorWithAuth('https://cursor.com/api/usage', {
+      token,
+      fetchImpl,
       method: 'GET',
-      headers: {
-        Cookie: cookieValue,
-        Accept: 'application/json',
-      },
+      headers: cursorDashboardHeaders(),
       signal: controller.signal,
     });
 
