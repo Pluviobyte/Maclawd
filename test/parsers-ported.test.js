@@ -32,6 +32,10 @@ test('每个解析器都实现了完整接口', () => {
   }
 });
 
+test('Codex 数据源统一显示为 Codex', () => {
+  assert.equal(parsers.find((parser) => parser.id === 'codex')?.label, 'Codex');
+});
+
 test('id 不重复，且覆盖 vibe-usage 的全部工具', () => {
   const ids = parsers.map((p) => p.id);
   assert.equal(new Set(ids).size, ids.length, 'id 有重复');

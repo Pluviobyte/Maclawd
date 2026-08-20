@@ -34,7 +34,7 @@
 
   const SOURCE_LABELS = {
     'claude-code': 'Claude Code',
-    codex: 'Codex CLI',
+    codex: 'Codex',
     'kimi-code': 'Kimi Code',
     'qwen-code': 'Qwen Code',
     grok: 'Grok CLI',

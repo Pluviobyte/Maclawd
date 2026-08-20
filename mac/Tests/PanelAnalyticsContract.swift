@@ -27,7 +27,7 @@ struct PanelAnalyticsContract {
             ],
             "dimensions": [
                 "sources": ["codex"], "models": ["gpt-test"], "projects": ["Maclawd"],
-                "sourceLabels": ["codex": "Codex CLI"],
+                "sourceLabels": ["codex": "Codex"],
             ],
             "collection": ["complete": false, "deferredFiles": 3, "sources": [
                 "codex": ["discoveredFiles": 10, "indexedFiles": 7, "deferredFiles": 3,
@@ -58,8 +58,8 @@ struct PanelAnalyticsContract {
         precondition(snapshot.records.items.first?.source == "codex")
         precondition(snapshot.records.nextCursor == "cursor-1")
 
-        // 统计页区间条上的工具筛选：菜单里是全称，条上是去尾缀短名。
-        precondition(snapshot.dimensions.label(forSource: "codex") == "Codex CLI")
+        // 统计页区间条与菜单统一显示简洁的产品名。
+        precondition(snapshot.dimensions.label(forSource: "codex") == "Codex")
         precondition(snapshot.dimensions.shortLabel(forSource: "codex") == "Codex")
         // 服务端没给标签时必须回落到 id，不能显示空白。
         precondition(snapshot.dimensions.label(forSource: "grok") == "grok")

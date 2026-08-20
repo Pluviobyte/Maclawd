@@ -5,7 +5,7 @@ import { toCount, UNKNOWN_MODEL } from '../usage-record.js';
 import { createTurnTracker } from '../sessions.js';
 
 export const id = 'codex';
-export const label = 'Codex CLI';
+export const label = 'Codex';
 
 /**
  * Codex 需要三类行：token_count 取用量，session_meta 取项目与 fork 关系，
