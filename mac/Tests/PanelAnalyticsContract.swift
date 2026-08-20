@@ -15,7 +15,9 @@ struct PanelAnalyticsContract {
             "cost": ["estimated": 3.5, "coverage": 0.98, "unpricedModels": ["new-model"]],
             "series": [["day": "2026-08-03", "totalTokens": 1_000.0, "estimatedCost": 3.5]],
             "heatmap": [["weekday": 1, "hour": 10, "totalTokens": 1_000.0,
-                           "estimatedCost": 3.5, "activeSeconds": 120.0]],
+                           "estimatedCost": 3.5, "activeSeconds": 120.0,
+                           "dateStart": "2026-07-27", "dateEnd": "2026-08-17",
+                           "dateCount": 4]],
             "sessions": ["available": true, "totals": [
                 "sessions": 2, "activeSeconds": 120, "durationSeconds": 600,
                 "messageCount": 20, "userMessageCount": 4,
@@ -49,6 +51,9 @@ struct PanelAnalyticsContract {
         precondition(snapshot.sessions.totals.messageCount == 20)
         precondition(snapshot.series.first?.day == "2026-08-03")
         precondition(snapshot.heatmap.first?.hour == 10)
+        precondition(snapshot.heatmap.first?.dateStart == "2026-07-27")
+        precondition(snapshot.heatmap.first?.dateEnd == "2026-08-17")
+        precondition(snapshot.heatmap.first?.dateCount == 4)
         precondition(snapshot.distributions.models.first?.id == "gpt-test")
         precondition(snapshot.dimensions.projects == ["Maclawd"])
         precondition(snapshot.collection.complete == false)

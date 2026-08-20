@@ -630,7 +630,7 @@ private struct QuotaBlock: View {
             .buttonStyle(.plain)
 
             if workBuddyBonusExpanded {
-                ScrollView(.vertical, showsIndicators: presentation.bonusDetails.count > 3) {
+                ScrollView(.vertical, showsIndicators: false) {
                     LazyVStack(alignment: .leading, spacing: 7) {
                         ForEach(Array(presentation.bonusDetails.enumerated()), id: \.element.id) { index, window in
                             VStack(alignment: .leading, spacing: 2) {

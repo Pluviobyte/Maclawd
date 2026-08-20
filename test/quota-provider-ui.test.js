@@ -125,7 +125,7 @@ test('WorkBuddy 额外积分包在有限的独立滚动区展开，不撑乱整�
     panelSource.indexOf('if workBuddyBonusExpanded'),
     panelSource.indexOf('private var workBuddyStatus'),
   );
-  assert.match(block, /ScrollView\(\.vertical/,
+  assert.match(block, /ScrollView\(\.vertical,\s*showsIndicators:\s*false\)/,
     '额外包明细必须使用自己的纵向滚动区，不能全部塞进概览外层滚动区');
   assert.match(block, /\.frame\(height:\s*min\(/,
     '明细视口高度必须有上限，积分包数量不能无限拉长概览页');

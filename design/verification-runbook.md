@@ -84,7 +84,7 @@ node bin/maclawd-usage.js probe --diff
 | **Hermes** | 问一句 | `~/.hermes/state.db`（多 profile 在 `profiles/*/state.db`） |
 | **Kiro** | 问一句 | `~/Library/Application Support/kiro-cli/data.sqlite3` |
 | **Antigravity** | 对话一轮 | `~/.gemini/antigravity*/conversations/*.db` |
-| **Cursor** | 需先在设置里开「Cursor 云端用量」（唯一联网解析器，默认关） | 云端 CSV，本地只存登录态 |
+| **Cursor** | 在 Cursor Agent 中完成一轮；至少配置一个 `stop` hook 才会生成精确本地事件 | `~/Library/Application Support/Cursor/logs/**/cursor.hooks.*.log`；可选切换为云端 CSV 完整历史，两者不叠加 |
 
 ### 几个特别注意的
 

@@ -238,14 +238,37 @@ function rowCursor(row) {
   return Buffer.from(raw).toString('base64url');
 }
 
-function heatmap(rows, sessions = []) {
+function heatmapDateContext(bounds) {
+  const start = startOfDay(new Date(bounds.fromTs));
+  const end = startOfDay(new Date(bounds.toTs));
+  const utcDay = (date) => Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+  const dayCount = Math.floor((utcDay(end) - utcDay(start)) / (24 * 60 * 60 * 1000)) + 1;
+  if (dayCount <= 7) return null;
+
+  const result = new Map();
+  for (let weekday = 1; weekday <= 7; weekday++) {
+    const first = shiftDays(start, (weekday - (((start.getDay() + 6) % 7) + 1) + 7) % 7);
+    if (first > end) continue;
+    const count = Math.floor((utcDay(end) - utcDay(first)) / (7 * 24 * 60 * 60 * 1000)) + 1;
+    result.set(weekday, {
+      dateStart: dayKey(first),
+      dateEnd: dayKey(shiftDays(first, (count - 1) * 7)),
+      dateCount: count,
+    });
+  }
+  return result;
+}
+
+function heatmap(rows, sessions = [], bounds) {
   const cells = [];
+  const dateContext = heatmapDateContext(bounds);
   for (let weekday = 1; weekday <= 7; weekday++) {
     for (let hour = 0; hour < 24; hour++) {
       cells.push({ weekday, hour, inputTokens: 0, outputTokens: 0,
         reasoningTokens: 0, cachedTokens: 0, totalTokens: 0,
         nonCachedReadTokens: 0, billableTokens: 0,
-        estimatedCost: null, activeSeconds: 0 });
+        estimatedCost: null, activeSeconds: 0,
+        ...(dateContext?.get(weekday) ?? {}) });
     }
   }
   for (const row of rows) {
@@ -418,7 +441,7 @@ export function queryUsageAnalytics(rollup, {
     series: series(rollup, bounds.current, filters, priceBucket, currentSessionList ?? []),
     sessions,
     distributions: distributions(rollup, bounds.current, filters, priceBucket),
-    heatmap: heatmap(allRows, currentSessionList ?? []),
+    heatmap: heatmap(allRows, currentSessionList ?? [], bounds.current),
     records: {
       items,
       total: allRows.length,
