@@ -8,7 +8,9 @@ import { AUTO_START_SUPPRESSION_FILE } from '../src/runtime/auto-start.js';
 
 const SOURCE = resolve('mac/Sources/Maclawd/AutoStartSuppression.swift');
 
-test('Swift 退出标记与 hook 共用同一份契约', () => {
+test('Swift 退出标记与 hook 共用同一份契约', {
+  skip: !existsSync('/usr/bin/swiftc') && '当前 runner 未安装 Swift 编译器',
+}, () => {
   const dir = mkdtempSync(join(tmpdir(), 'maclawd-auto-start-'));
   const harness = join(dir, 'main.swift');
   const binary = join(dir, 'test-auto-start-suppression');
