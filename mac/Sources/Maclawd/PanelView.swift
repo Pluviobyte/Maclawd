@@ -488,13 +488,18 @@ private struct QuotaBlock: View {
     @State private var showingSourcePicker = false
     /// 只是概览页这张卡的展示偏好；不能借此停掉采集或额度提醒。
     @AppStorage("overviewQuotaHiddenSources") private var hiddenSources = ""
+    @AppStorage("overviewQuotaSourceOrder") private var sourceOrder = ""
 
     private var hiddenSourceIDs: Set<String> {
         Set(hiddenSources.split(separator: ",").map(String.init))
     }
 
+    private var orderedSources: [QuotaSource] {
+        QuotaSourceOrder.resolve(store.quota.sources, stored: sourceOrder)
+    }
+
     private var visibleSources: [QuotaSource] {
-        store.quota.sources.filter { !hiddenSourceIDs.contains($0.id) }
+        orderedSources.filter { !hiddenSourceIDs.contains($0.id) }
     }
 
     private func sourceVisibility(_ id: String) -> Binding<Bool> {
@@ -505,6 +510,12 @@ private struct QuotaBlock: View {
                 if visible { hidden.remove(id) } else { hidden.insert(id) }
                 hiddenSources = hidden.sorted().joined(separator: ",")
             }
+        )
+    }
+
+    private func moveSource(_ id: String, by offset: Int) {
+        sourceOrder = QuotaSourceOrder.move(
+            id, by: offset, sources: store.quota.sources, stored: sourceOrder
         )
     }
 
@@ -529,12 +540,37 @@ private struct QuotaBlock: View {
         .help("选择这张订阅额度卡中显示的工具")
         .popover(isPresented: $showingSourcePicker, arrowEdge: .bottom) {
             VStack(alignment: .leading, spacing: 8) {
-                Text("显示工具")
-                    .font(.system(size: 11, weight: .semibold))
-                ForEach(store.quota.sources) { source in
-                    Toggle(source.label, isOn: sourceVisibility(source.id))
-                        .toggleStyle(.checkbox)
-                        .font(.system(size: 11))
+                HStack {
+                    Text("显示工具")
+                        .font(.system(size: 11, weight: .semibold))
+                    Spacer()
+                    Text("排序")
+                        .font(.system(size: 9.5))
+                        .foregroundStyle(.tertiary)
+                }
+                ForEach(Array(orderedSources.enumerated()), id: \.element.id) { index, source in
+                    HStack(spacing: 6) {
+                        Toggle(source.label, isOn: sourceVisibility(source.id))
+                            .toggleStyle(.checkbox)
+                            .font(.system(size: 11))
+                        Spacer(minLength: 6)
+                        Button { moveSource(source.id, by: -1) } label: {
+                            Image(systemName: "chevron.up")
+                                .font(.system(size: 8.5, weight: .semibold))
+                                .frame(width: 18, height: 18)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(index == 0)
+                        .accessibilityLabel("上移 \(source.label)")
+                        Button { moveSource(source.id, by: 1) } label: {
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 8.5, weight: .semibold))
+                                .frame(width: 18, height: 18)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(index == orderedSources.count - 1)
+                        .accessibilityLabel("下移 \(source.label)")
+                    }
                 }
                 Divider()
                 Button("全选") { hiddenSources = "" }
@@ -543,7 +579,7 @@ private struct QuotaBlock: View {
                     .foregroundStyle(PanelTheme.accent)
             }
             .padding(12)
-            .frame(width: 190, alignment: .leading)
+            .frame(width: 230, alignment: .leading)
         }
     }
 

@@ -108,6 +108,41 @@ struct QuotaSource: Identifiable, Equatable {
     }
 }
 
+/// “订阅额度”卡片的本地展示顺序。未知的新来源追加在末尾，不丢用户已有顺序。
+enum QuotaSourceOrder {
+    static func resolve(_ sources: [QuotaSource], stored: String) -> [QuotaSource] {
+        // 来源来自外部响应；重复 id 采用首个值，既保持 API 顺序也避免字典构造崩溃。
+        var byID: [String: QuotaSource] = [:]
+        for source in sources where byID[source.id] == nil {
+            byID[source.id] = source
+        }
+        var seen = Set<String>()
+        var result: [QuotaSource] = []
+        for id in stored.split(separator: ",").map(String.init) {
+            guard seen.insert(id).inserted, let source = byID[id] else { continue }
+            result.append(source)
+        }
+        result.append(contentsOf: sources.filter {
+            byID[$0.id] == $0 && seen.insert($0.id).inserted
+        })
+        return result
+    }
+
+    static func move(
+        _ id: String,
+        by offset: Int,
+        sources: [QuotaSource],
+        stored: String
+    ) -> String {
+        var ids = resolve(sources, stored: stored).map(\.id)
+        guard let index = ids.firstIndex(of: id) else { return ids.joined(separator: ",") }
+        let destination = index + offset
+        guard ids.indices.contains(destination) else { return ids.joined(separator: ",") }
+        ids.swapAt(index, destination)
+        return ids.joined(separator: ",")
+    }
+}
+
 /// WorkBuddy 首页只展示两条汇总；每个额外包仍保留在可展开明细里。
 struct WorkBuddyQuotaPresentation: Equatable {
     let base: QuotaWindow?

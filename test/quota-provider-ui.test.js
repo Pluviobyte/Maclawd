@@ -23,7 +23,7 @@ test('订阅额度即使只有一个服务商也始终显示来源名称', () =>
     panelSource.indexOf('private struct QuotaBlock'),
     panelSource.indexOf('private struct QuotaRow'),
   );
-  assert.match(block, /ForEach\(store\.quota\.sources\)[\s\S]*Text\(source\.label\)/);
+  assert.match(block, /ForEach\(visibleSources\)[\s\S]*Text\(source\.label\)/);
   assert.doesNotMatch(block, /if store\.quota\.sources\.count > 1/,
     '单一来源时也不能隐藏 Claude Code / Codex 标签');
 });
@@ -79,7 +79,7 @@ test('WorkBuddy 真实积分与现有额度来源共用进度条并显示精确�
     panelSource.indexOf('private struct QuotaBlock'),
     panelSource.indexOf('private struct QuotaRow'),
   );
-  assert.match(block, /ForEach\(store\.quota\.sources\)/);
+  assert.match(block, /ForEach\(visibleSources\)/);
   assert.doesNotMatch(block, /暂不支持读取积分/);
   const row = panelSource.slice(
     panelSource.indexOf('private struct QuotaRow'),
@@ -157,4 +157,19 @@ test('订阅额度标题右侧可多选这张卡显示的工具', () => {
   assert.match(block, /ForEach\(visibleSources\)/);
   assert.doesNotMatch(block, /setSetting|\/api\/settings/,
     '卡片筛选不应改变额度采集设置');
+});
+
+test('显示工具弹窗可持久化调整订阅额度来源顺序', () => {
+  const block = panelSource.slice(
+    panelSource.indexOf('private struct QuotaBlock'),
+    panelSource.indexOf('private struct QuotaRow'),
+  );
+  assert.match(block, /@AppStorage\("overviewQuotaSourceOrder"\)/);
+  assert.match(block, /QuotaSourceOrder\.resolve\(store\.quota\.sources, stored: sourceOrder\)/);
+  assert.match(block, /ForEach\(Array\(orderedSources\.enumerated\(\)\), id: \\.element\.id\)/);
+  assert.match(block, /sourceOrder = QuotaSourceOrder\.move\([\s\S]*id, by: offset, sources: store\.quota\.sources, stored: sourceOrder/);
+  assert.match(block, /Image\(systemName: "chevron\.up"\)/);
+  assert.match(block, /Image\(systemName: "chevron\.down"\)/);
+  assert.ok(block.includes('.accessibilityLabel("上移 \\(source.label)")'));
+  assert.ok(block.includes('.accessibilityLabel("下移 \\(source.label)")'));
 });

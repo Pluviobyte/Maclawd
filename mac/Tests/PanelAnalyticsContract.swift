@@ -116,6 +116,29 @@ struct PanelAnalyticsContract {
         precondition(resetClaude.usedPercent == nil)
         precondition(resetClaude.remainingPercent == 100)
 
+        // 展示顺序核对：OpenUsage 70acd4f 的 WidgetRegistry 按已保存的有效 id 排序，并把
+        // 新 provider 按注册顺序追加；其重复 provider 查找采用 first-wins。Vibe Usage
+        // 26522ec 仅定义本地用量来源顺序，没有可编辑的订阅额度卡片顺序。
+        let reorderSources = [
+            QuotaSource(["id": "claude", "label": "Claude Code", "windows": []])!,
+            QuotaSource(["id": "codex", "label": "Codex", "windows": []])!,
+            QuotaSource(["id": "cursor", "label": "Cursor", "windows": []])!,
+        ]
+        precondition(QuotaSourceOrder.resolve(reorderSources, stored: "cursor,claude").map(\.id)
+            == ["cursor", "claude", "codex"])
+        precondition(QuotaSourceOrder.move(
+            "claude", by: 1, sources: reorderSources, stored: "cursor,claude"
+        ) == "cursor,codex,claude")
+        precondition(QuotaSourceOrder.move(
+            "cursor", by: -1, sources: reorderSources, stored: "cursor,claude"
+        ) == "cursor,claude,codex")
+        let duplicateSources = reorderSources + [
+            QuotaSource(["id": "cursor", "label": "重复 Cursor", "windows": []])!,
+        ]
+        let deduplicated = QuotaSourceOrder.resolve(duplicateSources, stored: "cursor,cursor")
+        precondition(deduplicated.map(\.id) == ["cursor", "claude", "codex"])
+        precondition(deduplicated.first?.label == "Cursor", "重复来源应稳定保留 API 中首个值")
+
         let workBuddy = QuotaSource([
             "id": "workbuddy",
             "label": "WorkBuddy",
