@@ -127,10 +127,13 @@ struct PanelAnalyticsContract {
         precondition(QuotaSourceOrder.resolve(reorderSources, stored: "cursor,claude").map(\.id)
             == ["cursor", "claude", "codex"])
         precondition(QuotaSourceOrder.move(
-            "claude", by: 1, sources: reorderSources, stored: "cursor,claude"
-        ) == "cursor,codex,claude")
+            "claude", to: "cursor", sources: reorderSources, stored: "cursor,claude"
+        ) == "claude,cursor,codex")
         precondition(QuotaSourceOrder.move(
-            "cursor", by: -1, sources: reorderSources, stored: "cursor,claude"
+            "cursor", to: "codex", sources: reorderSources, stored: "cursor,claude"
+        ) == "claude,codex,cursor")
+        precondition(QuotaSourceOrder.move(
+            "cursor", to: "cursor", sources: reorderSources, stored: "cursor,claude"
         ) == "cursor,claude,codex")
         let duplicateSources = reorderSources + [
             QuotaSource(["id": "cursor", "label": "重复 Cursor", "windows": []])!,

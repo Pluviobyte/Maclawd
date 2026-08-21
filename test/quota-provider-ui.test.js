@@ -166,10 +166,19 @@ test('显示工具弹窗可持久化调整订阅额度来源顺序', () => {
   );
   assert.match(block, /@AppStorage\("overviewQuotaSourceOrder"\)/);
   assert.match(block, /QuotaSourceOrder\.resolve\(store\.quota\.sources, stored: sourceOrder\)/);
-  assert.match(block, /ForEach\(Array\(orderedSources\.enumerated\(\)\), id: \\.element\.id\)/);
-  assert.match(block, /sourceOrder = QuotaSourceOrder\.move\([\s\S]*id, by: offset, sources: store\.quota\.sources, stored: sourceOrder/);
-  assert.match(block, /Image\(systemName: "chevron\.up"\)/);
-  assert.match(block, /Image\(systemName: "chevron\.down"\)/);
-  assert.ok(block.includes('.accessibilityLabel("上移 \\(source.label)")'));
-  assert.ok(block.includes('.accessibilityLabel("下移 \\(source.label)")'));
+  assert.match(block, /ForEach\(orderedSources\)/);
+  assert.match(block, /sourceOrder = QuotaSourceOrder\.move\([\s\S]*id, to: targetID, sources: store\.quota\.sources, stored: sourceOrder/);
+  assert.match(block, /Image\(systemName: "line\.3\.horizontal"\)/);
+  assert.match(block, /\.draggable\(source\.id\)/);
+  assert.match(block, /\.dropDestination\(for: String\.self\)/);
+  assert.ok(block.includes('.accessibilityLabel("拖动 \\(source.label) 排序")'));
+  assert.match(block, /\.accessibilityAction\(named: "上移"\)/);
+  assert.match(block, /\.accessibilityAction\(named: "下移"\)/);
+  assert.match(block, /\.focusable\(\)/);
+  assert.match(block, /\.onMoveCommand[\s\S]*case \.up:[\s\S]*case \.down:/);
+  const pickerRows = block.slice(
+    block.indexOf('ForEach(orderedSources)'),
+    block.indexOf('Divider()', block.indexOf('ForEach(orderedSources)')),
+  );
+  assert.doesNotMatch(pickerRows, /Image\(systemName: "chevron\.(up|down)"\)/);
 });

@@ -130,15 +130,18 @@ enum QuotaSourceOrder {
 
     static func move(
         _ id: String,
-        by offset: Int,
+        to targetID: String,
         sources: [QuotaSource],
         stored: String
     ) -> String {
         var ids = resolve(sources, stored: stored).map(\.id)
-        guard let index = ids.firstIndex(of: id) else { return ids.joined(separator: ",") }
-        let destination = index + offset
-        guard ids.indices.contains(destination) else { return ids.joined(separator: ",") }
-        ids.swapAt(index, destination)
+        guard id != targetID,
+              let sourceIndex = ids.firstIndex(of: id),
+              let targetIndex = ids.firstIndex(of: targetID)
+        else { return ids.joined(separator: ",") }
+        let moved = ids.remove(at: sourceIndex)
+        // 向下拖时落在目标之后，向上拖时落在目标之前，符合列表拖放的空间方向。
+        ids.insert(moved, at: targetIndex)
         return ids.joined(separator: ",")
     }
 }

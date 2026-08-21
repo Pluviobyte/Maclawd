@@ -486,6 +486,7 @@ private struct QuotaBlock: View {
     @ObservedObject var store: PanelStore
     @State private var workBuddyBonusExpanded = false
     @State private var showingSourcePicker = false
+    @State private var sourceDropTarget: String?
     /// 只是概览页这张卡的展示偏好；不能借此停掉采集或额度提醒。
     @AppStorage("overviewQuotaHiddenSources") private var hiddenSources = ""
     @AppStorage("overviewQuotaSourceOrder") private var sourceOrder = ""
@@ -513,10 +514,22 @@ private struct QuotaBlock: View {
         )
     }
 
-    private func moveSource(_ id: String, by offset: Int) {
+    private func moveSource(_ id: String, to targetID: String) -> Bool {
+        let ids = orderedSources.map(\.id)
+        guard id != targetID, ids.contains(id), ids.contains(targetID) else { return false }
         sourceOrder = QuotaSourceOrder.move(
-            id, by: offset, sources: store.quota.sources, stored: sourceOrder
+            id, to: targetID, sources: store.quota.sources, stored: sourceOrder
         )
+        return true
+    }
+
+    @discardableResult
+    private func moveSource(_ id: String, by offset: Int) -> Bool {
+        let ids = orderedSources.map(\.id)
+        guard let index = ids.firstIndex(of: id),
+              ids.indices.contains(index + offset)
+        else { return false }
+        return moveSource(id, to: ids[index + offset])
     }
 
     private var sourcePickerLabel: String {
@@ -544,32 +557,57 @@ private struct QuotaBlock: View {
                     Text("显示工具")
                         .font(.system(size: 11, weight: .semibold))
                     Spacer()
-                    Text("排序")
+                    Text("拖动排序")
                         .font(.system(size: 9.5))
                         .foregroundStyle(.tertiary)
                 }
-                ForEach(Array(orderedSources.enumerated()), id: \.element.id) { index, source in
+                ForEach(orderedSources) { source in
                     HStack(spacing: 6) {
                         Toggle(source.label, isOn: sourceVisibility(source.id))
                             .toggleStyle(.checkbox)
                             .font(.system(size: 11))
                         Spacer(minLength: 6)
-                        Button { moveSource(source.id, by: -1) } label: {
-                            Image(systemName: "chevron.up")
-                                .font(.system(size: 8.5, weight: .semibold))
-                                .frame(width: 18, height: 18)
+                        Image(systemName: "line.3.horizontal")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(.tertiary)
+                            .frame(width: 20, height: 20)
+                            .contentShape(Rectangle())
+                            .draggable(source.id)
+                            .focusable()
+                            .onMoveCommand { direction in
+                                switch direction {
+                                case .up: moveSource(source.id, by: -1)
+                                case .down: moveSource(source.id, by: 1)
+                                default: break
+                                }
+                            }
+                            .accessibilityLabel("拖动 \(source.label) 排序")
+                            .accessibilityAction(named: "上移") {
+                                moveSource(source.id, by: -1)
+                            }
+                            .accessibilityAction(named: "下移") {
+                                moveSource(source.id, by: 1)
+                            }
+                            .help("拖动调整顺序")
+                    }
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 2)
+                    .background {
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            .fill(sourceDropTarget == source.id
+                                  ? PanelTheme.accent.opacity(0.10) : Color.clear)
+                    }
+                    .contentShape(Rectangle())
+                    .dropDestination(for: String.self) { draggedIDs, _ in
+                        sourceDropTarget = nil
+                        guard let draggedID = draggedIDs.first else { return false }
+                        return moveSource(draggedID, to: source.id)
+                    } isTargeted: { targeted in
+                        if targeted {
+                            sourceDropTarget = source.id
+                        } else if sourceDropTarget == source.id {
+                            sourceDropTarget = nil
                         }
-                        .buttonStyle(.plain)
-                        .disabled(index == 0)
-                        .accessibilityLabel("上移 \(source.label)")
-                        Button { moveSource(source.id, by: 1) } label: {
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: 8.5, weight: .semibold))
-                                .frame(width: 18, height: 18)
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(index == orderedSources.count - 1)
-                        .accessibilityLabel("下移 \(source.label)")
                     }
                 }
                 Divider()
