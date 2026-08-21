@@ -207,7 +207,7 @@ export function cursorCurrentPeriodReport(data) {
   };
   const windows = {
     current_period_total: {
-      label: '本周期总额度', usedPercent: total, ...shared,
+      label: '本周', usedPercent: total, ...shared,
     },
   };
   const auto = percent(usage.autoPercentUsed ?? usage.auto_percent_used);

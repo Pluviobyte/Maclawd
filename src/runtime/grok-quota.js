@@ -275,7 +275,7 @@ export async function readGrokBilling({
         billing_cycle: {
           usedPercent,
           resetAt: validResetAt,
-          label: '计费周期',
+          label: '本周',
         },
       },
     };
@@ -315,7 +315,7 @@ function reportFromJsonBilling(payload) {
       billing_cycle: {
         usedPercent,
         resetAt: parsedResetAt,
-        label: '计费周期',
+        label: '本周',
       },
     },
   };

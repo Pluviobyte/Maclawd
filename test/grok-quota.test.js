@@ -422,7 +422,7 @@ test('readGrokBilling 发送正确的 gRPC-web 请求并返回额度报告', asy
     assert.equal(report.sourceLabel, 'Grok Build');
     assert.equal(report.completeSnapshot, true);
     assert.ok(Math.abs(report.windows.billing_cycle.usedPercent - 65.0) < 0.01);
-    assert.equal(report.windows.billing_cycle.label, '计费周期');
+    assert.equal(report.windows.billing_cycle.label, '本周');
     assert.equal(report.windows.billing_cycle.resetAt, futureEpoch * 1000);
   } finally {
     rmSync(authDir, { recursive: true, force: true });
@@ -504,7 +504,7 @@ test('Grok 额度报告写入后 readQuota 能正确读取 billing_cycle 窗口'
       billing_cycle: {
         usedPercent: 55.5,
         resetAt: NOW + 3_600_000,
-        label: '计费周期',
+        label: '本周',
       },
     },
   }, { now: NOW });
@@ -515,7 +515,7 @@ test('Grok 额度报告写入后 readQuota 能正确读取 billing_cycle 窗口'
   assert.equal(grokSource.label, 'Grok Build');
   assert.equal(grokSource.windows.length, 1);
   assert.equal(grokSource.windows[0].id, 'billing_cycle');
-  assert.equal(grokSource.windows[0].label, '计费周期');
+  assert.equal(grokSource.windows[0].label, '本周');
   assert.equal(grokSource.windows[0].usedPercent, 55.5);
 });
 
@@ -527,7 +527,7 @@ test('Grok 采集器合并刷新、缓存结果并在开关关闭后停止读取
   const recorded = [];
   const report = {
     source: 'grok', sourceLabel: 'Grok Build', completeSnapshot: true,
-    windows: { billing_cycle: { label: '计费周期', usedPercent: 20, resetAt: NOW + 3_600_000 } },
+    windows: { billing_cycle: { label: '本周', usedPercent: 20, resetAt: NOW + 3_600_000 } },
   };
   const collector = createGrokQuotaCollector({
     intervalMs: 600_000,
@@ -562,7 +562,7 @@ test('关闭 Grok 采集器会丢弃仍在进行中的读取结果', async () =>
       await gate;
       return {
         source: 'grok', sourceLabel: 'Grok Build', completeSnapshot: true,
-        windows: { billing_cycle: { usedPercent: 30, resetAt: NOW + 3_600_000, label: '计费周期' } },
+        windows: { billing_cycle: { usedPercent: 30, resetAt: NOW + 3_600_000, label: '本周' } },
       };
     },
     record: (value) => recorded.push(value),
@@ -590,7 +590,7 @@ test('Grok 采集器读取失败保留 lastError 且不阻塞后续刷新', asyn
       if (shouldFail) throw Object.assign(new Error('网络超时'), { code: 'ETIMEDOUT' });
       return {
         source: 'grok', sourceLabel: 'Grok Build', completeSnapshot: true,
-        windows: { billing_cycle: { usedPercent: 10, resetAt: NOW + 3_600_000, label: '计费周期' } },
+        windows: { billing_cycle: { usedPercent: 10, resetAt: NOW + 3_600_000, label: '本周' } },
       };
     },
     record: () => {},

@@ -77,7 +77,7 @@ test('Cursor 当前计费周期映射总计与两个用量池百分比', () => {
   assert.equal(report.source, 'cursor');
   assert.equal(report.completeSnapshot, true);
   assert.deepEqual(report.windows.current_period_total, {
-    label: '本周期总额度', usedPercent: 62.5,
+    label: '本周', usedPercent: 62.5,
     resetAt: 1_788_134_400_000, durationMinutes: 44_640,
   });
   assert.equal(report.windows.current_period_auto.label, 'Cursor Models');
