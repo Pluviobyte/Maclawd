@@ -35,7 +35,9 @@ struct QuotaWindow: Identifiable, Equatable {
     var isReset: Bool { state == "reset" }
     var isQuiet: Bool { state == "quiet" }
     var remainingPercent: Double? {
-        usedPercent.map { max(0, min(100, 100 - $0)) }
+        // 重置前的 usedPercent 已被后端清空；对展示层而言，新周期额度已经恢复为满格。
+        if isReset { return 100 }
+        return usedPercent.map { max(0, min(100, 100 - $0)) }
     }
 
     init?(_ raw: [String: Any]) {

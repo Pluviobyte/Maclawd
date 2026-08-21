@@ -107,6 +107,15 @@ struct PanelAnalyticsContract {
         ], workBuddyInstalled: true)
         precondition(quota.workBuddy.installed)
 
+        // UI reset semantics cross-checked against OpenUsage 70acd4f and CodexBar f74117a:
+        // the expired usage value stays absent, while the newly reset allowance renders full.
+        let resetClaude = QuotaWindow([
+            "id": "seven_day", "label": "本周",
+            "usedPercent": NSNull(), "state": "reset",
+        ])!
+        precondition(resetClaude.usedPercent == nil)
+        precondition(resetClaude.remainingPercent == 100)
+
         let workBuddy = QuotaSource([
             "id": "workbuddy",
             "label": "WorkBuddy",
