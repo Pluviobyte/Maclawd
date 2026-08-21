@@ -146,6 +146,36 @@ enum QuotaSourceOrder {
     }
 }
 
+/// A reorder stays provisional for the lifetime of a native drag session.
+/// This keeps hover animation responsive and makes Escape/outside-drop cancellation lossless.
+struct QuotaSourceOrderDragSession {
+    let original: String
+    private(set) var draft: String
+    private let sources: [QuotaSource]
+
+    init(sources: [QuotaSource], stored: String) {
+        self.sources = sources
+        let normalized = QuotaSourceOrder.resolve(sources, stored: stored)
+            .map(\.id).joined(separator: ",")
+        original = normalized
+        draft = normalized
+    }
+
+    @discardableResult
+    mutating func move(_ id: String, to targetID: String) -> Bool {
+        let moved = QuotaSourceOrder.move(id, to: targetID, sources: sources, stored: draft)
+        guard moved != draft else { return false }
+        draft = moved
+        return true
+    }
+
+    func commit() -> String { draft }
+
+    mutating func cancel() {
+        draft = original
+    }
+}
+
 /// WorkBuddy 首页只展示两条汇总；每个额外包仍保留在可展开明细里。
 struct WorkBuddyQuotaPresentation: Equatable {
     let base: QuotaWindow?

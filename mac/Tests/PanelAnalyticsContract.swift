@@ -135,6 +135,15 @@ struct PanelAnalyticsContract {
         precondition(QuotaSourceOrder.move(
             "cursor", to: "cursor", sources: reorderSources, stored: "cursor,claude"
         ) == "cursor,claude,codex")
+        var dragOrder = QuotaSourceOrderDragSession(
+            sources: reorderSources,
+            stored: "claude,codex,cursor"
+        )
+        precondition(dragOrder.move("cursor", to: "claude"))
+        precondition(dragOrder.draft == "cursor,claude,codex")
+        precondition(dragOrder.commit() == "cursor,claude,codex")
+        dragOrder.cancel()
+        precondition(dragOrder.draft == "claude,codex,cursor")
         let duplicateSources = reorderSources + [
             QuotaSource(["id": "cursor", "label": "重复 Cursor", "windows": []])!,
         ]

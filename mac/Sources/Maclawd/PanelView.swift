@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 /**
  面板。点菜单栏或双击桌宠弹出，**所有内容都在这里，不再跳浏览器**。
@@ -482,11 +483,80 @@ private struct OverviewPage: View {
 
 // MARK: - 额度
 
+private extension UTType {
+    static let maclawdQuotaSource = UTType(exportedAs: "ai.maclawd.quota-source")
+}
+
+private struct QuotaSourceRowFramesKey: PreferenceKey {
+    static let defaultValue: [String: CGRect] = [:]
+
+    static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
+        value.merge(nextValue(), uniquingKeysWith: { _, latest in latest })
+    }
+}
+
+private struct QuotaSourceDropDelegate: DropDelegate {
+    let rowFrames: [String: CGRect]
+    let reduceMotion: Bool
+    @Binding var sourceDropTarget: String?
+    let onEnsureSession: () -> Void
+    let onMove: (String, String) -> Bool
+    let onCancel: () -> Void
+    let onCommit: () -> Void
+
+    private func draggedID(from info: DropInfo) -> String? {
+        info.itemProviders(for: [UTType.maclawdQuotaSource]).first?.suggestedName
+    }
+
+    func validateDrop(info: DropInfo) -> Bool {
+        draggedID(from: info) != nil
+    }
+
+    private func updateTarget(info: DropInfo) {
+        guard let draggedID = draggedID(from: info) else { return }
+        onEnsureSession()
+        guard
+              let targetID = rowFrames.min(by: {
+                  abs($0.value.midY - info.location.y) < abs($1.value.midY - info.location.y)
+              })?.key,
+              sourceDropTarget != targetID
+        else { return }
+        withAnimation(reduceMotion ? nil : .timingCurve(0.22, 1, 0.36, 1, duration: 0.18)) {
+            sourceDropTarget = targetID
+            if draggedID != targetID { _ = onMove(draggedID, targetID) }
+        }
+    }
+
+    func dropEntered(info: DropInfo) {
+        updateTarget(info: info)
+    }
+
+    func dropExited(info: DropInfo) {
+        sourceDropTarget = nil
+        onCancel()
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        updateTarget(info: info)
+        return DropProposal(operation: .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        sourceDropTarget = nil
+        guard draggedID(from: info) != nil else { return false }
+        onCommit()
+        return true
+    }
+}
+
 private struct QuotaBlock: View {
     @ObservedObject var store: PanelStore
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var workBuddyBonusExpanded = false
     @State private var showingSourcePicker = false
     @State private var sourceDropTarget: String?
+    @State private var sourceRowFrames: [String: CGRect] = [:]
+    @State private var sourceDrag: QuotaSourceOrderDragSession?
     /// 只是概览页这张卡的展示偏好；不能借此停掉采集或额度提醒。
     @AppStorage("overviewQuotaHiddenSources") private var hiddenSources = ""
     @AppStorage("overviewQuotaSourceOrder") private var sourceOrder = ""
@@ -496,7 +566,10 @@ private struct QuotaBlock: View {
     }
 
     private var orderedSources: [QuotaSource] {
-        QuotaSourceOrder.resolve(store.quota.sources, stored: sourceOrder)
+        QuotaSourceOrder.resolve(
+            store.quota.sources,
+            stored: sourceDrag?.draft ?? sourceOrder
+        )
     }
 
     private var visibleSources: [QuotaSource] {
@@ -521,6 +594,42 @@ private struct QuotaBlock: View {
             id, to: targetID, sources: store.quota.sources, stored: sourceOrder
         )
         return true
+    }
+
+    private func beginSourceDrag() {
+        sourceDrag = makeSourceDragSession()
+    }
+
+    private func ensureSourceDrag() {
+        if sourceDrag == nil { sourceDrag = makeSourceDragSession() }
+    }
+
+    private func makeSourceDragSession() -> QuotaSourceOrderDragSession {
+        QuotaSourceOrderDragSession(
+            sources: store.quota.sources,
+            stored: sourceOrder
+        )
+    }
+
+    private func previewSourceMove(_ id: String, to targetID: String) -> Bool {
+        guard var drag = sourceDrag else { return false }
+        let moved = drag.move(id, to: targetID)
+        sourceDrag = drag
+        return moved
+    }
+
+    private func commitSourceDrag() {
+        if let committed = sourceDrag?.commit(), committed != sourceOrder {
+            sourceOrder = committed
+        }
+        sourceDrag = nil
+        sourceDropTarget = nil
+    }
+
+    private func cancelSourceDrag() {
+        sourceDrag?.cancel()
+        sourceDrag = nil
+        sourceDropTarget = nil
     }
 
     @discardableResult
@@ -572,7 +681,27 @@ private struct QuotaBlock: View {
                             .foregroundStyle(.tertiary)
                             .frame(width: 20, height: 20)
                             .contentShape(Rectangle())
-                            .draggable(source.id)
+                            .onDrag {
+                                beginSourceDrag()
+                                let provider = NSItemProvider(
+                                    item: source.id as NSString,
+                                    typeIdentifier: UTType.maclawdQuotaSource.identifier
+                                )
+                                provider.suggestedName = source.id
+                                return provider
+                            } preview: {
+                                HStack(spacing: 7) {
+                                    Text(source.label)
+                                    Image(systemName: "line.3.horizontal")
+                                        .foregroundStyle(.secondary)
+                                }
+                                .font(.system(size: 11, weight: .medium))
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(.regularMaterial,
+                                            in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+                                .fixedSize()
+                            }
                             .focusable()
                             .onMoveCommand { direction in
                                 switch direction {
@@ -598,15 +727,12 @@ private struct QuotaBlock: View {
                                   ? PanelTheme.accent.opacity(0.10) : Color.clear)
                     }
                     .contentShape(Rectangle())
-                    .dropDestination(for: String.self) { draggedIDs, _ in
-                        sourceDropTarget = nil
-                        guard let draggedID = draggedIDs.first else { return false }
-                        return moveSource(draggedID, to: source.id)
-                    } isTargeted: { targeted in
-                        if targeted {
-                            sourceDropTarget = source.id
-                        } else if sourceDropTarget == source.id {
-                            sourceDropTarget = nil
+                    .background {
+                        GeometryReader { proxy in
+                            Color.clear.preference(
+                                key: QuotaSourceRowFramesKey.self,
+                                value: [source.id: proxy.frame(in: .named("quotaSourcePicker"))]
+                            )
                         }
                     }
                 }
@@ -618,6 +744,21 @@ private struct QuotaBlock: View {
             }
             .padding(12)
             .frame(width: 230, alignment: .leading)
+            .coordinateSpace(name: "quotaSourcePicker")
+            .onPreferenceChange(QuotaSourceRowFramesKey.self) { sourceRowFrames = $0 }
+            .onDrop(
+                of: [UTType.maclawdQuotaSource],
+                delegate: QuotaSourceDropDelegate(
+                    rowFrames: sourceRowFrames,
+                    reduceMotion: reduceMotion,
+                    sourceDropTarget: $sourceDropTarget,
+                    onEnsureSession: ensureSourceDrag,
+                    onMove: { previewSourceMove($0, to: $1) },
+                    onCancel: cancelSourceDrag,
+                    onCommit: commitSourceDrag
+                )
+            )
+            .onDisappear(perform: cancelSourceDrag)
         }
     }
 

@@ -159,26 +159,50 @@ test('订阅额度标题右侧可多选这张卡显示的工具', () => {
     '卡片筛选不应改变额度采集设置');
 });
 
-test('显示工具弹窗可持久化调整订阅额度来源顺序', () => {
+test('显示工具弹窗拖过目标行时平滑预览并仅在放下后持久化', () => {
   const block = panelSource.slice(
     panelSource.indexOf('private struct QuotaBlock'),
     panelSource.indexOf('private struct QuotaRow'),
   );
   assert.match(block, /@AppStorage\("overviewQuotaSourceOrder"\)/);
-  assert.match(block, /QuotaSourceOrder\.resolve\(store\.quota\.sources, stored: sourceOrder\)/);
+  assert.match(block, /QuotaSourceOrder\.resolve\([\s\S]*store\.quota\.sources,[\s\S]*stored: sourceDrag\?\.draft \?\? sourceOrder/);
   assert.match(block, /ForEach\(orderedSources\)/);
-  assert.match(block, /sourceOrder = QuotaSourceOrder\.move\([\s\S]*id, to: targetID, sources: store\.quota\.sources, stored: sourceOrder/);
+  assert.match(block, /@State private var sourceDrag: QuotaSourceOrderDragSession\?/);
+  assert.match(block, /stored: sourceDrag\?\.draft \?\? sourceOrder/);
+  assert.match(block, /let moved = drag\.move\(id, to: targetID\)/);
+  assert.match(block, /if let committed = sourceDrag\?\.commit\(\), committed != sourceOrder[\s\S]*sourceOrder = committed/);
+  assert.match(block, /private func cancelSourceDrag\(\)[\s\S]*sourceDrag\?\.cancel\(\)[\s\S]*sourceDrag = nil/);
   assert.match(block, /Image\(systemName: "line\.3\.horizontal"\)/);
-  assert.match(block, /\.draggable\(source\.id\)/);
-  assert.match(block, /\.dropDestination\(for: String\.self\)/);
+  assert.match(panelSource, /private struct QuotaSourceDropDelegate: DropDelegate/);
+  assert.match(panelSource, /private extension UTType[\s\S]*maclawdQuotaSource/);
+  assert.match(panelSource, /func dropEntered\(info: DropInfo\)/);
+  assert.match(panelSource, /onEnsureSession\(\)/);
+  assert.match(block, /private func ensureSourceDrag\(\)[\s\S]*if sourceDrag == nil/);
+  assert.match(panelSource, /func performDrop\(info: DropInfo\)[\s\S]*onCommit\(\)/);
+  assert.match(panelSource, /private struct QuotaSourceRowFramesKey: PreferenceKey/);
+  assert.match(block, /proxy\.frame\(in: \.named\("quotaSourcePicker"\)\)/);
+  assert.match(block, /\.coordinateSpace\(name: "quotaSourcePicker"\)/);
+  assert.match(block, /onCancel: cancelSourceDrag/);
+  assert.match(block, /onEnsureSession: ensureSourceDrag/);
+  assert.match(block, /onCommit: commitSourceDrag/);
+  assert.match(block, /\.onDisappear\(perform: cancelSourceDrag\)/);
+  assert.match(block, /@Environment\(\\\.accessibilityReduceMotion\)/);
+  assert.match(panelSource, /withAnimation\(reduceMotion \? nil : \.timingCurve\(0\.22, 1, 0\.36, 1, duration: 0\.18\)\)/);
+  assert.match(block, /\.onDrag\s*\{/);
+  assert.match(block, /provider\.suggestedName = source\.id/);
+  assert.match(block, /\} preview: \{/);
+  assert.match(block, /typeIdentifier: UTType\.maclawdQuotaSource\.identifier/);
+  assert.match(block, /\.onDrop\([\s\S]*of: \[UTType\.maclawdQuotaSource\],[\s\S]*delegate: QuotaSourceDropDelegate/);
+  const pickerRows = block.slice(
+    block.indexOf('ForEach(orderedSources)'),
+    block.indexOf('Divider()', block.indexOf('ForEach(orderedSources)')),
+  );
+  assert.doesNotMatch(pickerRows, /\.onDrop\(/,
+    '离开单行不应被误判为取消整个拖动会话');
   assert.ok(block.includes('.accessibilityLabel("拖动 \\(source.label) 排序")'));
   assert.match(block, /\.accessibilityAction\(named: "上移"\)/);
   assert.match(block, /\.accessibilityAction\(named: "下移"\)/);
   assert.match(block, /\.focusable\(\)/);
   assert.match(block, /\.onMoveCommand[\s\S]*case \.up:[\s\S]*case \.down:/);
-  const pickerRows = block.slice(
-    block.indexOf('ForEach(orderedSources)'),
-    block.indexOf('Divider()', block.indexOf('ForEach(orderedSources)')),
-  );
   assert.doesNotMatch(pickerRows, /Image\(systemName: "chevron\.(up|down)"\)/);
 });
