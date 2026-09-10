@@ -21,3 +21,11 @@ The collector deduplicates in-flight requests, caches success for 60 seconds, su
 ## Stage 1 validation
 
 Nine targeted tests cover units and plans, null/malformed values, isolated startup arguments, CLI/Desktop discovery, a real fixture subprocess exchanging split JSON lines, timeouts/abort/output bounds, fallback time budgets, cache/backoff, and late-result cancellation. A live read using the implementation succeeded against official Claude Code 2.1.260 without sending a prompt. No account details or raw responses are included in this document.
+
+## Stage 2 runtime and UI
+
+The existing `/api/quota` read schedules a cached Claude refresh without delaying the response. `serve` starts background polling, and shutdown/collection switches stop the worker. Status is exposed as `claude` with sanitized failure messages. A recently successful live read remains authoritative over cached terminal statusline windows for five minutes; statusline context/cost still flows, and its limits are accepted again when the active collector fails or becomes stale.
+
+A definitive non-subscription answer removes only Claude's quota source. Transient failures preserve both old limits and their actual acquisition time. The native panel decodes refresh/error state independently of statusline availability, and settings now explain automatic fetching instead of asking users to start a conversation.
+
+Integration tests exercise the real HTTP server, persistent quota store, switch cancellation/restart, custom-statusline coexistence and the compiled Swift decoder. Test binaries and temporary profiles are isolated from real credentials.

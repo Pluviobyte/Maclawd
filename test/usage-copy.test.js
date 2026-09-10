@@ -151,7 +151,7 @@ test('额度设置把 Claude HUD 兼容作为自动行为，不暴露接管和�
   );
   assert.match(quota, /自动兼容 Claude HUD/);
   assert.match(quota, /保持它原有的显示/);
-  assert.match(quota, /保留原显示并读取额度/);
+  assert.match(quota, /兼容状态行作为补充/);
   assert.doesNotMatch(quota, /接管并保留原有|状态行槽位|foreignBanner/);
 });
 

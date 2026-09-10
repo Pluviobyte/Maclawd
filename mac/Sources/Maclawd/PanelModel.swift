@@ -250,6 +250,7 @@ enum StatuslineState: String {
 }
 
 struct QuotaSnapshot: Equatable {
+    var claudeMessage: String?
     var sources: [QuotaSource] = []
     var workBuddy = WorkBuddyQuotaStatus()
     var empty: Bool = true
@@ -272,6 +273,14 @@ struct QuotaSnapshot: Equatable {
     ) -> QuotaSnapshot {
         var out = QuotaSnapshot()
         out.sources = (json["sources"] as? [[String: Any]] ?? []).compactMap(QuotaSource.init)
+        if let claude = json["claude"] as? [String: Any], claude["installed"] as? Bool == true {
+            if let error = claude["lastError"] as? [String: Any] {
+                out.claudeMessage = error["message"] as? String
+            } else if claude["refreshing"] as? Bool == true,
+                      !out.sources.contains(where: { $0.id == "claude-code" }) {
+                out.claudeMessage = "正在读取 Claude 订阅额度…"
+            }
+        }
         out.workBuddy.installed = workBuddyInstalled
         out.workBuddy.decode(json["workBuddy"])
         out.empty = json["empty"] as? Bool ?? out.sources.isEmpty

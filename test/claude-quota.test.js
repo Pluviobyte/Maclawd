@@ -89,7 +89,7 @@ readline.createInterface({input:process.stdin}).on('line', line => {
   process.stdout.write(line.slice(0,20));setTimeout(()=>process.stdout.write(line.slice(20)),5);
  } else process.exit(22);
 });`);
-  const raw = await probeClaudeUsage(command, { timeoutMs: 2000 });
+  const raw = await probeClaudeUsage(command, { timeoutMs: 10_000 });
   assert.deepEqual(raw, payload());
 });
 

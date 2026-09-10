@@ -338,6 +338,13 @@ export function markAlerted(alerts, { now = Date.now() } = {}) {
 }
 
 /** 删除全部额度记录。跟着「删除全部用量记录」一起走。 */
+/** Remove a definitively inapplicable account without clearing other providers. */
+export function removeQuotaSource(source) {
+  const store = loadStore();
+  delete store.sources[source];
+  persist(store);
+}
+
 export function clearQuota() {
   removeJson(QUOTA_FILE);
 }

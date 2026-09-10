@@ -797,6 +797,12 @@ private struct QuotaBlock: View {
                         || store.quota.workBuddy.lastErrorCode != nil) {
                     workBuddyStatus
                 }
+                if store.quota.enabled && !hiddenSourceIDs.contains("claude-code"),
+                   let message = store.quota.claudeMessage {
+                    Text(message)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
             }
         }
     }
@@ -906,14 +912,14 @@ private struct QuotaBlock: View {
             switch store.quota.statusline {
             case .foreign:
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("正在读取 Codex 额度").font(.system(size: 12))
-                    Text("Claude Code 的自定义状态行未被修改，可在设置中确认兼容")
+                    Text("正在读取 Codex 与 Claude 额度").font(.system(size: 12))
+                    Text("Claude 会主动查询订阅额度，自定义状态行未被修改")
                         .font(.system(size: 11)).foregroundStyle(.secondary)
                 }
             default:
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("等待第一次响应").font(.system(size: 12))
-                    Text("Codex 会自动刷新；Claude Code 在交互式会话首次响应后出现")
+                    Text("正在读取订阅额度").font(.system(size: 12))
+                    Text("Codex 与 Claude 会自动刷新，无需先发送聊天消息")
                         .font(.system(size: 11)).foregroundStyle(.secondary)
                 }
             }

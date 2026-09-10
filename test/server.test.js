@@ -13,6 +13,7 @@ const root = mkdtempSync(join(tmpdir(), 'maclawd-server-'));
 process.env.MACLAWD_DATA_DIR = join(root, 'data');
 const CLAUDE_SETTINGS = join(root, 'claude-settings.json');
 process.env.MACLAWD_CLAUDE_SETTINGS = CLAUDE_SETTINGS;
+process.env.MACLAWD_CLAUDE_BIN = join(root, 'missing-claude');
 // 不让测试碰到真实工具目录。
 process.env.MACLAWD_CLAUDE_DIRS = join(root, 'empty-claude');
 process.env.MACLAWD_CODEX_HOME = join(root, 'empty-codex');
@@ -388,14 +389,15 @@ test('设置开关不能借隐藏参数自动修改未知状态行', async () =>
   assert.deepEqual(JSON.parse(readFileSync(CLAUDE_SETTINGS, 'utf-8')).statusLine, custom);
 });
 
-test('自定义 Claude 状态行被保护时，Codex 额度读取仍可独立开启', async () => {
+test('自定义 Claude 状态行被保护时，Codex 与 Claude 主动额度仍可开启', async () => {
   const custom = { type: 'command', command: '/usr/local/bin/my-statusline' };
   writeFileSync(CLAUDE_SETTINGS, `${JSON.stringify({ statusLine: custom }, null, 2)}\n`);
 
   const result = await post('/api/settings', { quotaTracking: true });
   assert.equal(result.settings.quotaTracking, true);
   assert.equal(result.settings.quotaStatusline, false);
-  assert.equal(result.blocked, 'statusline');
+  assert.equal(result.blocked, undefined);
+  assert.equal(result.error, undefined);
   assert.deepEqual(JSON.parse(readFileSync(CLAUDE_SETTINGS, 'utf-8')).statusLine, custom);
 
   await post('/api/settings', { quotaTracking: false });

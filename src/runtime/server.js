@@ -38,8 +38,9 @@ import {
   installStatusline, uninstallStatusline, statuslineStatus,
 } from './statusline-install.js';
 import {
-  readQuota, recordQuota, clearQuota, pendingAlerts, markAlerted, QUOTA_FILE,
+  readQuota, recordQuota, clearQuota, removeQuotaSource, pendingAlerts, markAlerted, QUOTA_FILE,
 } from './account-quota.js';
+import { createClaudeQuotaCollector } from './claude-quota.js';
 import { createCodexQuotaCollector } from './codex-quota.js';
 import { createCursorQuotaCollector } from './cursor-quota.js';
 import { createGrokQuotaCollector } from './grok-quota.js';
@@ -422,6 +423,7 @@ function openProject(action, path) {
 export function createUsageServer({
   collector = null,
   quotaCollector = null,
+  claudeQuotaCollector = null,
   cursorQuotaCollector = null,
   grokQuotaCollector = null,
   workBuddyQuotaCollector = null,
@@ -430,6 +432,16 @@ export function createUsageServer({
   // 面板不该要求用户手动点刷新，所以服务端自带后台采集循环。
   const worker = collector ?? createCollector();
   const quotaWorker = quotaCollector ?? createCodexQuotaCollector();
+  const claudeQuotaWorker = claudeQuotaCollector ?? createClaudeQuotaCollector({
+    unavailable: () => removeQuotaSource('claude-code'),
+  });
+  function syncClaudeQuotaWorker() {
+    const settings = loadSettings();
+    if (usageEnabled(settings) && settings.quotaTracking === true) {
+      claudeQuotaWorker.start();
+      void claudeQuotaWorker.refresh().catch(() => {});
+    } else claudeQuotaWorker.stop();
+  }
   const cursorQuotaWorker = cursorQuotaCollector ?? createCursorQuotaCollector();
   const grokQuotaWorker = grokQuotaCollector ?? createGrokQuotaCollector();
   const workBuddyQuotaWorker = workBuddyQuotaCollector ?? createWorkBuddyQuotaCollector();
@@ -886,6 +898,15 @@ export function createUsageServer({
             return;
           }
           const report = JSON.parse((await readBody(req)) || '{}');
+          // A statusline can carry the terminal's older cached limits. Keep the
+          // recent live account reading authoritative, while accepting context/cost.
+          const claudeStatus = claudeQuotaWorker.status();
+          if (report && typeof report === 'object' && (!report.source || report.source === 'claude-code')
+            && claudeStatus.lastSuccessAt != null && !claudeStatus.lastError
+            && Date.now() - claudeStatus.lastSuccessAt < 5 * 60_000) {
+            delete report.windows;
+            delete report.completeSnapshot;
+          }
           const snapshot = recordQuota(report);
           sendJson(res, 200, snapshot ?? readQuota());
           return;
@@ -893,6 +914,7 @@ export function createUsageServer({
         // 打开额度页时触发一次带缓存的 Codex 刷新。不阻塞本次响应，
         // 成功后原生面板下一轮轻量轮询就会拿到。
         void quotaWorker.refresh().catch(() => {});
+        void claudeQuotaWorker.refresh().catch(() => {});
         void cursorQuotaWorker.refresh().catch(() => {});
         void grokQuotaWorker.refresh().catch(() => {});
         void workBuddyQuotaWorker.refresh().catch(() => {});
@@ -904,6 +926,7 @@ export function createUsageServer({
           // 这两种情况的文案完全不同。
           statusline: statuslineStatus(),
           enabled: settings.quotaTracking === true,
+          claude: claudeQuotaWorker.status(),
           cursor: cursorQuotaWorker.status(),
           grok: grokQuotaWorker.status(),
           workBuddy: workBuddyQuotaWorker.status(),
@@ -1034,6 +1057,8 @@ export function createUsageServer({
           let next = saveSettings(patch);
           const effects = [];
           const quotaTrackingChanged = next.quotaTracking !== before.quotaTracking;
+          // Cancel immediately when either collection switch turns off.
+          if (!usageEnabled(next) || next.quotaTracking !== true) claudeQuotaWorker.stop();
 
           // 开关必须真的做事。此前 hookEnhancement 只是存了个布尔值，
           // 真正干活的是旁边一个独立按钮——那种开关是在骗用户。
@@ -1090,15 +1115,14 @@ export function createUsageServer({
                 const r = installStatusline({ autoChainKnown: true });
                 if (r.blocked) {
                   next = saveSettings({ quotaTracking: true, quotaStatusline: false });
+                  syncClaudeQuotaWorker();
                   void quotaWorker.refresh({ force: true }).catch(() => {});
                   void cursorQuotaWorker.refresh({ force: true }).catch(() => {});
                   void grokQuotaWorker.refresh({ force: true }).catch(() => {});
                   void workBuddyQuotaWorker.refresh({ force: true }).catch(() => {});
                   sendJson(res, 200, {
                     settings: next,
-                    blocked: 'statusline',
-                    foreignCommand: r.foreignCommand,
-                    error: '已开启 Codex 额度；检测到自定义 Claude 状态行，未覆盖它。',
+                    effects: ['已开启 Codex 与 Claude 主动额度读取；自定义状态行未被修改。'],
                   });
                   return;
                 }
@@ -1172,9 +1196,11 @@ export function createUsageServer({
                 uninstallCodexPermissionHook();
               }
             } catch { /* Doctor will surface an external file that remains unreadable. */ }
+            syncClaudeQuotaWorker();
             sendJson(res, 200, { settings: next, error: err.message });
             return;
           }
+          syncClaudeQuotaWorker();
           sendJson(res, 200, { settings: next, effects });
           return;
         }
@@ -1312,6 +1338,7 @@ export function createUsageServer({
     stopHookWatch();
     for (const stop of stopSessionMonitors) stop();
     quotaWorker.stop();
+    claudeQuotaWorker.stop();
     cursorQuotaWorker.stop();
     grokQuotaWorker.stop();
     workBuddyQuotaWorker.stop();
@@ -1320,7 +1347,7 @@ export function createUsageServer({
     waiters.clear();
   });
 
-  return { server, worker, quotaWorker, cursorQuotaWorker, grokQuotaWorker, workBuddyQuotaWorker, identity };
+  return { server, worker, quotaWorker, claudeQuotaWorker, cursorQuotaWorker, grokQuotaWorker, workBuddyQuotaWorker, identity };
 }
 
 /** 端口被占时最多往后试几个。够覆盖「同机开了几个 Vite」，又不会无限游走。 */
@@ -1360,7 +1387,7 @@ async function probeMaclawd(port, timeoutMs = 400) {
  */
 export function serve({ port = 4173, host = null, collector = null } = {}) {
   const {
-    server, worker, quotaWorker, cursorQuotaWorker, grokQuotaWorker, workBuddyQuotaWorker, identity,
+    server, worker, quotaWorker, claudeQuotaWorker, cursorQuotaWorker, grokQuotaWorker, workBuddyQuotaWorker, identity,
   } = createUsageServer({ collector });
   // 只有显式开启局域网镜像才监听外部地址；否则严格绑回环。
   const bind = host ?? (loadSettings().lanMirror === true ? '0.0.0.0' : '127.0.0.1');
@@ -1406,11 +1433,12 @@ export function serve({ port = 4173, host = null, collector = null } = {}) {
       // 后台开始采集，页面打开即有数据。
       worker.start().catch(() => {});
       quotaWorker.start();
+      claudeQuotaWorker.start();
       cursorQuotaWorker.start();
       grokQuotaWorker.start();
       workBuddyQuotaWorker.start();
       resolvePromise({
-        server, worker, quotaWorker, cursorQuotaWorker, grokQuotaWorker, workBuddyQuotaWorker,
+        server, worker, quotaWorker, claudeQuotaWorker, cursorQuotaWorker, grokQuotaWorker, workBuddyQuotaWorker,
         identity, port: actual, host: bind,
       });
     });

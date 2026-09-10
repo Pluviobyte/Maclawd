@@ -170,12 +170,12 @@ struct SettingsPage: View {
             VStack(alignment: .leading, spacing: 10) {
                 SwitchRow(
                     title: "读取订阅额度",
-                    info: "Codex 通过官方 CLI 自动读取；Claude Code 通过状态行读取；"
+                    info: "Codex 通过官方 CLI 自动读取；Claude Code 通过官方客户端主动查询，状态行作为补充；"
                           + "WorkBuddy 会读取本机登录文件，并使用其中的 Token 查询计费服务。"
                           + "Token 只在内存中使用，不写入 Maclawd 数据或日志。"
                           + "Maclawd 会自动兼容 Claude HUD 并保持它原有的显示。\n\n"
-                          + "Claude Code 状态行只在交互式界面刷新。`claude -p`、CI 与后台任务"
-                          + "同样消耗额度，但不会触发更新，因此数字可能滞后。",
+                          + "Claude 打开面板时按一分钟缓存刷新，后台每五分钟查询。"
+                          + "查询不发送聊天消息；失败时保留旧数据并显示采集时间。",
                     isOn: store.bool("quotaTracking"),
                     enabled: !statuslineBusy
                 ) { want in
@@ -201,11 +201,11 @@ struct SettingsPage: View {
     private var customStatuslineNotice: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(store.bool("quotaTracking")
-                 ? "Codex 额度已开启。自定义 Claude 状态行未被修改。"
+                 ? "Codex 与 Claude 主动额度读取已开启。自定义状态行未被修改。"
                  : "检测到自定义 Claude 状态行，尚未修改它。")
                 .font(.system(size: 10.5))
                 .foregroundStyle(.orange)
-            Button("保留原显示并读取额度") {
+            Button("兼容状态行作为补充") {
                 statuslineBusy = true
                 store.statuslineAction("chain") { _ in statuslineBusy = false }
             }
