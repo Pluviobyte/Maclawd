@@ -789,12 +789,6 @@ private struct QuotaBlock: View {
                                     QuotaRow(window: window)
                                 }
                             }
-                            if let context = source.context {
-                                Text("上下文剩余 \(Int(context.remainingPercent.rounded()))%"
-                                     + (context.windowSize.map { "（窗口 \(Int($0 / 1000))K）" } ?? ""))
-                                    .font(.system(size: 10))
-                                    .foregroundStyle(.secondary)
-                            }
                         }
                     }
                 }

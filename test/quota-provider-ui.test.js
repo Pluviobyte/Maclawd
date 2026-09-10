@@ -28,6 +28,15 @@ test('订阅额度即使只有一个服务商也始终显示来源名称', () =>
     '单一来源时也不能隐藏 Claude Code / Codex 标签');
 });
 
+test('概览的订阅额度不混入当前会话上下文用量', () => {
+  const block = panelSource.slice(
+    panelSource.indexOf('private struct QuotaBlock'),
+    panelSource.indexOf('private struct QuotaRow'),
+  );
+  assert.doesNotMatch(block, /source\.context|上下文剩余|context\.windowSize/,
+    '上下文窗口是当前会话状态，不是账户订阅额度');
+});
+
 test('面板、菜单栏与额度提醒统一展示剩余百分比', () => {
   const row = panelSource.slice(
     panelSource.indexOf('private struct QuotaRow'),
