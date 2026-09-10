@@ -9,3 +9,7 @@ Independent CLI quota collection is now opt-in (`kimiCodeQuotaTracking`, default
 The provider layer adds an enabled status flag and provider-specific sanitized error text. Disabling during an in-flight request discards both late success and late failure. It never sends credentials to another region or modifies login files.
 
 Stage 1 tests reproduce the old default-on EAUTH warning, then verify opt-in, CLI-specific wording, late-error suppression and executable detection. The existing 15 desktop/CLI transport and auth tests also pass. Shared provider/auth/transport modules are included as dependencies of the previously local Kimi adapter; unrelated application changes remain outside this commit.
+
+Stage 2 adds the dedicated native settings switch, runtime lifecycle handling, and enabled-aware status display. Disabling removes only the independent CLI quota snapshot and rejects new CLI reports until re-enabled. Desktop membership and other providers remain intact. The native label explicitly says Kimi Code CLI.
+
+Validation: 688 tests pass in the combined workspace; 53 targeted tests and the native build pass from an isolated staged tree. The packaged local app was restarted. Its runtime reported successful desktop membership, disabled independent CLI collection with no attempted query, and no authentication error. The native overview retained Kimi quota and no longer displayed the CLI login warning. No login files or credentials were changed.

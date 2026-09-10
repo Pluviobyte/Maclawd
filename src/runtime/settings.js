@@ -31,6 +31,8 @@ export const DEFAULTS = {
   // 所有服务商的额度主开关。Codex 只读官方 CLI，Claude Code 另需
   // quotaStatusline 通道；两者不能再用同一个布尔值表示。
   quotaTracking: false,
+  // Standalone Kimi Code CLI uses a separate login from Kimi Desktop.
+  kimiCodeQuotaTracking: false,
   // 额度快用完时弹一次自绘浮窗。默认开——这是用户主动要的功能，
   // 而且有实际决策价值（决定现在敢不敢开大活），不是骚扰。
   quotaAlert: true,

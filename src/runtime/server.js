@@ -45,6 +45,7 @@ import { createCodexQuotaCollector } from './codex-quota.js';
 import { createCursorQuotaCollector } from './cursor-quota.js';
 import { createGrokQuotaCollector } from './grok-quota.js';
 import { createWorkBuddyQuotaCollector } from './workbuddy-quota.js';
+import { createKimiQuotaCollector, createKimiCodeQuotaCollector } from './kimi-quota.js';
 import { createPermissionBroker, decisionResponse } from './permissions.js';
 import { authorize, currentToken, pairingUrls, resetToken, rotateToken } from './lan.js';
 import { createOrchestrator } from './orchestrator.js';
@@ -427,6 +428,8 @@ export function createUsageServer({
   cursorQuotaCollector = null,
   grokQuotaCollector = null,
   workBuddyQuotaCollector = null,
+  kimiQuotaCollector = null,
+  kimiCodeQuotaCollector = null,
   identity = createRuntimeIdentity(),
 } = {}) {
   // 面板不该要求用户手动点刷新，所以服务端自带后台采集循环。
@@ -445,6 +448,21 @@ export function createUsageServer({
   const cursorQuotaWorker = cursorQuotaCollector ?? createCursorQuotaCollector();
   const grokQuotaWorker = grokQuotaCollector ?? createGrokQuotaCollector();
   const workBuddyQuotaWorker = workBuddyQuotaCollector ?? createWorkBuddyQuotaCollector();
+  const desktopQuotaWorkers = {
+    kimi: kimiQuotaCollector ?? createKimiQuotaCollector(),
+    kimiCode: kimiCodeQuotaCollector ?? createKimiCodeQuotaCollector(),
+  };
+  if (loadSettings().kimiCodeQuotaTracking !== true) removeQuotaSource('kimi-code');
+  function syncKimiCodeQuotaWorker() {
+    const settings = loadSettings();
+    if (usageEnabled(settings) && settings.quotaTracking === true && settings.kimiCodeQuotaTracking === true) {
+      desktopQuotaWorkers.kimiCode.start();
+      void desktopQuotaWorkers.kimiCode.refresh({ force: true }).catch(() => {});
+    } else {
+      desktopQuotaWorkers.kimiCode.stop();
+      removeQuotaSource('kimi-code');
+    }
+  }
 
   // 状态引擎 + 编排器：目前只有「速率推断」这条降级路径在喂它，
   // hook 通道接上后同一个引擎直接消费 hook 事件，不需要改结构。
@@ -898,6 +916,10 @@ export function createUsageServer({
             return;
           }
           const report = JSON.parse((await readBody(req)) || '{}');
+          if (report?.source === 'kimi-code' && settings.kimiCodeQuotaTracking !== true) {
+            sendJson(res, 200, { ignored: true });
+            return;
+          }
           // A statusline can carry the terminal's older cached limits. Keep the
           // recent live account reading authoritative, while accepting context/cost.
           const claudeStatus = claudeQuotaWorker.status();
@@ -919,6 +941,7 @@ export function createUsageServer({
           void cursorQuotaWorker.refresh().catch(() => {});
           void grokQuotaWorker.refresh().catch(() => {});
           void workBuddyQuotaWorker.refresh().catch(() => {});
+          for (const collector of Object.values(desktopQuotaWorkers)) void collector.refresh().catch(() => {});
         }
         const settings = loadSettings();
         const snapshot = readQuota();
@@ -932,6 +955,7 @@ export function createUsageServer({
           cursor: cursorQuotaWorker.status(),
           grok: grokQuotaWorker.status(),
           workBuddy: workBuddyQuotaWorker.status(),
+          ...Object.fromEntries(Object.entries(desktopQuotaWorkers).map(([key, collector]) => [key, collector.status()])),
           alert: {
             enabled: settings.quotaAlert === true,
             threshold: settings.quotaAlertThreshold,
@@ -1059,6 +1083,10 @@ export function createUsageServer({
           let next = saveSettings(patch);
           const effects = [];
           const quotaTrackingChanged = next.quotaTracking !== before.quotaTracking;
+          if (!usageEnabled(next) || next.quotaTracking !== true || next.kimiCodeQuotaTracking !== true) {
+            desktopQuotaWorkers.kimiCode.stop();
+            removeQuotaSource('kimi-code');
+          }
           // Cancel immediately when either collection switch turns off.
           if (!usageEnabled(next) || next.quotaTracking !== true) claudeQuotaWorker.stop();
 
@@ -1118,10 +1146,12 @@ export function createUsageServer({
                 if (r.blocked) {
                   next = saveSettings({ quotaTracking: true, quotaStatusline: false });
                   syncClaudeQuotaWorker();
+            syncKimiCodeQuotaWorker();
                   void quotaWorker.refresh({ force: true }).catch(() => {});
                   void cursorQuotaWorker.refresh({ force: true }).catch(() => {});
                   void grokQuotaWorker.refresh({ force: true }).catch(() => {});
                   void workBuddyQuotaWorker.refresh({ force: true }).catch(() => {});
+                  for (const collector of Object.values(desktopQuotaWorkers)) void collector.refresh({ force: true }).catch(() => {});
                   sendJson(res, 200, {
                     settings: next,
                     effects: ['已开启 Codex 与 Claude 主动额度读取；自定义状态行未被修改。'],
@@ -1136,6 +1166,7 @@ export function createUsageServer({
                 void cursorQuotaWorker.refresh({ force: true }).catch(() => {});
                 void grokQuotaWorker.refresh({ force: true }).catch(() => {});
                 void workBuddyQuotaWorker.refresh({ force: true }).catch(() => {});
+                for (const collector of Object.values(desktopQuotaWorkers)) void collector.refresh({ force: true }).catch(() => {});
               } else {
                 const r = uninstallStatusline();
                 next = saveSettings({ quotaTracking: false, quotaStatusline: false });
@@ -1170,6 +1201,7 @@ export function createUsageServer({
                 void grokQuotaWorker.refresh({ force: true }).catch(() => {});
                 void cursorQuotaWorker.refresh({ force: true }).catch(() => {});
                 void workBuddyQuotaWorker.refresh({ force: true }).catch(() => {});
+                for (const collector of Object.values(desktopQuotaWorkers)) void collector.refresh({ force: true }).catch(() => {});
               } else {
                 const r = uninstallStatusline();
                 next = saveSettings({ quotaTracking: false, quotaStatusline: false });
@@ -1199,10 +1231,12 @@ export function createUsageServer({
               }
             } catch { /* Doctor will surface an external file that remains unreadable. */ }
             syncClaudeQuotaWorker();
+            syncKimiCodeQuotaWorker();
             sendJson(res, 200, { settings: next, error: err.message });
             return;
           }
           syncClaudeQuotaWorker();
+          syncKimiCodeQuotaWorker();
           sendJson(res, 200, { settings: next, effects });
           return;
         }
@@ -1344,12 +1378,13 @@ export function createUsageServer({
     cursorQuotaWorker.stop();
     grokQuotaWorker.stop();
     workBuddyQuotaWorker.stop();
+    for (const collector of Object.values(desktopQuotaWorkers)) collector.stop();
     clearInterval(ticker);
     for (const resolve of waiters) resolve();
     waiters.clear();
   });
 
-  return { server, worker, quotaWorker, claudeQuotaWorker, cursorQuotaWorker, grokQuotaWorker, workBuddyQuotaWorker, identity };
+  return { server, worker, quotaWorker, claudeQuotaWorker, cursorQuotaWorker, grokQuotaWorker, workBuddyQuotaWorker, desktopQuotaWorkers, identity };
 }
 
 /** 端口被占时最多往后试几个。够覆盖「同机开了几个 Vite」，又不会无限游走。 */
@@ -1389,7 +1424,7 @@ async function probeMaclawd(port, timeoutMs = 400) {
  */
 export function serve({ port = 4173, host = null, collector = null } = {}) {
   const {
-    server, worker, quotaWorker, claudeQuotaWorker, cursorQuotaWorker, grokQuotaWorker, workBuddyQuotaWorker, identity,
+    server, worker, quotaWorker, claudeQuotaWorker, cursorQuotaWorker, grokQuotaWorker, workBuddyQuotaWorker, desktopQuotaWorkers, identity,
   } = createUsageServer({ collector });
   // 只有显式开启局域网镜像才监听外部地址；否则严格绑回环。
   const bind = host ?? (loadSettings().lanMirror === true ? '0.0.0.0' : '127.0.0.1');
@@ -1439,8 +1474,9 @@ export function serve({ port = 4173, host = null, collector = null } = {}) {
       cursorQuotaWorker.start();
       grokQuotaWorker.start();
       workBuddyQuotaWorker.start();
+      for (const collector of Object.values(desktopQuotaWorkers)) collector.start();
       resolvePromise({
-        server, worker, quotaWorker, claudeQuotaWorker, cursorQuotaWorker, grokQuotaWorker, workBuddyQuotaWorker,
+        server, worker, quotaWorker, claudeQuotaWorker, cursorQuotaWorker, grokQuotaWorker, workBuddyQuotaWorker, desktopQuotaWorkers,
         identity, port: actual, host: bind,
       });
     });

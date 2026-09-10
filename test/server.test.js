@@ -14,6 +14,8 @@ process.env.MACLAWD_DATA_DIR = join(root, 'data');
 const CLAUDE_SETTINGS = join(root, 'claude-settings.json');
 process.env.MACLAWD_CLAUDE_SETTINGS = CLAUDE_SETTINGS;
 process.env.MACLAWD_CLAUDE_BIN = join(root, 'missing-claude');
+process.env.MACLAWD_KIMI_DESKTOP_DIR = join(root, 'empty-kimi-desktop');
+process.env.MACLAWD_KIMI_CODE_DIR = join(root, 'empty-kimi');
 // 不让测试碰到真实工具目录。
 process.env.MACLAWD_CLAUDE_DIRS = join(root, 'empty-claude');
 process.env.MACLAWD_CODEX_HOME = join(root, 'empty-codex');

@@ -803,6 +803,19 @@ private struct QuotaBlock: View {
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                 }
+                ForEach(store.quota.desktopProviders.filter { provider in
+                    provider.enabled && provider.installed && !hiddenSourceIDs.contains(provider.id)
+                        && (provider.errorMessage != nil || !store.quota.sources.contains { $0.id == provider.id })
+                }) { provider in
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(provider.label)
+                            .font(.system(size: 11, weight: .semibold))
+                        Text(provider.refreshing ? "正在读取额度…" : provider.errorMessage ?? "等待额度数据")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
             }
         }
     }

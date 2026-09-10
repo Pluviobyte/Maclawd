@@ -243,6 +243,25 @@ struct WorkBuddyQuotaStatus: Equatable {
     }
 }
 
+struct DesktopQuotaStatus: Identifiable, Equatable {
+    let id: String
+    let label: String
+    let enabled: Bool
+    let installed: Bool
+    let refreshing: Bool
+    let errorMessage: String?
+
+    init(id: String, label: String, raw: Any?) {
+        let value = raw as? [String: Any] ?? [:]
+        self.enabled = value["enabled"] as? Bool ?? true
+        self.id = id
+        self.label = label
+        self.installed = value["installed"] as? Bool ?? false
+        self.refreshing = value["refreshing"] as? Bool ?? false
+        self.errorMessage = (value["lastError"] as? [String: Any])?["message"] as? String
+    }
+}
+
 /// 状态行通道的四种情形。面板据此决定显示什么——「没装通道」和
 /// 「装了但还没数据」的文案完全不同，混在一起会让用户干等。
 enum StatuslineState: String {
@@ -253,6 +272,7 @@ struct QuotaSnapshot: Equatable {
     var claudeMessage: String?
     var sources: [QuotaSource] = []
     var workBuddy = WorkBuddyQuotaStatus()
+    var desktopProviders: [DesktopQuotaStatus] = []
     var empty: Bool = true
     var statusline: StatuslineState = .unknown
     var foreignCommand: String?
@@ -283,6 +303,10 @@ struct QuotaSnapshot: Equatable {
         }
         out.workBuddy.installed = workBuddyInstalled
         out.workBuddy.decode(json["workBuddy"])
+        out.desktopProviders = [
+            DesktopQuotaStatus(id: "kimi", label: "Kimi", raw: json["kimi"]),
+            DesktopQuotaStatus(id: "kimi-code", label: "Kimi Code CLI", raw: json["kimiCode"]),
+        ]
         out.empty = json["empty"] as? Bool ?? out.sources.isEmpty
         out.enabled = json["enabled"] as? Bool ?? false
         if let sl = json["statusline"] as? [String: Any] {

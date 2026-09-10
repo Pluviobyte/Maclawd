@@ -172,6 +172,7 @@ struct SettingsPage: View {
                     title: "读取订阅额度",
                     info: "Codex 通过官方 CLI 自动读取；Claude Code 通过官方客户端主动查询，状态行作为补充；"
                           + "WorkBuddy 会读取本机登录文件，并使用其中的 Token 查询计费服务。"
+                          + "Kimi 桌面版复用桌面登录；独立 Kimi Code CLI 额度需单独开启。"
                           + "Token 只在内存中使用，不写入 Maclawd 数据或日志。"
                           + "Maclawd 会自动兼容 Claude HUD 并保持它原有的显示。\n\n"
                           + "Claude 打开面板时按一分钟缓存刷新，后台每五分钟查询。"
@@ -185,6 +186,13 @@ struct SettingsPage: View {
                         store.loadSettings()
                     }
                 }
+
+                SwitchRow(
+                    title: "读取独立 Kimi Code CLI 额度",
+                    detail: "仅使用 Kimi 桌面版无需开启；CLI 使用独立登录。",
+                    isOn: store.bool("kimiCodeQuotaTracking"),
+                    enabled: store.bool("quotaTracking")
+                ) { store.setSetting("kimiCodeQuotaTracking", $0) }
 
                 if store.quota.statusline == .foreign {
                     customStatuslineNotice

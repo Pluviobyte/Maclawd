@@ -53,6 +53,8 @@ const CURSOR_WINDOW_ORDER = [
 ];
 
 function validWindowKey(source, key) {
+  if (source === 'kimi') return ['total', 'work_five_hour', 'work_seven_day', 'code_five_hour', 'code_seven_day'].includes(key);
+  if (source === 'kimi-code') return /^duration_\d+$/.test(key);
   if (WINDOW_ORDER.includes(key)) return true;
   if (source === 'grok' && key === 'billing_cycle') return true;
   if (source === 'cursor') return CURSOR_WINDOW_ORDER.includes(key);
@@ -65,6 +67,10 @@ function orderedWindowKeys(source, windows) {
   return Object.keys(windows ?? {})
     .filter((key) => validWindowKey(source, key))
     .sort((a, b) => {
+      if (source === 'kimi') {
+        const order = ['total', 'work_five_hour', 'code_five_hour', 'work_seven_day', 'code_seven_day'];
+        return order.indexOf(a) - order.indexOf(b);
+      }
       if (source === 'workbuddy') {
         const [aKind, aIndex] = a.split('_');
         const [bKind, bIndex] = b.split('_');
@@ -90,6 +96,8 @@ export const SOURCE_LABELS = {
   cursor: 'Cursor',
   grok: 'Grok Build',
   workbuddy: 'WorkBuddy',
+  kimi: 'Kimi',
+  'kimi-code': 'Kimi Code CLI',
 };
 
 function emptyStore() {
@@ -241,6 +249,7 @@ export function freshness(window, now = Date.now(), source = null) {
   if (resetAt !== null && now > resetAt) return 'reset';
   const lastSeenAt = num(window?.lastSeenAt) ?? 0;
   const quietAfter = source === 'codex' ? CODEX_QUIET_AFTER_MS
+    : ['kimi', 'kimi-code'].includes(source) ? 15 * 60_000
     : source === 'cursor' ? CURSOR_QUIET_AFTER_MS
       : source === 'grok' ? GROK_QUIET_AFTER_MS
         : source === 'workbuddy' ? WORKBUDDY_QUIET_AFTER_MS : QUIET_AFTER_MS;
