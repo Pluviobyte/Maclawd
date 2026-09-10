@@ -50,6 +50,7 @@ test('opening quota refreshes Claude, stale statusline cannot overwrite live lim
     read: async () => { calls++; if (fail) throw Object.assign(new Error('private'), { code: 'ENODATA' });
       return claudeQuotaReport(raw); } });
   const request = await serverFixture(t, worker);
+  await request('/api/quota?refresh=false'); assert.equal(calls, 0, 'menu-bar reads must not accelerate the background polling timer');
   await request('/api/quota'); await worker.refresh();
   let response = await request('/api/quota');
   assert.equal(calls, 1);

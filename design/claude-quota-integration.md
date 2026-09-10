@@ -29,3 +29,16 @@ The existing `/api/quota` read schedules a cached Claude refresh without delayin
 A definitive non-subscription answer removes only Claude's quota source. Transient failures preserve both old limits and their actual acquisition time. The native panel decodes refresh/error state independently of statusline availability, and settings now explain automatic fetching instead of asking users to start a conversation.
 
 Integration tests exercise the real HTTP server, persistent quota store, switch cancellation/restart, custom-statusline coexistence and the compiled Swift decoder. Test binaries and temporary profiles are isolated from real credentials.
+
+## Stage 3 delivery verification
+
+The native background menu-bar reader now requests `/api/quota?refresh=false`. This keeps snapshot reads from accelerating the five-minute background schedule. Visible panels retain normal cached refresh behavior. An HTTP integration assertion verifies that the snapshot-only request does not start a probe.
+
+Validation completed:
+- Full combined workspace suite: 682 passing tests with `node --test --test-concurrency=4 test/*.test.js`.
+- Isolated staged tree (without unrelated local integrations): 666 passing tests and a successful native Swift debug build. Subsequent snapshot-only routing change passed the four HTTP/native integration tests.
+- Unbounded full-suite execution while a separate clean Swift build was running exposed fixture subprocess startup timeouts under contention. The functional protocol fixture now has a ten-second startup allowance; the explicit 80ms timeout test remains unchanged. The bounded full run passed without changing production probe timeouts.
+- Local debug app packaged and restarted. The running runtime reported a successful live Claude refresh with fresh window timestamps and no error. The native UI displayed those current limits without the stale-data note.
+- Claude settings checksum unchanged after the probe. No matching quota probe child remained after completion.
+
+All GitHub changes are confined to the Claude integration branch. Existing unrelated working-tree changes were preserved and are not included in these commits.

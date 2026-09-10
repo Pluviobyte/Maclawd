@@ -706,7 +706,7 @@ final class RuntimeClient: ObservableObject {
             }
         }
 
-        get("/api/quota") { [weak self] json in
+        get("/api/quota?refresh=false") { [weak self] json in
             guard let self, let json else { return }
             let snapshot = QuotaSnapshot.decode(json)
             // 菜单栏只放得下一个数字，取最紧的那个窗口。

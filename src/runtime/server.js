@@ -911,13 +911,15 @@ export function createUsageServer({
           sendJson(res, 200, snapshot ?? readQuota());
           return;
         }
-        // 打开额度页时触发一次带缓存的 Codex 刷新。不阻塞本次响应，
-        // 成功后原生面板下一轮轻量轮询就会拿到。
-        void quotaWorker.refresh().catch(() => {});
-        void claudeQuotaWorker.refresh().catch(() => {});
-        void cursorQuotaWorker.refresh().catch(() => {});
-        void grokQuotaWorker.refresh().catch(() => {});
-        void workBuddyQuotaWorker.refresh().catch(() => {});
+        // Background menu-bar reads use the snapshot; visible panels request a
+        // cached refresh. Provider timers continue independently for alerts.
+        if (url.searchParams.get('refresh') !== 'false') {
+          void quotaWorker.refresh().catch(() => {});
+          void claudeQuotaWorker.refresh().catch(() => {});
+          void cursorQuotaWorker.refresh().catch(() => {});
+          void grokQuotaWorker.refresh().catch(() => {});
+          void workBuddyQuotaWorker.refresh().catch(() => {});
+        }
         const settings = loadSettings();
         const snapshot = readQuota();
         sendJson(res, 200, {
