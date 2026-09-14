@@ -368,6 +368,7 @@ private struct OverviewPage: View {
                         .font(.system(size: 30, weight: .bold, design: .rounded))
                     Text((store.summary.collectionComplete ? "" : "已统计的 ") + "总 Token")
                         .font(.system(size: 11)).foregroundStyle(.secondary)
+                        .help("包含输入、输出、缓存写入和缓存读取；不是订阅额度。与不含缓存读取的统计比较时，请使用相同口径。")
                     Spacer()
                     if store.summary.showCost, let cost = store.summary.cost {
                         Text(String(format: "$%.2f", cost))

@@ -4,6 +4,7 @@ import { readJson, writeJson } from './store.js';
 import { TAIL_STATE_FILE } from './paths.js';
 import { lastNewlineBoundary, readLines, tailFingerprint } from './read-lines.js';
 import { throughput } from './usage-record.js';
+import { claudeUsageKey } from './dedupe.js';
 import { usageEnabled } from './settings.js';
 
 /**
@@ -132,12 +133,33 @@ export function createTailer({
       initializedParsers.add(parser);
     }
 
+    const cutoff = now - windowMs;
+    samples = samples.filter(([ts]) => ts >= cutoff);
+    const claudeSamples = new Map(samples.filter(([, , r]) => r.source === 'claude-code')
+      .map(sample => [claudeUsageKey(sample[2]), sample]).filter(([key]) => key !== null));
     const existingKeys = new Set(samples.map(([, , record]) => {
       if (!record?.messageId) return null;
       return [record.source, record.messageId, record.requestId ?? '', record.uuid ?? ''].join('|');
     }).filter(Boolean));
     const uniqueFresh = [];
     for (const record of fresh) {
+      if (record.source === 'claude-code') {
+        const key = claudeUsageKey(record);
+        const prior = key === null ? null : claudeSamples.get(key);
+        if (prior) {
+          // 更新完整值，不叠加流式部分值；保留初次采样时间，避免重复刷新窗口。
+          if (throughput(record) > prior[1]) {
+            prior[1] = throughput(record);
+            prior[2] = record;
+          }
+          continue;
+        }
+        const sample = [Math.min(record.ts, now), throughput(record), record];
+        samples.push(sample);
+        if (key !== null) claudeSamples.set(key, sample);
+        uniqueFresh.push(record);
+        continue;
+      }
       const key = record?.messageId
         ? [record.source, record.messageId, record.requestId ?? '', record.uuid ?? ''].join('|')
         : null;
@@ -147,7 +169,6 @@ export function createTailer({
       // 记录时间戳可能略微超前于本机时钟，钳到 now，避免样本落在窗口之外。
       samples.push([Math.min(record.ts, now), throughput(record), record]);
     }
-    const cutoff = now - windowMs;
     samples = samples.filter(([ts]) => ts >= cutoff);
     save();
 

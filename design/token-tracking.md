@@ -182,18 +182,19 @@ hit% = cache_read / (cache_read + cache_write + input) × 100
 
 ### 4. 去重合同
 
-非 Claude 来源取 tokei 的两层结构；Claude Code 采用 Vibe Usage 在真实日志上验证过的
-UUID 语义。Claude 的同一 `(message.id, requestId)` 可能包含多个不同 UUID 的合法用量
-片段，按 message/request 合并会造成大幅少计。
+非 Claude 来源保持两层结构；Claude Code 采用调用身份去重。
+同一次调用的不同 UUID 是内容块或流式快照，usage 不得累加。
+2026-09-14 核对 vibe-usage `fcf1c398` / `v0.10.21`，并通过本机日志验证。
 
 ```
-Claude Code 主键：uuid        # UUID 缺失时保留，不猜成重复
+Claude Code 主键：(message.id, requestId) # 两者均缺失才退回 uuid，再缺失则保留
 其他来源主键：(message.id, requestId)
 其他来源次键：uuid            # 仅当 message.id 缺失
 其他来源特例：同 message.id、不同 requestId，且任一方 isSidechain → 视为重复合并
 ```
 
-冲突时保留优先级（依次比较）：
+Claude 冲突保留 throughput 最大值，同值保留先出现者；不因 sidechain 丢弃完整值。
+其他来源冲突时保留优先级（依次比较）：
 
 1. 非 sidechain 优先于 sidechain
 2. `throughput` 大者优先

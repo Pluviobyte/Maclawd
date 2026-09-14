@@ -23,22 +23,45 @@ test('同 message.id + 同 requestId 视为同一条', () => {
   assert.equal(out.length, 1);
 });
 
-test('Claude Code：相同 message/request 但 UUID 不同是独立用量', () => {
+test('Claude Code：内容块与流式记录按调用去重，保留完整用量', () => {
   const out = dedupe([
     record({ source: 'claude-code', messageId: 'm1', requestId: 'r1', uuid: 'u1', input: 100 }),
     record({ source: 'claude-code', messageId: 'm1', requestId: 'r1', uuid: 'u2', input: 200 }),
   ]);
-  assert.equal(out.length, 2, 'Vibe Usage 以 UUID 区分 Claude 的合法分片');
-  assert.equal(sum(out), 320);
+  assert.equal(out.length, 1);
+  assert.equal(sum(out), 210);
 });
 
 test('Claude Code：相同 UUID 的复制记录只保留最完整的一条', () => {
   const out = dedupe([
-    record({ source: 'claude-code', messageId: 'm1', requestId: 'r1', uuid: 'u1', input: 100 }),
-    record({ source: 'claude-code', messageId: 'm2', requestId: 'r2', uuid: 'u1', input: 500 }),
+    record({ source: 'claude-code', uuid: 'u1', input: 100 }),
+    record({ source: 'claude-code', uuid: 'u1', input: 500 }),
   ]);
   assert.equal(out.length, 1);
   assert.equal(out[0].input, 500);
+});
+
+test('Claude Code：缺失单个调用 ID 仍去重；无身份记录保留', () => {
+  for (const identity of [{ messageId: 'm' }, { requestId: 'r' }]) {
+    assert.equal(dedupe(['a', 'b'].map(uuid => record({ source: 'claude-code', ...identity, uuid }))).length, 1);
+  }
+  assert.equal(dedupe([record({ source: 'claude-code' }), record({ source: 'claude-code' })]).length, 2);
+});
+
+test('Claude Code：不同请求不能因 sidechain 或相同 UUID 而合并', () => {
+  assert.equal(dedupe([
+    record({ source: 'claude-code', messageId: 'm', requestId: 'r1', uuid: 'u' }),
+    record({ source: 'claude-code', messageId: 'm', requestId: 'r2', uuid: 'u', sidechain: true }),
+  ]).length, 2);
+});
+
+test('Claude Code：完整 sidechain 副本优先于不完整主记录，与顺序无关', () => {
+  const partial = record({ source: 'claude-code', messageId: 'm', uuid: 'a', output: 1 });
+  const final = record({ ...partial, uuid: 'b', output: 100, sidechain: true });
+  for (const rows of [[partial, final], [final, partial]]) {
+    assert.equal(dedupe(rows).length, 1);
+    assert.equal(dedupe(rows)[0].output, 100);
+  }
 });
 
 test('同 message.id、不同 requestId 是合法分片，默认不合并', () => {

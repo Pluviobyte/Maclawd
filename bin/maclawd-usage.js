@@ -95,7 +95,7 @@ async function verify() {
     console.log(`  输出             ${fmt(total.output)}${total.reasoning > 0 ? dim(`  含推理 ${fmt(total.reasoning)}`) : ''}`);
     console.log(`  缓存读           ${fmt(total.cacheRead)}`);
     console.log(`  缓存写           ${fmt(cacheWrite(total))}${total.write1h > 0 ? dim(`  (5m ${fmt(total.write5m)} / 1h ${fmt(total.write1h)})`) : ''}`);
-    console.log(`  ${bold('billable')}         ${bold(fmt(billable(total)))}  ${dim('不含缓存读 · vibe-usage 口径')}`);
+    console.log(`  ${bold('非缓存读取量')}    ${bold(fmt(billable(total)))}  ${dim('不含缓存读 · 非实付费用或订阅额度')}`);
     console.log(`  ${bold('throughput')}       ${bold(fmt(throughput(total)))}  ${dim('四项全加 · tokei 口径')}`);
     const ratio = billable(total) > 0 ? throughput(total) / billable(total) : 0;
     console.log(`  两口径倍数        ${ratio.toFixed(2)}×`);

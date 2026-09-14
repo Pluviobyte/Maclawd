@@ -1,19 +1,32 @@
 import { throughput } from './usage-record.js';
 
+/** Claude 的调用身份供历史扫描和实时窗口共用。 */
+export function claudeUsageKey(record) {
+  const message = typeof record.messageId === 'string' ? record.messageId.trim() : '';
+  const request = typeof record.requestId === 'string' ? record.requestId.trim() : '';
+  if (message || request) return JSON.stringify(['claude-code', 'call', message, request]);
+  return record.uuid ? `u claude-code ${record.uuid}` : null;
+}
+
 /**
  * 两级去重。见 design/token-tracking.md「去重合同」。
  *
- *   Claude Code：uuid（不同 uuid 即使 message/request 相同也是合法分片）
+ *   Claude Code：(message.id, requestId)，均缺失时回落 uuid
  *   其余来源主键：(message.id, requestId)
  *   其余来源次键：uuid              仅当 message.id 缺失
  *   特例：同 message.id、不同 requestId，且任一方 isSidechain → 视为重复合并
  *
  * 主键防的是 API 流式重试——同一次响应会写出多行不同 uuid、相同 message.id 的记录。
- * 只按 uuid 去重（vibe-usage 的做法）防不住这种重复。
+ * 只按 uuid 去重防不住这种重复。
  */
 
 /** 冲突时是否用 candidate 替换 existing。 */
 export function prefer(candidate, existing) {
+  // Claude 内容块会重复携带同次调用的 usage，流式最终值可能在 sidechain 中。
+  // 核对 vibe-usage d4f9a1d / v0.10.21：完整度必须优先，不能累加部分响应。
+  if (candidate.source === 'claude-code' && existing.source === 'claude-code') {
+    return throughput(candidate) > throughput(existing);
+  }
   // 1. 非 sidechain 优先于 sidechain
   if (candidate.sidechain !== existing.sidechain) return existing.sidechain;
   // 2. throughput 大者优先（Claude 有时把同一条记录以零用量复制到别处）
@@ -36,13 +49,10 @@ export function dedupe(records) {
     // 键里带 source，避免两个工具的 id 空间偶然碰撞时互相吃掉记录。
     const scope = record.source ?? '';
 
-    // Claude Code 的一个 API 响应会把多个独立 usage 片段写成相同的
-    // message.id/requestId，但每个片段有自己的 UUID。Vibe Usage 的真实数据
-    // 证明按 message/request 合并会吃掉一半以上 Token，所以 Claude 必须以 UUID
-    // 为逻辑记录身份；没有 UUID 的匿名行宁可保留，也不能猜成重复。
+    // Claude 按调用而不是日志行计数；不同 requestId 仍是不同调用。
     if (record.source === 'claude-code') {
-      if (record.uuid) {
-        exactKey = `u ${scope} ${record.uuid}`;
+      exactKey = claudeUsageKey(record);
+      if (exactKey !== null) {
         const hit = exact.get(exactKey);
         if (hit !== undefined) index = hit;
       }

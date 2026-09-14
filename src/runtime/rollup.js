@@ -12,7 +12,8 @@ import {
  * 全部历史，不需要 tokei 那样的 _recalc_costs 重算过程。
  */
 
-export const ROLLUP_VERSION = 4;
+// v5：Claude 从 UUID 改为调用级去重，旧聚合不可继续展示，需重新扫描。
+export const ROLLUP_VERSION = 5;
 
 export const RANGES = [
   'today', 'yesterday', 'week', 'last_week', 'month', 'year', 'all',

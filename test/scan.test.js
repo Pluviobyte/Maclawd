@@ -13,13 +13,13 @@ import { intensityFromRate } from '../src/runtime/tail.js';
  * 所以用真实临时文件端到端验证三级读取策略，而不是打桩。
  */
 
-function assistantLine(ts, { input = 100, output = 50, cacheRead = 0, id, uuid }) {
+function assistantLine(ts, { input = 100, output = 50, cacheRead = 0, id, uuid, requestId = `req-${uuid}` }) {
   return `${JSON.stringify({
     type: 'assistant',
     timestamp: ts,
     cwd: '/Users/rain/Desktop/Maclawd',
     uuid,
-    requestId: `req-${uuid}`,
+    requestId,
     message: {
       id,
       model: 'claude-opus-5',
@@ -63,6 +63,45 @@ async function withFixture(run) {
     rmSync(root, { recursive: true, force: true });
   }
 }
+
+test('Claude 调用去重覆盖首次扫描、缓存复用、增量与跨文件副本', async () => {
+  await withFixture(async ({ file, scan }) => {
+    const line = (uuid, output) => assistantLine('2026-07-30T10:00:00Z', {
+      id: 'call', requestId: 'request', uuid, input: 100, cacheRead: 1000, output,
+    });
+    writeFileSync(file, line('a', 1) + line('b', 50));
+    for (let i = 0; i < 2; i++) {
+      const result = await scan();
+      assert.equal(result.bySource['claude-code'].length, 1);
+      assert.equal(result.bySource['claude-code'][0].output, 50);
+    }
+    appendFileSync(file, line('c', 100));
+    writeFileSync(join(file, '..', 'copied.jsonl'), line('d', 100));
+    const result = await scan();
+    assert.equal(result.bySource['claude-code'].length, 1);
+    assert.equal(result.bySource['claude-code'][0].output, 100);
+  });
+});
+
+test('Claude 实时窗口跨轮次替换流式 usage，不重复累计', async () => {
+  await withFixture(async ({ file }) => {
+    const { createTailer } = await import('../src/runtime/tail.js');
+    const claude = await import('../src/runtime/parsers/claude-code.js');
+    const tail = createTailer({ parsers: [claude], persist: false });
+    const now = Date.parse('2026-07-30T10:00:00Z');
+    const line = (uuid, output) => assistantLine(new Date(now).toISOString(), {
+      id: 'call', requestId: 'request', uuid, input: 100, cacheRead: 1000, output,
+    });
+    writeFileSync(file, '');
+    await tail.poll({ now, ignoreSettings: true });
+    appendFileSync(file, line('a', 1));
+    assert.equal((await tail.poll({ now, ignoreSettings: true })).windowTokens, 1101);
+    appendFileSync(file, line('b', 100) + line('c', 100));
+    assert.equal((await tail.poll({ now: now + 1000, ignoreSettings: true })).windowTokens, 1200);
+    assert.equal((await tail.poll({ now: now + 2000, ignoreSettings: true })).windowTokens, 1200);
+    assert.equal((await tail.poll({ now: now + 360000, ignoreSettings: true })).windowTokens, 0);
+  });
+});
 
 test('第 3 级：首次全量读取，项目名从 cwd 推导', async () => {
   await withFixture(async ({ file, scan }) => {
