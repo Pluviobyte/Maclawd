@@ -8,27 +8,14 @@ import WebKit
  那些动画是 CSS 驱动的，WebKit 原生就能播，零资产转换、零重新导出。
  换成 NSImage 会丢掉全部动画。
  */
-/**
- 承载 webView 的容器。
-
- **桌宠一直拖不动的真正原因**：contentView 直接就是 WKWebView，
- 而 WKWebView 是个正常的响应者，会自己吃掉 mouseDown / mouseDragged
- 去处理网页内容。事件永远到不了 NSWindow 的 mouseDown——
- 拖拽代码一直都在，只是从来没被调用过。而且没有任何报错，
- 表现就是「点它没反应」，最难查的那种。
-
- 这里把命中权收回来：落在角色身上就返回容器自己（不实现鼠标方法，
- 事件顺着响应链交给窗口处理），落在空白处返回 nil。
- 返回 nil 顺带解决了空白区吃掉点击的问题，而且**不需要任何全局监听**——
- 之前那版用全局监听切 ignoresMouseEvents，把整个输入弄死了。
- */
+/// 角色轮廓内把事件交回窗口处理点击与拖动；窗口外部穿透由独立指针采样负责。
 @MainActor
 final class PetContentView: NSView {
     /// 由窗口注入：这个点（窗口坐标）落在角色身上吗。
     var hitsCharacter: ((NSPoint) -> Bool)?
 
     override func hitTest(_ point: NSPoint) -> NSView? {
-        guard hitsCharacter?(point) ?? true else { return nil }
+        guard hitsCharacter?(point) ?? false else { return nil }
         return self
     }
 }
@@ -42,7 +29,12 @@ final class PetWindow: NSWindow {
     var onClick: (() -> Void)?
     /// 外壳事件回灌入口，由 AppDelegate 接到 RuntimeClient 上。
     var onShellEvent: ((String) -> Void)?
-    private var trackingArea: NSTrackingArea?
+    private let hitRegionHandler = PetHitRegionHandler()
+    private var hitRegion = PetHitRegion()
+    private var hitDocumentID: String?
+    private var awaitingHitRegion = false
+    private var pointerTimer: Timer?
+    private var isHovering = false
 
     // MARK: - 拖动状态
 
@@ -105,7 +97,7 @@ final class PetWindow: NSWindow {
         // 全空间可见，切桌面时桌宠跟着走。
         collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
         isMovableByWindowBackground = false
-        ignoresMouseEvents = false
+        ignoresMouseEvents = true
 
         // webView 必须套在容器里：直接当 contentView 的话它会吃掉全部鼠标事件。
         let container = PetContentView(frame: NSRect(x: 0, y: 0, width: size, height: size))
@@ -117,7 +109,15 @@ final class PetWindow: NSWindow {
 
         // 先试着回到上次拖到的地方；没有记录或那块屏幕已经不在了才回默认角落。
         if !restorePosition() { positionAtDefaultCorner() }
-        container.hitsCharacter = { [weak self] point in self?.hitsCharacter(point) ?? true }
+        container.hitsCharacter = { [weak self] point in self?.hitsCharacter(point) ?? false }
+        config.userContentController.add(hitRegionHandler, name: "petHitRegion")
+        hitRegionHandler.onUpdate = { [weak self] id, region in
+            guard let self, id == self.hitDocumentID else { return }
+            self.hitRegion = region
+            self.awaitingHitRegion = false
+            self.updatePointerInteraction()
+        }
+        refreshTracking()
     }
 
     private func positionAtDefaultCorner() {
@@ -129,37 +129,11 @@ final class PetWindow: NSWindow {
 
     // MARK: - 命中区域
 
-    /**
-     命中区与可见画面框，**由运行时按契约算好下发**。
-
-     此前这里硬编码四个归一化小数，靠一条测试盯着它和 characterContract 一致。
-     那能防漂移，但挡不住第二个问题：命中框需要**按动作变化**——
-     俯视平躺的 sleeping 比站立扁得多，用同一个框会让「点得到点不到」
-     变得没道理，而外壳并不知道当前在演哪个动作的几何。
-     所以改成随 plan 下发，Swift 里一个几何常量都不留。
-
-     nil 表示还没收到（启动头一两秒）或处于 mini 档（整个窗口就是角色）。
-     */
-    private var hitBox: NormalizedRect?
     private var marginBox: NormalizedRect?
 
-    /// 抓取容差。角色只有 45×27px，一个像素不差地要求命中太苛刻——
-    /// 但也不能给太多，给多了又回到「在空白处能拎起它」。
-    private static let grabMargin: CGFloat = 6
-
-    /// 运行时下发的几何。窗口尺寸变化时命中区跟着变，所以要重建追踪区。
+    /// 保留运行时几何入口；包围盒只用于屏幕边缘夹取，点击采用实际渲染轮廓。
     func applyGeometry(hit: NormalizedRect?, margin: NormalizedRect?) {
-        let changed = hit?.x0 != hitBox?.x0 || hit?.y0 != hitBox?.y0
-            || hit?.x1 != hitBox?.x1 || hit?.y1 != hitBox?.y1
-        hitBox = hit
         marginBox = margin
-        if changed { refreshTracking() }
-    }
-
-    /// 角色在当前窗口坐标下的可抓取矩形。
-    private var characterRect: NSRect {
-        guard let hitBox else { return NSRect(origin: .zero, size: frame.size) }
-        return hitBox.rect(in: frame.width).insetBy(dx: -Self.grabMargin, dy: -Self.grabMargin)
     }
 
     /// 可见画面在当前窗口坐标下的矩形。夹到屏幕内时用它。
@@ -170,27 +144,22 @@ final class PetWindow: NSWindow {
 
     /// 这个点落在角色身上吗？点在窗口坐标系里。
     private func hitsCharacter(_ point: NSPoint) -> Bool {
-        // mini 档整个窗口就是角色（取景已经裁到只剩演员），不必再收
-        if isMini { return true }
-        return characterRect.contains(point)
+        hitRegion.contains(point, in: frame.size)
     }
 
-    /**
-     **不做**动态的点击穿透。
+    /// 不依赖发给本应用或其他应用的鼠标事件，穿透开启后仍能恢复接收输入。
+    /// 从轮廓内按下后保持捕获，直到 mouseUp，拖动越出轮廓也不会丢失。
+    private func updatePointerInteraction() {
+        let point = convertPoint(fromScreen: NSEvent.mouseLocation)
+        let inside = isVisible && hitsCharacter(point)
+        ignoresMouseEvents = pressedAt == nil && !inside
+        guard pressedAt == nil, !awaitingHitRegion else { return }
+        if inside != isHovering {
+            isHovering = inside
+            onShellEvent?(inside ? "shell.hover" : "shell.hoverEnd")
+        }
+    }
 
-     曾经在这里用 NSEvent.addGlobalMonitorForEvents 跟着光标切换
-     ignoresMouseEvents，想让 93% 的透明区域把点击透给下面的窗口。
-     结果是把主功能弄坏了：**全局监听不接收发给自己应用的事件**，
-     一旦 ignoresMouseEvents 被置为 true，恢复它所需要的那个事件
-     可能永远等不到，于是窗口再也收不到任何鼠标输入——桌宠彻底拖不动，
-     而且没有任何报错，只是「点它没反应」。
-
-     命中收窄改由两处**不依赖任何全局状态**的手段完成，各自都能独立验证：
-       - 追踪区收到角色包围盒 → hover 不再在 93px 外误触发
-       - mouseDown 判定命中 → 空白处按下不会把它拎起来
-     代价是空白处的点击仍然被窗口吃掉（透不到下面）。那是个锦上添花，
-     不值得拿主功能去换。真要做，得用能独立验证的机制，而不是全局监听。
-     */
     // MARK: - 渲染
 
     func show(source: String?, motion: Bool, variant: String? = nil) {
@@ -198,11 +167,18 @@ final class PetWindow: NSWindow {
         // 只比对 source 会让变体切换不触发重渲染。
         // 镜像同理——贴左边和贴右边是同一个 source，漏掉它会导致换边不重绘。
         let key = "\(source ?? "")|\(variant ?? "")|\(motion)|\(dockEdge == .left)"
-        guard let source, key != currentKey else {
-            if source == nil { webView.loadHTMLString("", baseURL: nil) }
+        guard key != currentKey else { return }
+        currentKey = key
+        let documentID = UUID().uuidString
+        hitDocumentID = documentID
+        hitRegion = PetHitRegion()
+        awaitingHitRegion = source != nil
+        guard let source else {
+            awaitingHitRegion = false
+            webView.loadHTMLString("", baseURL: nil)
+            updatePointerInteraction()
             return
         }
-        currentKey = key
 
         // 渲染细节（尤其是共享样式表必须真正内联）统一由 CharacterRenderer 负责。
         // 面板里也要渲染同一只角色，两份实现必然漂移——而这里漂移的表现是
@@ -216,8 +192,16 @@ final class PetWindow: NSWindow {
             motion: motion,
             variant: variant,
             mirrored: dockEdge == .left
-        ) else { return }
-        webView.loadHTMLString(rendered.html, baseURL: rendered.baseURL)
+        ) else {
+            awaitingHitRegion = false
+            webView.loadHTMLString("", baseURL: nil)
+            updatePointerInteraction()
+            return
+        }
+        webView.loadHTMLString(
+            rendered.html + PetHitRegion.script(documentID: documentID, mirrored: dockEdge == .left),
+            baseURL: rendered.baseURL
+        )
     }
 
     // MARK: - 交互
@@ -231,8 +215,7 @@ final class PetWindow: NSWindow {
      这是拖放的标准做法。
      */
     override func mouseDown(with event: NSEvent) {
-        // 空白处按下不算数。ignoresMouseEvents 大多数时候已经拦住了，
-        // 但它是跟着光标移动更新的——用键盘或脚本瞬移光标再按下时会来不及。
+        // 再按事件位置检查轮廓，避免指针采样与按下之间移动导致误触。
         guard hitsCharacter(event.locationInWindow) else { return }
         pressedAt = NSEvent.mouseLocation
         grabOffset = event.locationInWindow
@@ -260,6 +243,7 @@ final class PetWindow: NSWindow {
             pressedAt = nil
             grabOffset = nil
             pendingClicks = 0
+            updatePointerInteraction()
         }
 
         if isDragging {
@@ -441,30 +425,19 @@ final class PetWindow: NSWindow {
         refreshTracking()
     }
 
-    override func mouseEntered(with event: NSEvent) {
-        onShellEvent?("shell.hover")
-    }
-
-    /// hover 是 held 模式：必须成对，否则「注视」会一直挂着不走。
-    override func mouseExited(with event: NSEvent) {
-        onShellEvent?("shell.hoverEnd")
-    }
-
-    /// 鼠标进入时才有 hover；窗口会移动，所以每次改变 frame 都要重建追踪区。
+    /// 独立采样在透明区域和拖动期间都继续运行，无须全局事件监听或辅助功能权限。
     func refreshTracking() {
-        if let existing = trackingArea { contentView?.removeTrackingArea(existing) }
-        guard let view = contentView else { return }
-        // 追踪区跟着角色走，不是整个窗口。用 view.bounds 的话，
-        // 光标停在桌宠上方 93px 的空白处就会触发「注视」——
-        // 那里看起来什么都没有，用户不会明白它在看什么。
-        let area = NSTrackingArea(
-            rect: isMini ? view.bounds : characterRect,
-            options: [.mouseEnteredAndExited, .activeAlways],
-            owner: self,
-            userInfo: nil
-        )
-        view.addTrackingArea(area)
-        trackingArea = area
+        if pointerTimer == nil {
+            let timer = Timer(timeInterval: 1.0 / 60, repeats: true) { [weak self] timer in
+                MainActor.assumeIsolated {
+                    guard let self else { timer.invalidate(); return }
+                    self.updatePointerInteraction()
+                }
+            }
+            RunLoop.main.add(timer, forMode: .common)
+            pointerTimer = timer
+        }
+        updatePointerInteraction()
     }
 
     /**
@@ -477,6 +450,9 @@ final class PetWindow: NSWindow {
     func setMini(_ on: Bool) {
         guard on != isMini else { return }
         isMini = on
+        hitRegion = PetHitRegion()
+        hitDocumentID = nil
+        awaitingHitRegion = true
         let side = on ? miniSize : mainSize
         var origin = frame.origin
         if let screen = hostScreen {
