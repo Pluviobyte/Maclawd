@@ -9,6 +9,7 @@
 - OpenUsage main `bb055e26ee7ac65b982947cf6e3df6feda10dcca`（账户用量参考；本批不改账户凭据或额度）。
 - openai/codex main `d77ebc72237a639b6d877f2edc3b20b54631f25e`，最新稳定 `rust-v0.154.0`。
 - 重点近期变更：vibe-usage `84d007b7` Codex continuation、`ba8ebd36` Cline SDK、`51775e12` Hermes Desktop；缺乏真机日志的来源不能宣称已完成真机对账。
+- 补充核对 npm 注册表：最新发布包实际是 `0.10.31`，gitHead 与上述 main 完全相同；`v0.10.21` 是 GitHub 最新标记 release，不是 npm 最新版。实际研究的 main 已覆盖 npm 最新代码。
 
 ## 第一批：实时窗口及概览新鲜度
 
@@ -36,3 +37,9 @@
 - 同时保留缓存写字段 4。离线 SQLite 实测由 0 恢复为 238 条、15,018,741 Token，来源完整且无警告。
 - vibe-usage 总路径先前返回 19,176,452，其代码还可覆盖本项目未开启的语言服务 RPC 路径；不同来源覆盖和输出重复计算不能混成目标值。本批对齐可验证的离线记录，不新增私有网络接口。
 - 回归测试先失败（0 条 vs 1 条），修复后覆盖新版缺失时间、不同 idx、唯一 bot/step 身份、歧义拒绝、输出包含推理与缓存写入。
+
+## 第四批：Pi/OMP 路径和 WorkBuddy 模型
+
+- 核对 Pi 官方 `badlogic/pi-mono` main `ceea48f5d5d12fd7915dfefba2835ccd55f23bb9`、release `v0.85.1` 的 config.ts：agent 根与 sessions 根不同。对照 vibe-usage 的 pi-roots。
+- Pi 扫 agent/sessions、环境变量独立会话目录及 settings.sessionDir（仅可确定的绝对路径），realpath 去重。OMP 扫 profiles、XDG 与继承的 agent 根；检测到 OMP store 时不再作为 Pi 重复统计。
+- WorkBuddy 增加现代 `.workbuddy-ai/projects`，保留旧根；模型优先 requestModelId，而非 Auto/套餐展示名。先运行回归测试确认错误，再修复；保留已有非缓存输入/输出口径。

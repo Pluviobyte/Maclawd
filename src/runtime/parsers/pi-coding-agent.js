@@ -2,19 +2,18 @@ import { homedir } from 'node:os';
 import { basename, join, sep } from 'node:path';
 import { pickCount, toCount, UNKNOWN_MODEL } from '../usage-record.js';
 import { statelessParser } from '../parser-kit.js';
+import { piSessionDirs } from './pi-roots.js';
 
 export const id = 'pi-coding-agent';
 export const label = 'pi';
 export const lineFilter = '"usage"';
 
 export function sessionsDir() {
-  return process.env.MACLAWD_PI_DIR?.trim()
-    || process.env.PI_CODING_AGENT_DIR?.trim()
-    || join(homedir(), '.pi', 'agent', 'sessions');
+  return piSessionDirs()[0] ?? join(homedir(), '.pi', 'agent', 'sessions');
 }
 
 export function dataDirs() {
-  return [sessionsDir()];
+  return piSessionDirs();
 }
 
 /** 目录名是 URL 编码后的 cwd。 */
@@ -31,7 +30,7 @@ function projectFromEncodedDir(relative) {
 }
 
 export function discover({ listJsonl }) {
-  return listJsonl(sessionsDir()).map(({ path, size, mtimeMs, ino, relative }) => ({
+  return dataDirs().flatMap(dir => listJsonl(dir)).map(({ path, size, mtimeMs, ino, relative }) => ({
     path,
     size,
     mtimeMs,

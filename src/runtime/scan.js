@@ -41,7 +41,8 @@ import { usageEnabled } from './settings.js';
  */
 // 13: Codex thread_settings_applied 模型归属和新增来源兼容性修复。
 // 14: Antigravity 时间身份关联、输出和缓存写字段修正。
-const CACHE_VERSION = 14;
+// 15: WorkBuddy 路由模型、Pi/OMP 配置根修正。
+const CACHE_VERSION = 15;
 const MAX_WARNINGS = 20;
 const DEFAULT_BUDGET_MS = 20_000;
 

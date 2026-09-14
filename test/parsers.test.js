@@ -65,6 +65,15 @@ test('Claude Code：projectFromCwd 兼容 Windows 路径', () => {
 
 // ---------- WorkBuddy ----------
 
+test('WorkBuddy 使用路由后的模型 ID，而不是套餐/自动选择展示名', () => {
+  const record = workbuddy.parseObject({
+    type: 'function_call', timestamp: '2026-09-14T00:00:00Z',
+    providerData: { requestModelName: 'Auto', requestModelId: 'claude-sonnet-4-6', messageId: 'id',
+      usage: { input_tokens: 100, output_tokens: 10, total_tokens: 110 } },
+  });
+  assert.equal(record.model, 'claude-sonnet-4-6');
+});
+
 /** 取自 ~/.workbuddy/projects 的真实记录结构。 */
 function workbuddyRecord(timestamp) {
   return {
@@ -126,9 +135,9 @@ test('WorkBuddy：用 providerData.messageId 而非顶层 id 做去重键', () =
   assert.notEqual(record.messageId, 'gen-1784799112-abc');
 });
 
-test('WorkBuddy：模型名优先取 requestModelName', () => {
+test('WorkBuddy：模型名优先取 requestModelId', () => {
   const record = workbuddy.parseObject(workbuddyRecord('2026-07-23T17:31:51Z'));
-  assert.equal(record.model, 'Hy3');
+  assert.equal(record.model, 'hy3');
 });
 
 test('WorkBuddy：时间戳兼容 ISO / epoch 秒 / epoch 毫秒', () => {

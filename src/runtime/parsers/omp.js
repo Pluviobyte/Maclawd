@@ -1,19 +1,14 @@
-import { homedir } from 'node:os';
-import { basename, join, sep } from 'node:path';
+import { basename, sep } from 'node:path';
 import { pickCount, toCount, UNKNOWN_MODEL } from '../usage-record.js';
 import { statelessParser } from '../parser-kit.js';
+import { ompSessionDirs } from './pi-roots.js';
 
 export const id = 'omp';
 export const label = 'Oh My Pi';
 export const lineFilter = '"usage"';
 
-function sessionsDir() {
-  return process.env.MACLAWD_OMP_DIR?.trim()
-    || join(homedir(), '.omp', 'agent', 'sessions');
-}
-
 export function dataDirs() {
-  return [sessionsDir()];
+  return ompSessionDirs();
 }
 
 function projectFromEncodedDir(relative) {
@@ -29,7 +24,7 @@ function projectFromEncodedDir(relative) {
 }
 
 export function discover({ listJsonl }) {
-  return listJsonl(sessionsDir()).map(({ path, size, mtimeMs, ino, relative }) => ({
+  return dataDirs().flatMap(dir => listJsonl(dir)).map(({ path, size, mtimeMs, ino, relative }) => ({
     path,
     size,
     mtimeMs,

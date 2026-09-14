@@ -17,11 +17,12 @@ export function projectsDir() {
 }
 
 export function dataDirs() {
-  return [projectsDir()];
+  return process.env.MACLAWD_WORKBUDDY_DIR?.trim() ? [projectsDir()]
+    : [join(homedir(), '.workbuddy-ai', 'projects'), projectsDir()];
 }
 
 export function roots() {
-  return [projectsDir()];
+  return dataDirs();
 }
 
 function projectFromEncodedDir(relative) {
@@ -33,8 +34,7 @@ function projectFromEncodedDir(relative) {
 }
 
 export function discover({ listJsonl }) {
-  const base = projectsDir();
-  return listJsonl(base).map(({ path, size, mtimeMs, ino, relative }) => ({
+  return dataDirs().flatMap(base => listJsonl(base)).map(({ path, size, mtimeMs, ino, relative }) => ({
     path,
     size,
     mtimeMs,
@@ -147,7 +147,7 @@ export function parseObject(obj) {
   const ts = parseTimestamp(obj.timestamp ?? message.timestamp);
   if (ts === null) return null;
 
-  const model = provider.requestModelName || provider.requestModelId || provider.model
+  const model = provider.requestModelId || obj.requestModelName || provider.requestModelName || provider.model
     || message.model || obj.model || UNKNOWN_MODEL;
 
   // reasoning 只是 output 的展示用子集，截断到 output 以内防止显示矛盾。
