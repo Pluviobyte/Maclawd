@@ -776,11 +776,14 @@ private struct QuotaBlock: View {
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(visibleSources) { source in
-                        VStack(alignment: .leading, spacing: 7) {
+                        if source.id != visibleSources.first?.id {
+                            Divider().padding(.vertical, 3)
+                        }
+                        VStack(alignment: .leading, spacing: 10) {
                             // 来源是额度的一部分，不是只有多来源时才需要的分组标题。
                             // 只显示「本周 51%」会让用户无法判断它属于 Claude 还是 Codex。
                             Text(source.label)
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(.primary)
                             if source.id == "workbuddy" {
                                 workBuddyQuota(source)
@@ -956,23 +959,12 @@ private struct QuotaRow: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(labelOverride ?? window.label)
                     .font(.system(size: 11, weight: .medium))
-                    .lineLimit(1)
-                    .frame(width: 72, alignment: .leading)
-
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        Capsule().fill(Color.secondary.opacity(0.16))
-                        if let remaining = window.remainingPercent, remaining > 0 {
-                            Capsule().fill(tint)
-                                .frame(width: max(2, geo.size.width * remaining / 100))
-                        }
-                    }
-                }
-                .frame(height: 6)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
                 // 官方返回 used_percentage；这里翻转为用户真正要决策的“还剩多少”。
                 // 进度条和文字都使用剩余值，避免方向相反。
@@ -981,9 +973,19 @@ private struct QuotaRow: View {
                      : "剩余 \(Int((window.remainingPercent ?? 0).rounded()))%")
                     .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .foregroundStyle(window.isReset ? Color.secondary : .primary)
-                    .frame(width: 68, alignment: .trailing)
+                    .fixedSize(horizontal: true, vertical: false)
             }
-            HStack(spacing: 6) {
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.secondary.opacity(0.16))
+                    if let remaining = window.remainingPercent, remaining > 0 {
+                        Capsule().fill(tint)
+                            .frame(width: max(2, geo.size.width * remaining / 100))
+                    }
+                }
+            }
+            .frame(height: 6)
+            VStack(alignment: .leading, spacing: 2) {
                 if let remaining = window.remaining, let limit = window.limit {
                     Text("\(Fmt.credits(remaining)) / \(Fmt.credits(limit)) Credits")
                 }
@@ -997,9 +999,9 @@ private struct QuotaRow: View {
                     Text("· \(max(1, window.staleSeconds / 60)) 分钟前的数据")
                 }
             }
-            .font(.system(size: 9.5))
-            .foregroundStyle(.tertiary)
-            .padding(.leading, 78)
+            .font(.system(size: 10.5))
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
