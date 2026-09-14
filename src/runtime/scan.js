@@ -43,7 +43,8 @@ import { usageEnabled } from './settings.js';
 // 14: Antigravity 时间身份关联、输出和缓存写字段修正。
 // 15: WorkBuddy 路由模型、Pi/OMP 配置根修正。
 // 16: Codex 按真实会话合并分段，并使用父会话重放边界。
-const CACHE_VERSION = 16;
+// 17: Cline SDK 和旧版逐调用明细；依赖 metadata 参与缓存签名。
+const CACHE_VERSION = 17;
 const MAX_WARNINGS = 20;
 const DEFAULT_BUDGET_MS = 20_000;
 
@@ -391,7 +392,7 @@ export async function scanAll({
     for (const candidate of orderedCandidates) {
       livePaths.add(candidate.path);
       const entry = cache.files[candidate.path];
-      const sig = `${candidate.mtimeMs}:${candidate.size}`;
+      const sig = `${candidate.mtimeMs}:${candidate.size}${candidate.cacheKey ? `:${candidate.cacheKey}` : ''}`;
 
       // ---- 第 1 级：签名未变，零读取 ----
       // 审计轮转：全部文件都已建完后，如果某个缓存条目超过 30 天没被全量重读过，
@@ -518,8 +519,10 @@ export async function scanAll({
 
       // ---- 第 3 级：全量重读 ----
       try {
-        const fullBoundary = await lastNewlineBoundary(candidate.path, candidate.size);
         const chunkable = (parser.readMode ?? 'lines') === 'lines';
+        // A complete JSON document need not end in a newline. Only append-only
+        // JSONL uses newline boundaries; otherwise valid SDK artifacts read as 0.
+        const fullBoundary = chunkable ? await lastNewlineBoundary(candidate.path, candidate.size) : candidate.size;
         const cappedSize = chunkable ? Math.min(candidate.size, maxFileBytes) : candidate.size;
         let boundary = fullBoundary;
         if (cappedSize < candidate.size) {

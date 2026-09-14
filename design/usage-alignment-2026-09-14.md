@@ -53,3 +53,13 @@
 - 真机完整读取 1,406 文件、约 11.7 GB。与上述最新 vibe-usage 对账：截至 9 月 13 日的 **158 个历史日期总量全部相同**；按半小时和基础模型归并后也没有差异。9 月 14 日仍在产生新日志，两次非同时扫描相差 1,382,850 Token，不能作为稳定快照差异。
 - 口径换算：vibe-usage 的 output 不含 reasoning，Maclawd 的 output 包含 reasoning；比较使用上游 totalTokens + cachedInputTokens。上游 tier 后缀合并至基础模型后比对，本批尚不把 tier 作为独立费用维度。
 - 范围边界：本批对齐 Token 计数，不声称实时短窗口的跨父子匹配、分段后的精确活跃时长或服务档位费用已经完全对齐。多段会话的时长暂取最完整摘要，不能将重叠摘要简单相加。
+
+## 第六批：Cline 新旧存储及完整 JSON 扫描
+
+- 核对 Cline 官方 main `19ddebb3b9de734a968db1a37867092ef5387774`，最新 release `desktop-v0.0.27`，及 vibe-usage `fcf1c398`。官方 `messages-contract-v1.md`、`services/session-data.ts`、`services/usage.ts` 与 `llms/src/providers/ai-sdk.ts` 交叉确认 SDK 输入已包含缓存读和写。
+- 新增 `.cline/data/sessions`、CLINE_DIR / CLINE_DATA_DIR / CLINE_SESSION_DATA_DIR、编辑器扩展根和自定义根支持；校验 SDK v1 manifest/artifact 身份，只取带有效时间的 assistant metrics。缺少时间的迁移累计值不搬到迁移当天。
+- SDK 缓存读写都从 inputTokens 中拆开，输出不重复相加。与上游相比额外保留官方 cacheWriteTokens 维度，避免把缓存写入按普通输入估价；不把日志 cost 当订阅限额。
+- 旧版优先 `ui_messages.json` 每次调用的时间、模型和用量，同任务不再叠加 taskHistory 累计。缺少明细的旧安装保留任务摘要降级；这类摘要无法还原精确跨日分布，不能声称完全逐日对账。
+- 依赖 manifest 的模型/项目变化也参与缓存失效；不支持的版本、损坏 JSON 保留旧结果并报告来源不完整。测试覆盖恢复副本、部分快照补全、嵌套数据根去重及不持久化正文。
+- 真实回归测试还发现通用 `whole` 读取错误：没有结尾换行的完整 JSON 被截为 0 字节。现仅 JSONL 受换行边界约束，完整 JSON 按完整长度读取。scan-cache v17 / rollup v10。
+- 本机没有可用 Cline 会话，本批为官方契约和本地夹具验证，不标记为真机已验证。
