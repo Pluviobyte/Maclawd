@@ -40,7 +40,8 @@ import { usageEnabled } from './settings.js';
  * 12: Cursor 从云端-only 改为默认解析本地 hook 日志，存量缓存必须重建。
  */
 // 13: Codex thread_settings_applied 模型归属和新增来源兼容性修复。
-const CACHE_VERSION = 13;
+// 14: Antigravity 时间身份关联、输出和缓存写字段修正。
+const CACHE_VERSION = 14;
 const MAX_WARNINGS = 20;
 const DEFAULT_BUDGET_MS = 20_000;
 

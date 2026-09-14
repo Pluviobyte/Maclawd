@@ -27,3 +27,12 @@
 - scan-cache v13、rollup v6 使历史模型归属修正生效。针对性 41 项通过。
 - 对本机 1405 个 Codex 文件完成全量对照。部分跨日偏移已消除，但仍存在 fork/replay 边界差异；不能把本批称为 Codex 已完全对齐。上游有基于父会话索引的回放前缀匹配，本地仍主要依赖 payload 去重。continuation 分段也需要补齐；本机按文件名发现的同 ID 分段数量为 0，不能据此省掉兼容性测试。
 - 其他真实来源初步总量对账：WorkBuddy 562,949、Kimi 192,896,619、Grok 153,391,949、OpenClaw 19,223，均与上游一致。Qwen 本地 ledger 为 64,041,144，而 vibe-usage 只扫旧 chats 路径得到 0，应保留本地现代 ledger 支持。
+
+## 第三批：Antigravity SQLite
+
+- vibe-usage 的新版时间恢复在 `556b1c57` 中引入。交叉核对 ccusage main `1b4f42314bf9fe2f323436d2dadba18ba9b04970` 的 ModelUsage、CodexBar main `69c5a785c2e7e76f49ed63445b3c277f63de38e4`（release v0.60.2）的 bot/step 时间关联。
+- 本机 238 个有 usage 的 generation 均能唯一关联同一 step UUID 下的 bot ID，只有 71 个可通过同 idx 直接对应 UUID。采用身份关联而非数组位置/idx，歧义时上报来源不完整，不猜时间。
+- 本机全部 238 条均满足字段 3 = 字段 9 + 字段 10；与 ccusage 的 total_output / reasoning / visible 解释一致。因此 output 使用字段 3，不像 vibe-usage 那样再加字段 9。CodexBar 的计数解释又不同，仅采用独立验证一致的时间身份关系，不复制其 token 字段语义。
+- 同时保留缓存写字段 4。离线 SQLite 实测由 0 恢复为 238 条、15,018,741 Token，来源完整且无警告。
+- vibe-usage 总路径先前返回 19,176,452，其代码还可覆盖本项目未开启的语言服务 RPC 路径；不同来源覆盖和输出重复计算不能混成目标值。本批对齐可验证的离线记录，不新增私有网络接口。
+- 回归测试先失败（0 条 vs 1 条），修复后覆盖新版缺失时间、不同 idx、唯一 bot/step 身份、歧义拒绝、输出包含推理与缓存写入。

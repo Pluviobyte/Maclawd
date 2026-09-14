@@ -9,7 +9,7 @@ export const id = 'antigravity';
 export const label = 'Antigravity';
 
 /**
- * ⚠️ 未在真实数据上验证（开发机未安装 Antigravity）。
+ * 已用本机 SQLite 验证，参考记录见 design/usage-alignment-2026-09-14.md。
  *
  * Antigravity 把每个会话存成一个 SQLite `.db`，用量在 `gen_metadata` 表里，
  * 值是 **protobuf blob**。字段号是 vibe-usage 逆向出来的，本项目无法独立验证。
@@ -59,22 +59,25 @@ export function parseGenMetadata(buf) {
   const input = toCount(firstVarint(usage, 2));
   const output = toCount(firstVarint(usage, 3));
   const cacheRead = toCount(firstVarint(usage, 5));
+  const cacheWrite = toCount(firstVarint(usage, 4));
   const thinking = toCount(firstVarint(usage, 9));
   // 全零说明这条是报错或只做规划的步骤——也可能是 schema 猜错了。两种都跳过。
-  if (input + output + cacheRead + thinking === 0) return null;
+  if (input + output + cacheRead + cacheWrite + thinking === 0) return null;
 
   const startMeta = firstMessage(chatModel, 9);
   const createdAt = startMeta ? firstMessage(startMeta, 4) : undefined;
   const seconds = createdAt ? firstVarint(createdAt, 1) : undefined;
-  if (!seconds) return null;
 
   return {
     input,
     output,
     cacheRead,
     thinking,
+    cacheWrite,
+    stepId: firstString(root, 4)?.trim() || null,
+    botId: firstString(usage, 7)?.trim() || null,
     responseId: firstString(usage, 11) || '',
-    ts: seconds * 1000,
+    ts: seconds ? seconds * 1000 : null,
     model: firstString(chatModel, 21) || firstString(chatModel, 19) || UNKNOWN_MODEL,
   };
 }
@@ -104,23 +107,49 @@ function rowsToRecords(path) {
   const cwd = uri ? decodeURIComponent(uri.replace(/^file:\/\//, '')) : null;
   const cascade = basename(path, '.db');
   const records = [];
+  let steps = null;
+
+  function recoverTime(parsed) {
+    if (parsed.ts !== null) return parsed.ts;
+    if (steps === null) {
+      try {
+        steps = queryDbJson(path, 'SELECT hex(metadata) AS h FROM steps').map(row => {
+          const meta = decodeMessage(Buffer.from(row.h, 'hex'));
+          const timestamp = firstMessage(meta, 1);
+          const seconds = firstVarint(timestamp, 1);
+          return {
+            stepId: firstString(meta, 12)?.trim(),
+            botId: firstString(firstMessage(meta, 9), 7)?.trim(),
+            ts: seconds ? seconds * 1000 + Math.floor((firstVarint(timestamp, 2) || 0) / 1e6) : null,
+          };
+        });
+      } catch { steps = []; }
+    }
+    // UUID 可能复用，优先用唯一 bot ID + step UUID；不能拿相同 idx 猜测。
+    const matches = steps.filter(step => parsed.stepId && step.stepId === parsed.stepId
+      && (!parsed.botId || step.botId === parsed.botId));
+    return matches.length === 1 ? matches[0].ts : null;
+  }
 
   rows.forEach((row, index) => {
     if (!row.h) return;
     const parsed = parseGenMetadata(Buffer.from(row.h, 'hex'));
     if (!parsed) return;
+    const ts = recoverTime(parsed);
+    if (ts === null) throw new Error('Antigravity usage 缺少可唯一关联的时间，保留旧统计等待兼容');
     records.push({
       source: id,
       input: parsed.input,
-      output: parsed.output + parsed.thinking,
+      output: parsed.output,
       cacheRead: parsed.cacheRead,
-      write5m: 0,
+      write5m: parsed.cacheWrite,
       write1h: 0,
-      // 字段独立上报，为满足不变量 2 把 thinking 并进 output 并保留子计数。
-      reasoning: parsed.thinking,
+      // 本机每条记录均满足 output(3) = reasoning(9) + visible(10)。
+      // ccusage 也将 3 解释为总输出；不能照搬旧上游再加一次 reasoning。
+      reasoning: Math.min(parsed.thinking, parsed.output),
       model: String(parsed.model).trim() || UNKNOWN_MODEL,
       cwd,
-      ts: parsed.ts,
+      ts,
       messageId: parsed.responseId || `${cascade}|${index}`,
       requestId: null,
       uuid: null,
