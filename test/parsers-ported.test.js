@@ -36,10 +36,10 @@ test('Codex 数据源统一显示为 Codex', () => {
   assert.equal(parsers.find((parser) => parser.id === 'codex')?.label, 'Codex');
 });
 
-test('id 不重复，且覆盖 vibe-usage 的全部工具', () => {
+test('id 不重复，且覆盖 Maclawd 已承诺支持的来源', () => {
   const ids = parsers.map((p) => p.id);
   assert.equal(new Set(ids).size, ids.length, 'id 有重复');
-  // vibe-usage 的 20 个 source
+  // 固定本项目的支持契约；不能由这份静态清单声称覆盖上游今后所有工具。
   for (const id of [
     'claude-code', 'codex', 'grok', 'copilot-cli', 'cursor', 'gemini-cli',
     'opencode', 'openclaw', 'pi-coding-agent', 'qwen-code', 'kimi-code',
@@ -55,6 +55,10 @@ test('已验证集合只包含真机核对过的 source', () => {
   for (const id of VERIFIED_SOURCES) assert.ok(ids.has(id), `${id} 不在注册表里`);
   // 把「已支持」和「已验证」分开说是诚实底线，不能全都标成已验证
   assert.ok(VERIFIED_SOURCES.size < parsers.length);
+  assert.ok(VERIFIED_SOURCES.has('antigravity'), '238 条真机记录已完成字段及时间关联核对');
+  for (const id of ['cline', 'roo-code', 'pi-coding-agent', 'omp', 'trae-cli']) {
+    assert.equal(VERIFIED_SOURCES.has(id), false, `${id} 无真机日志，不能只因夹具通过就标已验证`);
+  }
 });
 
 // ---------- protobuf 解码器（可独立验证） ----------

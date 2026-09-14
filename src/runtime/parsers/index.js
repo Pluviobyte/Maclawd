@@ -85,6 +85,9 @@ export const VERIFIED_SOURCES = new Set([
   // 用本机 Cursor 真实 hook 日志核对过：stop 事件的四类 token 均为非零，
   // generation_id 可稳定去重；数据库 bubble token 字段为 0，刻意不读取。
   'cursor',
+  // 2026-09-14：238 条离线 SQLite usage，bot/step 身份、时间及
+  // output = visible + reasoning 均已真机交叉核对（见多来源审计）。
+  'antigravity',
 ]);
 
 export function parserById(id) {
