@@ -13,7 +13,7 @@ import {
  */
 
 // v5：Claude 从 UUID 改为调用级去重，旧聚合不可继续展示，需重新扫描。
-export const ROLLUP_VERSION = 10;
+export const ROLLUP_VERSION = 11;
 
 export const RANGES = [
   'today', 'yesterday', 'week', 'last_week', 'month', 'year', 'all',

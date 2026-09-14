@@ -44,7 +44,8 @@ import { usageEnabled } from './settings.js';
 // 15: WorkBuddy 路由模型、Pi/OMP 配置根修正。
 // 16: Codex 按真实会话合并分段，并使用父会话重放边界。
 // 17: Cline SDK 和旧版逐调用明细；依赖 metadata 参与缓存签名。
-const CACHE_VERSION = 17;
+// 18: Roo 逐调用明细与 _index.entries。
+const CACHE_VERSION = 18;
 const MAX_WARNINGS = 20;
 const DEFAULT_BUDGET_MS = 20_000;
 

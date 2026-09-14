@@ -1,7 +1,9 @@
-import { statSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { homedir, platform } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { pickCount, toCount, UNKNOWN_MODEL } from '../usage-record.js';
+import { createTurnTracker } from '../sessions.js';
 
 /**
  * Cline 与 Roo Code 是 VSCode 扩展，用量存在宿主的 globalStorage 里。
@@ -38,8 +40,9 @@ export function extensionDirs(extensionId) {
     const dir = join(root, 'User', 'globalStorage', extensionId);
     try {
       if (statSync(dir).isDirectory()) dirs.push(dir);
-    } catch {
+    } catch (err) {
       // 该宿主没装这个扩展
+      if (err.code !== 'ENOENT' && err.code !== 'ENOTDIR') throw err;
     }
   }
   return dirs;
@@ -91,6 +94,8 @@ export function taskToRecord(info, { source, fallbackModel = null }) {
  * 索引可能是数组，也可能是 { taskHistory: [...] } 这类包裹形态。
  */
 export function createTaskIndexParser({ id, label, extensionId, indexFiles }) {
+  const items = root => Array.isArray(root) ? root
+    : root?.entries ?? root?.taskHistory ?? root?.tasks ?? (root && typeof root === 'object' ? [root] : []);
   return {
     id,
     label,
@@ -102,30 +107,73 @@ export function createTaskIndexParser({ id, label, extensionId, indexFiles }) {
     discover({ listJsonl }) {
       const candidates = [];
       for (const dir of extensionDirs(extensionId)) {
-        for (const { path, size, mtimeMs, ino } of listJsonl(dir, { extensions: ['.json'] })) {
-          const name = path.slice(dir.length + 1);
+        const files = listJsonl(dir, { extensions: ['.json'] });
+        const byPath = new Map(files.map(file => [file.path, file]));
+        const indexes = [], tasks = new Map();
+        // The global index is a disposable cache. Per-task metadata, if present,
+        // is authoritative and overrides a stale index entry.
+        for (const file of [...files].sort((a, b) => Number(basename(a.path) === 'history_item.json') - Number(basename(b.path) === 'history_item.json'))) {
+          const name = file.path.slice(dir.length + 1);
           if (!indexFiles.some((f) => name === f || name.endsWith(`/${f}`))) continue;
-          candidates.push({ path, size, mtimeMs, ino, sessionId: path, fallbackProject: null });
+          const list = items(JSON.parse(readFileSync(file.path, 'utf8')));
+          if (!Array.isArray(list)) throw new Error(`${id}: 任务索引格式不支持`);
+          indexes.push({ file, list });
+          for (const item of list) {
+            if (!item?.id || /[\\/]/.test(String(item.id)) || ['.', '..'].includes(String(item.id))) continue;
+            tasks.set(String(item.id), item);
+          }
+        }
+        const detailed = new Set();
+        for (const [taskId, item] of tasks) {
+          const file = byPath.get(join(dir, 'tasks', taskId, 'ui_messages.json'));
+          if (!file) continue;
+          detailed.add(taskId);
+          // apiConfigName is a user-defined profile, NOT an actual model ID.
+          const metadata = { taskId, cwd: item.workspace || item.cwd || null,
+            model: item.modelId || item.apiModelId || item.model || UNKNOWN_MODEL };
+          candidates.push({ ...file, sessionId: file.path, kind: 'messages', metadata,
+            cacheKey: createHash('sha256').update(JSON.stringify(metadata)).digest('base64url') });
+        }
+        for (const { file, list } of indexes) {
+          const fallbackIds = list.filter(item => !detailed.has(String(item?.id))).map(item => String(item?.id));
+          if (!fallbackIds.length) continue;
+          candidates.push({ ...file, sessionId: file.path, fallbackProject: null, fallbackIds,
+            cacheKey: JSON.stringify(fallbackIds) });
         }
       }
       return candidates;
     },
 
-    createFileParser() {
+    createFileParser({ candidate = {} } = {}) {
       const records = [];
+      const tracker = createTurnTracker();
+      let root;
       return {
-        onObject(root) {
-          const list = Array.isArray(root) ? root
-            : Array.isArray(root?.taskHistory) ? root.taskHistory
-              : Array.isArray(root?.tasks) ? root.tasks
-                : root && typeof root === 'object' ? [root] : [];
-          for (const info of list) {
-            const record = taskToRecord(info, { source: id });
-            if (record) records.push(record);
-          }
-        },
+        onObject(value) { root = value; },
         finish() {
-          return { records, state: null };
+          if (root == null) throw new Error(`${id}: JSON 损坏或尚未写入完成`);
+          if (candidate.kind === 'messages') {
+            if (!Array.isArray(root)) throw new Error(`${id}: 消息格式不支持`);
+            const metadata = candidate.metadata;
+            for (const message of root) {
+              const ts = message?.ts == null ? NaN : Number(message.ts);
+              if (!Number.isFinite(ts) || !Number.isFinite(new Date(ts).getTime())) continue;
+              if (message.type === 'ask' || (message.type === 'say' && message.say === 'user_feedback')) tracker.onEvent('user', ts);
+              if (message.type !== 'say' || message.say !== 'api_req_started') continue;
+              let info;
+              try { info = JSON.parse(message.text); } catch { continue; }
+              const record = taskToRecord({ ...info, ts, cwd: metadata.cwd, id: `${metadata.taskId}:${ts}` },
+                { source: id, fallbackModel: metadata.model });
+              if (record) { records.push(record); tracker.onEvent('assistant', ts); }
+            }
+          } else {
+            for (const info of items(root)) {
+              if (candidate.fallbackIds && !candidate.fallbackIds.includes(String(info?.id))) continue;
+              const record = taskToRecord(info, { source: id, fallbackModel: info?.modelId });
+              if (record) records.push(record);
+            }
+          }
+          return { records, state: null, session: tracker.snapshot() };
         },
       };
     },

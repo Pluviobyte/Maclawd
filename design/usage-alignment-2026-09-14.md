@@ -63,3 +63,10 @@
 - 依赖 manifest 的模型/项目变化也参与缓存失效；不支持的版本、损坏 JSON 保留旧结果并报告来源不完整。测试覆盖恢复副本、部分快照补全、嵌套数据根去重及不持久化正文。
 - 真实回归测试还发现通用 `whole` 读取错误：没有结尾换行的完整 JSON 被截为 0 字节。现仅 JSONL 受换行边界约束，完整 JSON 按完整长度读取。scan-cache v17 / rollup v10。
 - 本机没有可用 Cline 会话，本批为官方契约和本地夹具验证，不标记为真机已验证。
+
+## 第七批：Roo Code 每次调用与模型语义
+
+- 最新官方仓库 RooCodeInc/Roo-Code 已归档，核对最终 main `b867ec9145750d0ae1ff7f02d35406e9bf2a0b16` / release `v3.54.0`，不是沿用未经检查的旧结论。与 vibe-usage `fcf1c398` 交叉核对 TaskHistoryStore、taskMessages、HistoryItem。
+- 支持 `_index.json` 的 `entries` 包裹结构，优先每个任务的 `ui_messages.json`，用调用时间而不是任务更新日期汇总。任务元数据优先于可能滞后的全局索引；明细缺失才保留摘要降级，不能叠加二者。
+- 官方明确 `apiConfigName` 是用户配置名，不能像上游那样默认作为模型 ID。调用有 `model` 时优先它，否则缺乏真实模型信息就保留 unknown，避免错误估价。
+- 损坏的消息文件保留旧缓存并公开不完整状态。scan-cache v18 / rollup v11；本机没有 Roo 日志，验证级别为官方契约＋端到端夹具。
