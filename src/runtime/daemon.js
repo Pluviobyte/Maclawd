@@ -41,13 +41,16 @@ export function createCollector({
   tailIntervalMs = DEFAULT_TAIL_MS,
   scanIntervalMs = DEFAULT_SCAN_MS,
   catchUpIntervalMs = DEFAULT_CATCH_UP_MS,
+  activityRefreshMs = 5_000,
+  tailer = createTailer(),
   scan = scanAll,
   onScan = null,
   onTick = null,
   onError = null,
 } = {}) {
-  const tailer = createTailer();
   let tailTimer = null;
+  let activityTimer = null;
+  let ticking = false;
   let scanTimer = null;
   let reconcileTimer = null;
   let nextScanAt = null;
@@ -180,8 +183,20 @@ export function createCollector({
   }
 
   async function tick() {
+    if (ticking) return;
+    ticking = true;
     try {
       const result = await tailer.poll();
+      if (stopped) return;
+      // 首次变化起计时，后续变化不延期；扫描仍通过 requestScan 合并，禁止并发。
+      if (!result.disabled && ((result.changedFiles ?? 0) > 0 || result.fresh.length > 0)
+          && !activityTimer) {
+        activityTimer = setTimeout(() => {
+          activityTimer = null;
+          requestScan();
+        }, activityRefreshMs);
+        activityTimer.unref?.();
+      }
       live.tokensPerMin = result.tokensPerMin;
       live.tokensPerMinBySource = result.tokensPerMinBySource ?? {};
       live.sources = [...new Set(result.fresh.map((r) => r.source))];
@@ -191,6 +206,8 @@ export function createCollector({
       onTick?.(live);
     } catch (err) {
       onError?.(err);
+    } finally {
+      ticking = false;
     }
   }
 
@@ -213,6 +230,8 @@ export function createCollector({
       stopped = true;
       lifecycle++;
       if (tailTimer) clearInterval(tailTimer);
+      if (activityTimer) clearTimeout(activityTimer);
+      activityTimer = null;
       if (scanTimer) clearTimeout(scanTimer);
       if (reconcileTimer) clearTimeout(reconcileTimer);
       tailTimer = null;

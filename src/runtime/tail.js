@@ -27,6 +27,8 @@ export function createTailer({
 } = {}) {
   const loaded = persist ? readJson(TAIL_STATE_FILE, null) : null;
   const files = new Map(Object.entries(loaded?.files ?? {}));
+  // 调用高水位独立于窗口寿命，重启也不把同次调用的完整快照重新计入。
+  const claudeUsage = new Map(Object.entries(loaded?.claudeUsage ?? {}));
   // 环形样本：[时刻, throughput]。窗口外的样本每次 poll 时丢弃。
   let samples = [];
   // 每个解析器分别建立首轮 discover 基线；某个来源首次探测失败不能被别的来源
@@ -36,7 +38,7 @@ export function createTailer({
   const save = () => {
     if (!persist) return;
     try {
-      writeJson(TAIL_STATE_FILE, { files: Object.fromEntries(files) });
+      writeJson(TAIL_STATE_FILE, { files: Object.fromEntries(files), claudeUsage: Object.fromEntries(claudeUsage) });
     } catch {
       // 游标是派生数据，写失败不影响本次读取结果。
     }
@@ -44,6 +46,7 @@ export function createTailer({
 
   async function poll({ now = Date.now(), ignoreSettings = false } = {}) {
     const fresh = [];
+    let changedFiles = 0;
 
     // 与扫描同一条闸门：关掉之后不碰任何文件，也不推进游标。
     if (!ignoreSettings && !usageEnabled()) {
@@ -71,6 +74,7 @@ export function createTailer({
         // 首轮启动只建立基线，不回放历史。运行期间新出现的、由解析器明确声明
         // 可安全从头读取的文件（例如 Cursor 当天第一条事件创建的 JSONL）则从 0 跟读。
         if (!prev) {
+          if (initializedParsers.has(parser) && candidate.size > 0) changedFiles++;
           const fromStart = initializedParsers.has(parser)
             && parser.tailNewCandidateFromStart?.(candidate) === true;
           prev = { ino: candidate.ino, offset: fromStart ? 0 : candidate.size };
@@ -80,11 +84,13 @@ export function createTailer({
 
         // inode 变了或文件缩小 → 轮转/截断，从头开始重新跟。
         if (prev.ino !== candidate.ino || candidate.size < prev.offset) {
+          changedFiles++;
           files.set(candidate.path, { ino: candidate.ino, offset: candidate.size });
           continue;
         }
 
         if (candidate.size === prev.offset) continue;
+        changedFiles++;
 
         const boundary = await lastNewlineBoundary(candidate.path, candidate.size);
         if (boundary <= prev.offset) continue;
@@ -135,8 +141,6 @@ export function createTailer({
 
     const cutoff = now - windowMs;
     samples = samples.filter(([ts]) => ts >= cutoff);
-    const claudeSamples = new Map(samples.filter(([, , r]) => r.source === 'claude-code')
-      .map(sample => [claudeUsageKey(sample[2]), sample]).filter(([key]) => key !== null));
     const existingKeys = new Set(samples.map(([, , record]) => {
       if (!record?.messageId) return null;
       return [record.source, record.messageId, record.requestId ?? '', record.uuid ?? ''].join('|');
@@ -145,18 +149,12 @@ export function createTailer({
     for (const record of fresh) {
       if (record.source === 'claude-code') {
         const key = claudeUsageKey(record);
-        const prior = key === null ? null : claudeSamples.get(key);
-        if (prior) {
-          // 更新完整值，不叠加流式部分值；保留初次采样时间，避免重复刷新窗口。
-          if (throughput(record) > prior[1]) {
-            prior[1] = throughput(record);
-            prior[2] = record;
-          }
-          continue;
-        }
-        const sample = [Math.min(record.ts, now), throughput(record), record];
-        samples.push(sample);
-        if (key !== null) claudeSamples.set(key, sample);
+        const total = throughput(record);
+        const prior = key === null ? 0 : (claudeUsage.get(key) ?? 0);
+        const delta = Math.max(total - prior, 0);
+        if (key !== null) claudeUsage.set(key, Math.max(total, prior));
+        if (delta === 0) continue;
+        samples.push([Math.min(record.ts, now), delta, record]);
         uniqueFresh.push(record);
         continue;
       }
@@ -182,6 +180,7 @@ export function createTailer({
 
     return {
       fresh: uniqueFresh,
+      changedFiles,
       tokensPerMin: Math.round(windowTokens / minutes),
       tokensPerMinBySource: Object.fromEntries(Object.entries(tokensBySource)
         .map(([source, tokens]) => [source, Math.round(tokens / minutes)])),
