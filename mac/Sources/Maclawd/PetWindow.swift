@@ -354,7 +354,7 @@ final class PetWindow: NSWindow {
     /**
      恢复上次的位置。
 
-     那块显示器还在 → **信任存下来的坐标，即使朴素的夹取会推动它**
+     那块显示器还在且旧窗口仍与当前可见区域相交 → 保留位置
      （用户可能就是故意把它靠在边上的）。
      不在了 → 返回 false，交给默认角落。
      */
@@ -374,7 +374,11 @@ final class PetWindow: NSWindow {
             return true
         }
 
-        guard matchingScreen(saved) != nil else { return false }
+        guard let screen = matchingScreen(saved),
+              PetWindowPosition.canRestore(
+                NSRect(origin: NSPoint(x: x, y: y), size: frame.size),
+                in: screen.visibleFrame
+              ) else { return false }
         setFrameOrigin(NSPoint(x: x, y: y))
         return true
     }
