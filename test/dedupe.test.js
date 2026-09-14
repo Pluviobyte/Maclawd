@@ -15,6 +15,14 @@ function record(overrides = {}) {
 
 const sum = (records) => records.reduce((n, r) => n + throughput(r), 0);
 
+test('Codex 复制到后续 fork 的同一快照保留原调用日期', () => {
+  const original = record({ source: 'codex', messageId: 'snapshot', ts: 1000 });
+  const replay = record({ ...original, ts: 9000 });
+  for (const input of [[replay, original], [original, replay]]) {
+    assert.equal(dedupe(input)[0].ts, 1000);
+  }
+});
+
 test('同 message.id + 同 requestId 视为同一条', () => {
   const out = dedupe([
     record({ messageId: 'm1', requestId: 'r1' }),

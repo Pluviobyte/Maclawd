@@ -39,7 +39,8 @@ import { usageEnabled } from './settings.js';
  *     扫描审计轮转：每 30 天随机抽一个缓存文件全量重读验证正确性。
  * 12: Cursor 从云端-only 改为默认解析本地 hook 日志，存量缓存必须重建。
  */
-const CACHE_VERSION = 12;
+// 13: Codex thread_settings_applied 模型归属和新增来源兼容性修复。
+const CACHE_VERSION = 13;
 const MAX_WARNINGS = 20;
 const DEFAULT_BUDGET_MS = 20_000;
 

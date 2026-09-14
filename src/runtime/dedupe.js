@@ -22,6 +22,10 @@ export function claudeUsageKey(record) {
 
 /** 冲突时是否用 candidate 替换 existing。 */
 export function prefer(candidate, existing) {
+  // Codex fork 会改写外层时间但保留 payload。相同快照应归原消费时间，
+  // 不能因扫描先读最新文件而把历史用量搬到 fork 当天。
+  if (candidate.source === 'codex' && existing.source === 'codex'
+      && candidate.ts !== existing.ts) return candidate.ts < existing.ts;
   // Claude 内容块会重复携带同次调用的 usage，流式最终值可能在 sidechain 中。
   // 核对 vibe-usage d4f9a1d / v0.10.21：完整度必须优先，不能累加部分响应。
   if (candidate.source === 'claude-code' && existing.source === 'claude-code') {

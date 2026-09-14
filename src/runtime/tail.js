@@ -102,12 +102,13 @@ export function createTailer({
           continue;
         }
 
-        const fileParser = parser.createFileParser({ state: null, candidate, mode: 'tail' });
+        const fileParser = parser.createFileParser({ state: prev.state ?? null, candidate, mode: 'tail' });
         const filter = parser.lineFilter;
         const accept = typeof filter === 'function'
           ? filter
           : (typeof filter === 'string' && filter ? (line) => line.includes(filter) : null);
 
+        let nextState;
         try {
           await readLines(candidate.path, prev.offset, boundary, (line) => {
             if (accept && !accept(line)) return;
@@ -123,7 +124,8 @@ export function createTailer({
               // 单行失败不影响其余
             }
           });
-          const { records } = fileParser.finish();
+          const { records, state } = await fileParser.finish();
+          nextState = state;
           for (const record of records) fresh.push(record);
         } catch {
           // 读失败就等下一轮，不推进 offset
@@ -134,6 +136,7 @@ export function createTailer({
           ino: candidate.ino,
           offset: boundary,
           tail: await tailFingerprint(candidate.path, boundary),
+          state: nextState ?? null,
         });
       }
       initializedParsers.add(parser);

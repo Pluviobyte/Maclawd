@@ -20,6 +20,7 @@ export const lineFilter = (line) => (
   || line.includes('"turn_context"')
   || line.includes('"task_started"')
   || line.includes('"turn_started"')
+  || line.includes('"thread_settings_applied"')
 );
 
 /** CODEX_HOME 与 Codex CLI 自身一致；MACLAWD_CODEX_HOME 供测试覆盖。 */
@@ -154,7 +155,7 @@ const OWN_TASK_START_WINDOW_MS = 5_000;
  *   input_tokens 含缓存  → 减掉 cached_input_tokens（不变量 1）
  *   output_tokens 含推理 → 原样保留，reasoning 作为子计数（不变量 2）
  */
-export function createFileParser({ state, candidate } = {}) {
+export function createFileParser({ state, candidate, mode } = {}) {
   const records = [];
   let prevCumulativeTotal = state?.prevCumulativeTotal ?? null;
   let prevTotal = state?.prevTotal ?? null;
@@ -247,6 +248,10 @@ export function createFileParser({ state, candidate } = {}) {
         return;
       }
 
+      if (payload.type === 'thread_settings_applied') {
+        if (payload.thread_settings?.model) turnContextModel = payload.thread_settings.model;
+        return;
+      }
       if (payload.type !== 'token_count') return;
       const info = payload.info;
       if (!info) return;
@@ -271,6 +276,10 @@ export function createFileParser({ state, candidate } = {}) {
             reasoning_output_tokens: (curr.reasoning_output_tokens || 0) - (prevTotal.reasoning_output_tokens || 0),
           };
           usage = Object.values(delta).some((value) => value < 0) ? curr : delta;
+        } else if (mode === 'tail') {
+          // 从文件中途接入时累计总量是基线，不是刚刚新增的 Token。
+          prevTotal = { ...curr };
+          return;
         } else {
           usage = curr;
         }

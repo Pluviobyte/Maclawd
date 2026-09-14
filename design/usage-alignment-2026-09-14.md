@@ -18,3 +18,12 @@
 - 任意来源日志新建、追加、轮转或重写可触发合并后的 5 秒刷新请求；连续活动不反复推迟刷新，重扫复用现有增量扫描，并维持单实例执行。
 - 尾读本身也避免重叠轮询；停用采集时不强行打开主开关。
 - 针对性测试 32 项通过（usage-refresh、scan、daemon-catchup）。实际全源文件库存：Claude 110、Codex 1405（约 11.7 GB）、WorkBuddy 6、Kimi 64、Qwen 1、Grok 84、Gemini 2、OpenClaw 1；数据库/hook 来源单独核对。
+
+## 第二批：Codex 日期与实时基线
+
+- 已读取官方 `codex-rs/protocol/src/protocol.rs` 的 TokenUsage、TokenUsageInfo、ThreadSettingsAppliedEvent，并与 vibe-usage 最新解析交叉验证。
+- 先运行日期回归测试，复制快照被归到 9000 而不是原时间 1000；修正同快照优先原调用时间。
+- 实时轮询保存解析器续读 state，不再每秒丢掉累计基线、模型与 ordinal；中途接入的首个 cumulative-only 快照只建基线，不把历史累计当成新增。支持 thread_settings_applied 模型更新。
+- scan-cache v13、rollup v6 使历史模型归属修正生效。针对性 41 项通过。
+- 对本机 1405 个 Codex 文件完成全量对照。部分跨日偏移已消除，但仍存在 fork/replay 边界差异；不能把本批称为 Codex 已完全对齐。上游有基于父会话索引的回放前缀匹配，本地仍主要依赖 payload 去重。continuation 分段也需要补齐；本机按文件名发现的同 ID 分段数量为 0，不能据此省掉兼容性测试。
+- 其他真实来源初步总量对账：WorkBuddy 562,949、Kimi 192,896,619、Grok 153,391,949、OpenClaw 19,223，均与上游一致。Qwen 本地 ledger 为 64,041,144，而 vibe-usage 只扫旧 chats 路径得到 0，应保留本地现代 ledger 支持。
