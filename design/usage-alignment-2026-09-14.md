@@ -43,3 +43,13 @@
 - 核对 Pi 官方 `badlogic/pi-mono` main `ceea48f5d5d12fd7915dfefba2835ccd55f23bb9`、release `v0.85.1` 的 config.ts：agent 根与 sessions 根不同。对照 vibe-usage 的 pi-roots。
 - Pi 扫 agent/sessions、环境变量独立会话目录及 settings.sessionDir（仅可确定的绝对路径），realpath 去重。OMP 扫 profiles、XDG 与继承的 agent 根；检测到 OMP store 时不再作为 Pi 重复统计。
 - WorkBuddy 增加现代 `.workbuddy-ai/projects`，保留旧根；模型优先 requestModelId，而非 Auto/套餐展示名。先运行回归测试确认错误，再修复；保留已有非缓存输入/输出口径。
+
+## 第五批：Codex 真实会话身份、重放和分段
+
+- 先写回归测试并复现：独立会话相同快照被误合并（27 变为 10），分叉之后真实相同调用被误删（35 变为 25），续写累计值重复相加（38 变为 48）。
+- 物理文件全部保留，按首个 session_meta.id 归组；精确跨文件副本以出现次数合并，保持单文件顺序。先合并再做累计差，保留计数重置与每段模型上下文。冲突时来源标记不完整并保留最后成功统计。
+- 历史不再用全局 payload hash 去重。只在明确父子关系内匹配 spawn 时父日志的连续重放前缀，支持父会话后续增长、Last-N、复制尚未完成的子会话、明确 task 边界以及没有 task 的旧子会话。
+- 缓存仅保留数值字段、模型、会话关系、时间与哈希，不保留聊天/工具正文；新增测试验证隐私边界。scan-cache v16 / rollup v9 强制旧缓存重建。暖缓存复用来源结果；新增、删除、重写、轮转审计均使来源结果失效。
+- 真机完整读取 1,406 文件、约 11.7 GB。与上述最新 vibe-usage 对账：截至 9 月 13 日的 **158 个历史日期总量全部相同**；按半小时和基础模型归并后也没有差异。9 月 14 日仍在产生新日志，两次非同时扫描相差 1,382,850 Token，不能作为稳定快照差异。
+- 口径换算：vibe-usage 的 output 不含 reasoning，Maclawd 的 output 包含 reasoning；比较使用上游 totalTokens + cachedInputTokens。上游 tier 后缀合并至基础模型后比对，本批尚不把 tier 作为独立费用维度。
+- 范围边界：本批对齐 Token 计数，不声称实时短窗口的跨父子匹配、分段后的精确活跃时长或服务档位费用已经完全对齐。多段会话的时长暂取最完整摘要，不能将重叠摘要简单相加。

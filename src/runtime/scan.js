@@ -42,7 +42,8 @@ import { usageEnabled } from './settings.js';
 // 13: Codex thread_settings_applied 模型归属和新增来源兼容性修复。
 // 14: Antigravity 时间身份关联、输出和缓存写字段修正。
 // 15: WorkBuddy 路由模型、Pi/OMP 配置根修正。
-const CACHE_VERSION = 15;
+// 16: Codex 按真实会话合并分段，并使用父会话重放边界。
+const CACHE_VERSION = 16;
 const MAX_WARNINGS = 20;
 const DEFAULT_BUDGET_MS = 20_000;
 
@@ -182,6 +183,7 @@ async function runParser(parser, candidate, { start, end, prevState }) {
   const fileParser = parser.createFileParser({
     state: prevState ?? null,
     candidate,
+    mode: 'scan',
   });
 
   // 读取模式：
@@ -277,6 +279,33 @@ export async function scanAll({
   const stats = { reused: 0, appended: 0, full: 0, deferred: 0, bytesRead: 0, audited: 0 };
   const sourceStatus = {};
 
+  const reconcile = (parser, records, sessions, status) => {
+    if (!parser.reconcileSource) return { records: dedupe(records), sessions };
+    try {
+      const entries = Object.entries(cache.files).filter(([path, entry]) => (
+        entry.source === parser.id && livePaths.has(path)
+      )).map(([path, entry]) => ({ ...entry, path }));
+      const signature = JSON.stringify(entries.map(entry => [entry.path, entry.sig, entry.auditedAt]).sort((a, b) => a[0].localeCompare(b[0])));
+      if (cache.reconciled?.[parser.id] && cache.reconciledSignatures?.[parser.id] === signature) {
+        return cache.reconciled[parser.id];
+      }
+      const result = parser.reconcileSource(entries);
+      if (status.complete) {
+        cache.reconciled ??= {};
+        cache.reconciledSignatures ??= {};
+        cache.reconciled[parser.id] = result;
+        cache.reconciledSignatures[parser.id] = signature;
+        cacheChanged = true;
+      }
+      return result;
+    } catch (err) {
+      status.complete = false;
+      status.failedFiles++;
+      warn(`${parser.id}: ${err.message}`);
+      return cache.reconciled?.[parser.id] ?? { records: [], sessions: [] };
+    }
+  };
+
   const warn = (message) => {
     if (warnings.length < MAX_WARNINGS) warnings.push(message);
   };
@@ -334,18 +363,19 @@ export async function scanAll({
       const records = [];
       const sessions = [];
       restoreCachedSource(parser.id, records, sessions, status);
-      bySource[parser.id] = dedupe(records);
+      const result = reconcile(parser, records, sessions, status);
+      bySource[parser.id] = result.records;
       status.latestRecordAt = bySource[parser.id].reduce(
         (latest, record) => Math.max(latest ?? Number.NEGATIVE_INFINITY, record.ts), null,
       );
-      sessionsBySource[parser.id] = sessions;
+      sessionsBySource[parser.id] = result.sessions;
       continue;
     }
 
     // 同一 session id 出现在多个 root/目录时选最完整的一份，不求和。
     const groups = new Map();
     for (const candidate of candidates) {
-      const key = candidate.sessionId ?? candidate.path;
+      const key = parser.keepSegments ? candidate.path : candidate.sessionId ?? candidate.path;
       if (isBetter(candidate, groups.get(key))) groups.set(key, candidate);
     }
 
@@ -559,11 +589,12 @@ export async function scanAll({
     if (discoveryErrors > 0) restoreCachedSource(parser.id, records, sessions, status);
 
     // 跨文件去重：fork 与 subagent 会把父会话记录复制到新文件。
-    bySource[parser.id] = dedupe(records);
+    const result = reconcile(parser, records, sessions, status);
+    bySource[parser.id] = result.records;
     status.latestRecordAt = bySource[parser.id].reduce(
       (latest, record) => Math.max(latest ?? Number.NEGATIVE_INFINITY, record.ts), null,
     );
-    sessionsBySource[parser.id] = sessions;
+    sessionsBySource[parser.id] = result.sessions;
   }
 
   const firstDeferredIndex = orderedParsers.findIndex((parser) => (

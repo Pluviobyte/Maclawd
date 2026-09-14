@@ -3,6 +3,12 @@ import { homedir } from 'node:os';
 import { basename, join } from 'node:path';
 import { toCount, UNKNOWN_MODEL } from '../usage-record.js';
 import { createTurnTracker } from '../sessions.js';
+import { createAccountingIndex } from './codex-accounting.js';
+export { reconcileSource } from './codex-accounting.js';
+
+// Discovery keeps every physical segment. Canonical session_meta.id, not the
+// filename or file size, determines how history is reconciled after scanning.
+export const keepSegments = true;
 
 export const id = 'codex';
 export const label = 'Codex';
@@ -16,6 +22,7 @@ export const label = 'Codex';
  */
 export const lineFilter = (line) => (
   line.includes('"total_token_usage"')
+  || line.includes('"token_count"')
   || line.includes('"session_meta"')
   || line.includes('"turn_context"')
   || line.includes('"task_started"')
@@ -58,8 +65,7 @@ export function discover({ listJsonl }) {
         size,
         mtimeMs,
         ino,
-        // 同一 session id 同时存在于 live 与 archive 时，由 scan.js 选更完整的一份，
-        // 不求和——瞬时重叠否则会让 buckets 翻倍。
+        // 文件名只作尾读提示。历史扫描保留分段，由 session_meta.id 归组。
         sessionId: sessionIdFromName(path),
         fallbackProject: null,
       });
@@ -68,39 +74,9 @@ export function discover({ listJsonl }) {
   return candidates;
 }
 
-const USAGE_FIELDS = [
-  'input_tokens', 'cached_input_tokens', 'cache_write_input_tokens',
-  'output_tokens', 'reasoning_output_tokens', 'total_tokens',
-];
-
 /**
- * 快照键：total_token_usage 与 last_token_usage 全部字段的指纹。
- *
- * fork 与 subagent 的 rollout 会在开头**逐条复制**父会话的 token_count，复制件的
- * 这两个快照与父会话原件完全相同。用它作为去重键，跨文件的重放前缀就会自然折叠成
- * 一条，不需要去读父文件、也不需要维护重放索引（tokei 用的就是这个思路）。
- *
- * 12 个数字的组合熵足够高，不同会话偶然撞上的概率可以忽略；唯一的退化情形是
- * 全零快照，调用方对此单独兜底。
- */
-function snapshotKey(total, last) {
-  const parts = [];
-  for (const source of [total, last]) {
-    for (const field of USAGE_FIELDS) parts.push(source?.[field] ?? '');
-  }
-  return createHash('sha1').update(parts.join('|')).digest('hex').slice(0, 20);
-}
-
-/**
- * Payload 指纹：token_count 整个 payload 的 SHA256 前缀。
- *
- * 这是 snapshotKey 的兜底。snapshotKey 依赖 total_token_usage 的累计值，
- * 而 fork 子进程在某些版本中会从零开始计累计——此时同一条被复制的 API 响应，
- * 在父子文件里的 snapshotKey 不同，snapshotKey 去重失效。
- *
- * payload 指纹直接对 token_count 的原始 payload 取摘要，不含外层 timestamp
- * （Codex 复制时会给外层打新时间戳，但 payload 原样保留），所以在父子文件
- * 之间一定相同。用它做第二把键，vibe-usage 也是这个思路。
+ * 增量实时路径的短窗口去重指纹。不能用于历史全局去重：独立会话可能
+ * 出现相同 payload。历史扫描统一由 codex-accounting.js 按父子关系核对。
  */
 function payloadFingerprint(payload) {
   return createHash('sha256')
@@ -140,7 +116,7 @@ function isTaskStarted(payload) {
 const OWN_TASK_START_WINDOW_MS = 5_000;
 
 /**
- * 用量计算完全采用 vibe-usage 的方案：
+ * 单文件增量路径（历史汇总以 codex-accounting.js 的跨会话核对为准）：
  *
  *   1. 累计总量未前进且为正 → 判为重复发射或零用量记账事件（如 compaction），计零。
  *      真实的 API 调用必然让累计计数器前进。限定为正值，是为了让那些把
@@ -157,6 +133,7 @@ const OWN_TASK_START_WINDOW_MS = 5_000;
  */
 export function createFileParser({ state, candidate, mode } = {}) {
   const records = [];
+  const accounting = mode === 'scan' ? createAccountingIndex(state?.accounting) : null;
   let prevCumulativeTotal = state?.prevCumulativeTotal ?? null;
   let prevTotal = state?.prevTotal ?? null;
   let turnContextModel = state?.turnContextModel ?? null;
@@ -185,6 +162,7 @@ export function createFileParser({ state, candidate, mode } = {}) {
       if (!match) return;
       const ts = timestampMs(match[1]);
       if (ts == null) return;
+      accounting?.advance(ts);
       const role = match[2] === 'session_meta' || match[2] === 'turn_context'
         ? 'user'
         : 'assistant';
@@ -192,6 +170,7 @@ export function createFileParser({ state, candidate, mode } = {}) {
     },
 
     onObject(obj) {
+      accounting?.onObject(obj);
       const payload = obj?.payload;
       if (!payload) return;
 
@@ -347,6 +326,7 @@ export function createFileParser({ state, candidate, mode } = {}) {
         resetSession: resetSession || (isSubagent && !ownTaskBoundaryReached),
         // 续读状态：增量尾读时解析器要从这里接着算累计基线。
         state: {
+          ...(accounting ? { accounting: accounting.state() } : {}),
           prevCumulativeTotal,
           prevTotal,
           turnContextModel,
