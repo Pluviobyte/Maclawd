@@ -9,7 +9,8 @@ import {
   buildRollup, summarize, baseline, splitCellKey,
   RANGES, ROLLUP_VERSION, rangeBounds,
 } from './rollup.js';
-import { costOf, updatePrices, pricingMeta } from './pricing.js';
+import { costOf, pricingMeta } from './pricing.js';
+import { createPricingRefresher } from './pricing-refresh.js';
 import { billable } from './usage-record.js';
 import { summarizeSessions } from './sessions.js';
 import { queryUsageAnalytics } from './analytics.js';
@@ -222,10 +223,10 @@ function wrapped(rollup, summary) {
   };
 }
 
-function buildSummary(query) {
+function buildSummary(query, priceBucket = costOf) {
   const rollup = loadRollup();
-  if (!rollup) return { empty: true };
-  if (rollup.stale) return { empty: true, stale: true };
+  if (!rollup) return { empty: true, pricing: pricingMeta() };
+  if (rollup.stale) return { empty: true, stale: true, pricing: pricingMeta() };
 
   const settings = loadSettings();
   const range = RANGES.includes(query.get('range')) ? query.get('range') : 'today';
@@ -236,7 +237,7 @@ function buildSummary(query) {
   const summary = summarize(rollup, range, {
     source, model, project,
     // 成本始终计算，是否展示由前端按设置决定——这样切开关不用重新请求。
-    priceBucket: costOf,
+    priceBucket,
   });
 
   const from = rangeStartEpoch(range);
@@ -273,10 +274,10 @@ function buildSummary(query) {
   };
 }
 
-function buildAnalytics(query) {
+function buildAnalytics(query, priceBucket = costOf) {
   const rollup = loadRollup();
-  if (!rollup) return { empty: true };
-  if (rollup.stale) return { empty: true, stale: true };
+  if (!rollup) return { empty: true, pricing: pricingMeta() };
+  if (rollup.stale) return { empty: true, stale: true, pricing: pricingMeta() };
 
   const multi = (name) => {
     const values = query.getAll(name).filter(Boolean);
@@ -295,7 +296,7 @@ function buildAnalytics(query) {
       },
       cursor: query.get('cursor'),
       limit: Number(query.get('limit')) || 50,
-      priceBucket: costOf,
+      priceBucket,
     });
     // 工具显示名。analytics.js 只认识 rollup，不认识解析器注册表，所以在这里补。
     // 只加不改：dimensions.sources 仍是 id 数组，老客户端不受影响。原生面板要在
@@ -433,6 +434,7 @@ export function createUsageServer({
   identity = createRuntimeIdentity(),
 } = {}) {
   // 面板不该要求用户手动点刷新，所以服务端自带后台采集循环。
+  const priceRefresher = createPricingRefresher();
   const worker = collector ?? createCollector();
   const quotaWorker = quotaCollector ?? createCodexQuotaCollector();
   const claudeQuotaWorker = claudeQuotaCollector ?? createClaudeQuotaCollector({
@@ -728,12 +730,12 @@ export function createUsageServer({
 
       // ---- API ----
       if (pathname === '/api/summary') {
-        sendJson(res, 200, buildSummary(url.searchParams));
+        sendJson(res, 200, buildSummary(url.searchParams, priceRefresher.priceBucket));
         return;
       }
 
       if (pathname === '/api/analytics') {
-        sendJson(res, 200, buildAnalytics(url.searchParams));
+        sendJson(res, 200, buildAnalytics(url.searchParams, priceRefresher.priceBucket));
         return;
       }
 
@@ -1268,8 +1270,8 @@ export function createUsageServer({
       }
 
       if (pathname === '/api/update-prices' && req.method === 'POST') {
-        // 本项目唯一的对外请求，必须由用户显式触发，绝不在启动时自动发起。
-        const result = await updatePrices();
+        // 手动更新与后台更新共享进行中的请求，避免重复下载或旧响应覆盖新表。
+        const result = await priceRefresher.refresh();
         sendJson(res, 200, { ...result, meta: pricingMeta() });
         return;
       }
@@ -1353,6 +1355,7 @@ export function createUsageServer({
    */
   function shutdownRuntime() {
     clearEndpoint({ instanceId: identity.instanceId });
+    priceRefresher.stop();
     worker.stop?.();
     for (const resolve of waiters) resolve();
     waiters.clear();
@@ -1370,6 +1373,7 @@ export function createUsageServer({
   // 留着的话文件监听和定时器会越堆越多。挂着的长轮询也要放掉，
   // 否则 server.close() 会一直等这些请求，测试卡在关闭那一步。
   server.on('close', () => {
+    priceRefresher.stop();
     managerWatch.stop();
     stopHookWatch();
     for (const stop of stopSessionMonitors) stop();
@@ -1384,7 +1388,7 @@ export function createUsageServer({
     waiters.clear();
   });
 
-  return { server, worker, quotaWorker, claudeQuotaWorker, cursorQuotaWorker, grokQuotaWorker, workBuddyQuotaWorker, desktopQuotaWorkers, identity };
+  return { server, priceRefresher, worker, quotaWorker, claudeQuotaWorker, cursorQuotaWorker, grokQuotaWorker, workBuddyQuotaWorker, desktopQuotaWorkers, identity };
 }
 
 /** 端口被占时最多往后试几个。够覆盖「同机开了几个 Vite」，又不会无限游走。 */
@@ -1422,9 +1426,9 @@ async function probeMaclawd(port, timeoutMs = 400) {
  *
  * 拿到端口后写端点文件，hook 与外壳靠它找到我们，谁都不用写死常量。
  */
-export function serve({ port = 4173, host = null, collector = null } = {}) {
+export function serve({ port = 4173, host = null, collector = null, pricingAutoRefresh = true } = {}) {
   const {
-    server, worker, quotaWorker, claudeQuotaWorker, cursorQuotaWorker, grokQuotaWorker, workBuddyQuotaWorker, desktopQuotaWorkers, identity,
+    server, priceRefresher, worker, quotaWorker, claudeQuotaWorker, cursorQuotaWorker, grokQuotaWorker, workBuddyQuotaWorker, desktopQuotaWorkers, identity,
   } = createUsageServer({ collector });
   // 只有显式开启局域网镜像才监听外部地址；否则严格绑回环。
   const bind = host ?? (loadSettings().lanMirror === true ? '0.0.0.0' : '127.0.0.1');
@@ -1467,6 +1471,7 @@ export function serve({ port = 4173, host = null, collector = null } = {}) {
       server.removeListener('error', onError);
       const actual = server.address()?.port ?? port;
       writeEndpoint({ port: actual, identity });
+      if (pricingAutoRefresh) priceRefresher.start();
       // 后台开始采集，页面打开即有数据。
       worker.start().catch(() => {});
       quotaWorker.start();

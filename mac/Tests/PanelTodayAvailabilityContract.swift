@@ -3,6 +3,12 @@ import Foundation
 @main
 struct PanelTodayAvailabilityContract {
     static func main() {
+        for timestamp in ["2026-09-15T12:00:00.000Z", "2026-09-15T12:00:00Z"] {
+            let summary = PanelStore.decodeSummary(["empty": true, "pricing": ["fetchedAt": timestamp]])
+            precondition(summary.pricingUpdatedAt != nil)
+        }
+        precondition(PanelStore.decodeSummary(["pricing": ["fetchedAt": "invalid"]]).pricingUpdatedAt == nil)
+        precondition(PanelStore.decodeSummary([:]).pricingUpdatedAt == nil)
         let stillIndexing = PanelStore.decodeSummary([
             "empty": false,
             "summary": ["throughput": 0.0],

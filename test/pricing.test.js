@@ -218,3 +218,38 @@ test('价表缓存与用户数据目录分离——清掉用户数据不该丢�
   assert.equal(priceFor('keeper').input, 7, '价表不该跟着用户数据目录走');
   process.env.MACLAWD_DATA_DIR = join(root, 'data');
 });
+
+test('background refresh prices existing unpriced usage without uploading model names or changing overrides', async () => {
+  const { createPricingRefresher } = await import('../src/runtime/pricing-refresh.js');
+  writePricingTable({ _meta: { fetchedAt: new Date().toISOString() }, models: { 'vendor/known': { input: 1, output: 1 } } });
+  writeJson(OVERRIDES_FILE, { 'private-price': { input: 9, output: 9 } });
+  resetPricingCache();
+  const bucket = { input: 1e6, output: 1e6, cacheRead: 1e6 };
+  assert.equal(costOf('new-priced-model', bucket), null);
+  let requestCount = 0;
+  const server = createServer((req, res) => {
+    requestCount++;
+    assert.equal(req.method, 'GET');
+    assert.equal(req.url, '/models');
+    assert.equal(req.headers.authorization, undefined);
+    res.setHeader('content-type', 'application/json');
+    res.end(JSON.stringify({ data: [{ id: 'vendor/new-priced-model', pricing: {
+      prompt: '0.00001', completion: '0.00005', input_cache_read: '0.000001',
+    } }] }));
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const manager = createPricingRefresher({ update: (options) => updatePrices({
+    ...options, url: `http://127.0.0.1:${server.address().port}/models`,
+  }) });
+  try {
+    manager.start();
+    assert.equal(manager.priceBucket('new-priced-model', bucket), null);
+    await manager.check();
+    assert.equal(requestCount, 1);
+    assert.equal(costOf('new-priced-model', bucket), 61);
+    assert.equal(priceFor('private-price').input, 9);
+  } finally {
+    manager.stop();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});

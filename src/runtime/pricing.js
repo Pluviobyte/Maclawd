@@ -8,7 +8,7 @@ import { pricingCacheDir } from './paths.js';
  * 成本估算。三层查价，越靠前优先级越高：
  *
  *   1. pricing.overrides.json   本地手工修正，永不被自动更新覆盖
- *   2. pricing.json             从 OpenRouter 拉取的价格表（用户显式触发更新）
+ *   2. pricing.json             从 OpenRouter 拉取的价格表（后台定期或用户手动更新）
  *   3. 内置家族关键词兜底        离线可用，只覆盖 Anthropic 家族
  *
  * **为什么要拉取而不是手工维护**：手工维护每出一个新模型就要改代码。实测本机
@@ -75,6 +75,10 @@ const OFFICIAL_PRICES = new Map(Object.entries({
 
 /** 永不计价：这些不是真实模型，而是工具内部的记账/别名条目。 */
 const NON_MODELS = new Set(['<synthetic>', 'unknown', '', 'codex-auto-review']);
+
+export function isPricingCandidate(model) {
+  return !NON_MODELS.has(String(model ?? '').trim().toLowerCase());
+}
 
 function fromInputOutput(input, output) {
   return {
@@ -240,13 +244,14 @@ export function normalizeOpenRouter(entry) {
 }
 
 /**
- * 显式联网更新价格表。这是本项目**唯一**的对外网络请求（见
- * design/token-tracking.md 不可变原则 1），只发一个公开 GET，不携带任何用户数据。
+ * 从公开目录更新价格表，供后台刷新和手动更新共用。
+ * 只发公开 GET，不携带任何用户数据或凭据。
  *
  * 只写 pricing.json，绝不动 pricing.overrides.json——手工修正必须在更新后依然生效。
  */
-export async function updatePrices({ url = OPENROUTER_URL, timeoutMs = 30_000, now = null } = {}) {
-  const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+export async function updatePrices({ url = OPENROUTER_URL, timeoutMs = 30_000, now = null, signal = null } = {}) {
+  const timeout = AbortSignal.timeout(timeoutMs);
+  const response = await fetch(url, { signal: signal ? AbortSignal.any([signal, timeout]) : timeout });
   if (!response.ok) throw new Error(`价格表请求失败 HTTP ${response.status}`);
   const payload = await response.json();
   const list = Array.isArray(payload?.data) ? payload.data : [];
@@ -261,6 +266,7 @@ export async function updatePrices({ url = OPENROUTER_URL, timeoutMs = 30_000, n
   }
   if (Object.keys(models).length === 0) throw new Error('没有解析出任何价格，未覆盖本地文件');
 
+  signal?.throwIfAborted();
   writePricing({
     _meta: {
       source: url,

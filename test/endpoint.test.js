@@ -91,7 +91,7 @@ test('首选端口被别人占用时顺次往后找，不再崩溃', () => withD
   // 用按进程分段的明确端口，避免恰好撞上另一个测试的 Maclawd。
   const blocker = await occupy(20_000 + (process.pid % 1_000) * 20);
   try {
-    const started = await serve({ port: blocker.port });
+    const started = await serve({ pricingAutoRefresh: false, port: blocker.port });
     try {
       assert.notEqual(started.port, blocker.port, '应当换了一个端口');
       assert.ok(started.port > blocker.port, `应当往后找，实际 ${started.port}`);
@@ -108,10 +108,10 @@ test('首选端口被别人占用时顺次往后找，不再崩溃', () => withD
 
 test('占位的是另一个 Maclawd 时拒绝启动第二份', () => withDataDir(async () => {
   const { serve } = await import(`../src/runtime/server.js?case=dup`);
-  const first = await serve({ port: 0 });
+  const first = await serve({ pricingAutoRefresh: false, port: 0 });
   try {
     await assert.rejects(
-      () => serve({ port: first.port }),
+      () => serve({ pricingAutoRefresh: false, port: first.port }),
       (err) => {
         // 两个采集器同时跑会重复计数，这里必须是明确的拒绝而不是静默换端口。
         assert.equal(err.code, 'EALREADYRUNNING');
@@ -128,7 +128,7 @@ test('占位的是另一个 Maclawd 时拒绝启动第二份', () => withDataDir
 test('只有持有端点管理令牌才能让当前运行时优雅退出', () => withDataDir(async () => {
   const { serve } = await import(`../src/runtime/server.js?case=managed-shutdown`);
   const { readEndpoint } = await import(`../src/runtime/endpoint.js?case=managed-shutdown`);
-  const started = await serve({ port: 0 });
+  const started = await serve({ pricingAutoRefresh: false, port: 0 });
   const base = `http://127.0.0.1:${started.port}`;
   try {
     const endpoint = readEndpoint();

@@ -22,7 +22,7 @@ function withServer(fn) {
   process.env.MACLAWD_DATA_DIR = dir;
   return (async () => {
     const { serve } = await import('../src/runtime/server.js?case=latency');
-    const started = await serve({ port: 0 });
+    const started = await serve({ pricingAutoRefresh: false, port: 0 });
     const base = `http://127.0.0.1:${started.port}`;
     try {
       return await fn(base);

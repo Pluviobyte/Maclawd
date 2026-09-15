@@ -368,6 +368,7 @@ struct PanelSummary: Equatable {
     var bySource: [NamedBucket] = []
     var coverage: Double = 1
     var unpricedModels: [String] = []
+    var pricingUpdatedAt: Date?
     var primaryMetric: String = "throughput"
     var showCost = false
     var collectionComplete = false
@@ -735,6 +736,7 @@ struct AnalyticsSnapshot: Equatable {
     static func decode(_ json: [String: Any]) -> AnalyticsSnapshot {
         var out = AnalyticsSnapshot()
         out.empty = json["empty"] as? Bool ?? false
+
         out.range = json["range"] as? String ?? "30d"
         out.totals = AnalyticsTotals(json["totals"])
         out.previous = AnalyticsTotals(json["previous"])
@@ -1039,6 +1041,15 @@ final class PanelStore: ObservableObject {
     static func decodeSummary(_ json: [String: Any]) -> PanelSummary {
         var out = PanelSummary()
         out.empty = json["empty"] as? Bool ?? false
+        if let pricing = json["pricing"] as? [String: Any], let timestamp = pricing["fetchedAt"] as? String {
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            out.pricingUpdatedAt = formatter.date(from: timestamp)
+            if out.pricingUpdatedAt == nil {
+                formatter.formatOptions = [.withInternetDateTime]
+                out.pricingUpdatedAt = formatter.date(from: timestamp)
+            }
+        }
         let settings = json["settings"] as? [String: Any] ?? [:]
         out.primaryMetric = "throughput"
         out.showCost = settings["showCost"] as? Bool ?? false
