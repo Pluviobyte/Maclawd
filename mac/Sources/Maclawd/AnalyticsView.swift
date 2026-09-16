@@ -299,7 +299,7 @@ struct StatsPage: View {
                         Divider().opacity(0.5)
                         sessionSummary
                         if store.analytics.cost.coverage < 0.999 {
-                            Text("费用覆盖 \(Fmt.percent(store.analytics.cost.coverage))"
+                            Text("价格匹配 \(Fmt.percent(store.analytics.cost.coverage))"
                                  + (store.analytics.cost.unpricedModels.isEmpty ? "" : " · 有未定价模型"))
                                 .font(.system(size: 10)).foregroundStyle(.orange)
                         }

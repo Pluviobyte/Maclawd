@@ -296,6 +296,14 @@ function priceSummary(rollup, bounds, filters, priceBucket) {
   const unpricedModels = new Set();
   visitSlots(rollup, bounds, filters, ({ model, bucket }) => {
     const tokens = throughput(bucket);
+    const quote = priceBucket?.quote?.(model, bucket);
+    if (quote) {
+      estimated += quote.cost ?? 0;
+      pricedTokens += quote.pricedTokens;
+      unpricedTokens += quote.unpricedTokens;
+      if (quote.unpricedTokens > 0) unpricedModels.add(model);
+      return;
+    }
     const cost = priceBucket ? priceBucket(model, bucket) : null;
     if (cost === null || !Number.isFinite(cost)) {
       unpricedTokens += tokens;

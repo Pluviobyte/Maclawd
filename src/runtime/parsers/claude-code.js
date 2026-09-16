@@ -1,3 +1,4 @@
+import { normalizeServiceTier } from '../billing-context.js';
 import { basename, join, sep } from 'node:path';
 import { getClaudeRoots, getProjectDirs } from '../claude-roots.js';
 import { cacheWriteSplit, toCount, UNKNOWN_MODEL } from '../usage-record.js';
@@ -86,6 +87,8 @@ export function parseObject(obj) {
 
   return {
     source: id,
+    billing: { serviceTier: normalizeServiceTier(usage.speed ?? usage.service_tier),
+      promptTokens: toCount(usage.input_tokens) + toCount(usage.cache_read_input_tokens) + write5m + write1h },
     input: toCount(usage.input_tokens),
     output: toCount(usage.output_tokens),
     cacheRead: toCount(usage.cache_read_input_tokens),

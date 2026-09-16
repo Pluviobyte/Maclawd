@@ -14,7 +14,7 @@ import {
  */
 
 // v5：Claude 从 UUID 改为调用级去重，旧聚合不可继续展示，需重新扫描。
-export const ROLLUP_VERSION = 13;
+export const ROLLUP_VERSION = 14;
 
 export const RANGES = [
   'today', 'yesterday', 'week', 'last_week', 'month', 'year', 'all',
@@ -130,7 +130,7 @@ function addRecordToSource(container, record) {
   const project = record.project || 'unknown';
   const key = cellKey(model, project);
   const cell = source.cells[key] ?? (source.cells[key] = emptyBucket());
-  addInto(cell, record);
+  addInto(cell, record, { pricing: true });
 }
 
 /** 记录 → 日聚合。records 必须已经去重。 */
@@ -202,6 +202,9 @@ export function summarize(rollup, range, {
   const byModel = {};
   const byProject = {};
   const bySource = {};
+  let cost = priceBucket ? 0 : null;
+  let unpricedTokens = 0;
+  const missingModels = new Set();
   const daily = [];
 
   for (const key of keys) {
@@ -216,6 +219,14 @@ export function summarize(rollup, range, {
         if (model && parts.model !== model) continue;
         if (project && parts.project !== project) continue;
         mergeBucket(total, bucket);
+        if (priceBucket) {
+          const quote = priceBucket.quote?.(parts.model, bucket);
+          const value = quote ? quote.cost : priceBucket(parts.model, bucket);
+          const missing = quote ? quote.unpricedTokens : value === null ? throughput(bucket) : 0;
+          unpricedTokens += missing;
+          if (missing > 0) missingModels.add(parts.model);
+          if (value !== null) cost += value;
+        }
         mergeBucket(dayTotal, bucket);
         accumulate(bySource, sourceId, bucket);
         accumulate(byModel, parts.model, bucket);
@@ -232,23 +243,7 @@ export function summarize(rollup, range, {
     daily.push({ day: key, ...dayTotal, throughput: throughput(dayTotal), billable: billable(dayTotal) });
   }
 
-  let cost = null;
-  let unpricedTokens = 0;
-  const unpricedModels = [];
-  if (priceBucket) {
-    cost = 0;
-    for (const [model, bucket] of Object.entries(byModel)) {
-      const value = priceBucket(model, bucket);
-      if (value === null) {
-        unpricedTokens += throughput(bucket);
-        // 列出具体是哪些模型，用户才能往 pricing.overrides.json 里补。
-        if (throughput(bucket) > 0) unpricedModels.push(model);
-      } else {
-        cost += value;
-      }
-    }
-    unpricedModels.sort();
-  }
+  const unpricedModels = [...missingModels].sort();
 
   return {
     range,
@@ -265,7 +260,7 @@ export function summarize(rollup, range, {
     byProject,
     bySource,
     daily,
-    cost,
+    cost: throughput(total) > 0 && unpricedTokens === throughput(total) ? null : cost,
     unpricedTokens,
     unpricedModels,
   };

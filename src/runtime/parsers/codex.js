@@ -1,3 +1,4 @@
+import { normalizeServiceTier } from '../billing-context.js';
 import { createHash } from 'node:crypto';
 import { homedir } from 'node:os';
 import { basename, join } from 'node:path';
@@ -137,6 +138,7 @@ export function createFileParser({ state, candidate, mode } = {}) {
   let prevCumulativeTotal = state?.prevCumulativeTotal ?? null;
   let prevTotal = state?.prevTotal ?? null;
   let turnContextModel = state?.turnContextModel ?? null;
+  let serviceTier = state?.serviceTier ?? 'standard';
   let sessionCwd = state?.sessionCwd ?? null;
   let canonicalSessionId = state?.canonicalSessionId ?? null;
   let ordinal = state?.ordinal ?? 0;
@@ -204,6 +206,7 @@ export function createFileParser({ state, candidate, mode } = {}) {
 
       if (obj.type === 'turn_context') {
         if (payload.model) turnContextModel = payload.model;
+        if (Object.hasOwn(payload, 'service_tier')) serviceTier = normalizeServiceTier(payload.service_tier);
         if (!sessionCwd && payload.cwd) sessionCwd = payload.cwd;
         return;
       }
@@ -228,6 +231,7 @@ export function createFileParser({ state, candidate, mode } = {}) {
       }
 
       if (payload.type === 'thread_settings_applied') {
+        if (payload.thread_settings && Object.hasOwn(payload.thread_settings, 'service_tier')) serviceTier = normalizeServiceTier(payload.thread_settings.service_tier);
         if (payload.thread_settings?.model) turnContextModel = payload.thread_settings.model;
         return;
       }
@@ -296,6 +300,7 @@ export function createFileParser({ state, candidate, mode } = {}) {
 
       records.push({
         source: id,
+        billing: { serviceTier, promptTokens: info.last_token_usage ? inputTotal : null },
         input: nonCachedInput,
         output,
         cacheRead: cachedInput,
@@ -327,6 +332,7 @@ export function createFileParser({ state, candidate, mode } = {}) {
         // 续读状态：增量尾读时解析器要从这里接着算累计基线。
         state: {
           ...(accounting ? { accounting: accounting.state() } : {}),
+          serviceTier,
           prevCumulativeTotal,
           prevTotal,
           turnContextModel,

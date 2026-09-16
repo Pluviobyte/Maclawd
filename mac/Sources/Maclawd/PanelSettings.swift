@@ -388,7 +388,7 @@ struct SettingsPage: View {
 
                 Text("价格表每 24 小时自动更新；未计价模型会触发限频刷新。")
                     .font(.system(size: 10)).foregroundStyle(.secondary)
-                Text("价格来源：OpenRouter · 仅下载公开价格，不上传用量或凭据。")
+                Text("价格来源：供应商官方与 OpenRouter · 仅下载公开价格，不上传用量或凭据。")
                     .font(.system(size: 10)).foregroundStyle(.secondary)
                 if let updatedAt = store.summary.pricingUpdatedAt {
                     Text("上次成功更新：\(updatedAt.formatted(date: .abbreviated, time: .shortened))")

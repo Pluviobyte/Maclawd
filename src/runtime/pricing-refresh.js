@@ -1,4 +1,4 @@
-import { costOf, isPricingCandidate, priceFor, pricingMeta, updatePrices } from './pricing.js';
+import { quoteBucket, costOf, isPricingCandidate, priceFor, pricingMeta, updatePrices } from './pricing.js';
 
 export const PRICE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 export const PRICE_RETRY_MS = 60 * 60 * 1000;
@@ -55,13 +55,14 @@ export function createPricingRefresher({
     queueMicrotask(() => { queued = false; void check(); });
   }
 
+  const priceBucket = (model, bucket) => priceBucket.quote(model, bucket).cost;
+  priceBucket.quote = (model, bucket) => {
+    const quote = quoteBucket(model, bucket);
+    if (quote.unpricedTokens > 0) observe(model);
+    return quote;
+  };
   return {
-    refresh, check,
-    priceBucket(model, bucket) {
-      const cost = costOf(model, bucket);
-      if (cost === null) observe(model);
-      return cost;
-    },
+    refresh, check, priceBucket,
     observe,
     start() {
       if (running) return;

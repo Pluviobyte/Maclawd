@@ -1,3 +1,5 @@
+import { normalizeServiceTier } from './billing-context.js';
+export { normalizeServiceTier } from './billing-context.js';
 import { toCount, throughput } from './usage-record.js';
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -56,11 +58,6 @@ export function priceFor(model) {
   for(const v of variants){const p=byId.get(v)??byBare.get(v);if(p)return p;}
   return null;
 }
-export function normalizeServiceTier(value) {
-  const tier=typeof value==='string'?value.trim().toLowerCase():'';
-  if(['','default','standard','auto'].includes(tier))return 'standard';
-  return tier==='priority'?'fast':tier;
-}
 function priceRequest(price,bucket,{serviceTier='standard',promptTokens=null}={}) {
   const tier=normalizeServiceTier(serviceTier);
   let p=tier==='standard'?price:price.tiers?.[tier];
@@ -90,8 +87,10 @@ export function quoteBucket(model,bucket) {
   return {cost:pricedTokens>0?cost:null,pricedTokens,unpricedTokens,provenance:price?.provenance??'unknown',source:price?.source??null,verifiedAt:price?.verifiedAt??null};
 }
 export function costOf(model,bucket) {
-  const q=quoteBucket(model,bucket);return q.unpricedTokens>0?null:(q.cost??(priceFor(model)?0:null));
+  const q=quoteBucket(model,bucket);return q.cost??(throughput(bucket)===0&&priceFor(model)?0:null);
 }
+costOf.quote = quoteBucket;
+
 export function normalizeOpenRouter(entry) {
   const p=entry?.pricing;if(!p)return null;
   const convert=x=>{const n=rate(x);return n===null?null:n*1e6;};

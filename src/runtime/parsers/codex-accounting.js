@@ -1,3 +1,4 @@
+import { normalizeServiceTier } from '../billing-context.js';
 import { codexAttribution } from '../usage-attribution.js';
 import { createHash } from 'node:crypto';
 import { toCount, UNKNOWN_MODEL } from '../usage-record.js';
@@ -36,6 +37,7 @@ export function createAccountingIndex(previous) {
       } else if (obj.type === 'turn_context' || p.type === 'thread_settings_applied') {
         const settings = obj.type === 'turn_context' ? p : p.thread_settings;
         if (settings?.model) state.model = settings.model;
+        if (settings && Object.hasOwn(settings, 'service_tier')) state.serviceTier = normalizeServiceTier(settings.service_tier);
         // Context is captured on each usage event; unrelated context lines must
         // not introduce contradictory edges when overlapping segments merge.
         return;
@@ -46,6 +48,7 @@ export function createAccountingIndex(previous) {
         event = { kind: 'token', fingerprint: digest(p).slice(0, 16),
           total: usage(p.info?.total_token_usage), last: usage(p.info?.last_token_usage),
           model: p.info?.model || p.model || state.model || UNKNOWN_MODEL,
+          serviceTier: state.serviceTier ?? 'standard',
           at: ts == null ? null : state.time };
       } else return;
       event.ts = ts;
@@ -158,6 +161,7 @@ function recordsFor(session, skip) {
     records.push({ source: 'codex', ...(session.usageSource ? { usageSource: session.usageSource } : {}), project, ts: event.ts, model: event.model,
       input: Math.max(0, input - cached - write), cacheRead: cached, write5m: write, write1h: 0,
       output, reasoning: Math.min(output, reasoning),
+      billing: { serviceTier: event.serviceTier ?? 'standard', promptTokens: event.last ? input : null },
       // Identity is scoped to the logical session, never a global numeric hash.
       messageId: `${session.id}:${ordinal}`, requestId: null, uuid: null, sidechain: false });
   }

@@ -118,3 +118,13 @@ test('Codex last-only 和缓存写入按官方字段拆分，缓存不保留工�
   assert.deepEqual(['input', 'cacheRead', 'write5m', 'output', 'reasoning'].map(k => result.records[0][k]), [70, 20, 10, 50, 15]);
   assert.equal(readFileSync(join(root, 'data/usage/scan-cache.json'), 'utf8').includes('DO_NOT_CACHE_PRIVATE_TEXT'), false);
 }));
+
+test('Codex service tier survives cold/warm/append scans and snapshot serialization', async () => fixture(async ({write,scan})=>{
+ const ctx=(tier)=>({...context(0,'gpt-6-astra'),payload:{model:'gpt-6-astra',service_tier:tier}});
+ const path=write('sessions/tier.jsonl',[meta('tier'),ctx('priority'),token(1,100,100)]);
+ for(let i=0;i<2;i++) {
+  const r=(await scan()).records[0];assert.deepEqual(r.billing,{serviceTier:'fast',promptTokens:100});
+ }
+ appendFileSync(path,lines([{type:'event_msg',timestamp:ts(2),payload:{type:'thread_settings_applied',thread_settings:{service_tier:'flex'}}},token(3,200,100)]));
+ const result=await scan();assert.equal(result.stats.appended,1);assert.deepEqual(result.records.map(r=>r.billing.serviceTier),['fast','flex']);assert.equal(total(result),200);
+}));

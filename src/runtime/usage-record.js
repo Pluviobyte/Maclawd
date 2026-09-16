@@ -113,8 +113,17 @@ export function emptyBucket() {
   return { input: 0, output: 0, cacheRead: 0, write5m: 0, write1h: 0, reasoning: 0 };
 }
 
-export function addInto(bucket, record) {
+export function addInto(bucket, record, { pricing = false } = {}) {
   for (const field of BUCKET_FIELDS) bucket[field] += toCount(record[field]);
+  if (pricing && throughput(record) > 0) {
+    // Exact prompt sizes survive aggregation, so a future published threshold can reprice history.
+    const prompt = record.billing && Object.hasOwn(record.billing, 'promptTokens')
+      ? record.billing.promptTokens : toCount(record.input) + toCount(record.cacheRead) + cacheWrite(record);
+    const key = JSON.stringify([record.billing?.serviceTier ?? 'standard', prompt]);
+    const groups = bucket.chargeGroups ??= {};
+    const group = groups[key] ??= emptyBucket();
+    for (const field of BUCKET_FIELDS) group[field] += toCount(record[field]);
+  }
   return bucket;
 }
 
