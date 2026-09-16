@@ -156,8 +156,8 @@ async function enrich(eventName, payload, event) {
 async function main() {
   const eventName = process.argv[2];
   if (!eventName) exitQuietly();
-  const sourceAgent = process.argv[3] === '--maclawd-source=workbuddy'
-    ? 'workbuddy' : 'claude-code';
+  const requestedSource = process.argv[3]?.replace('--maclawd-source=', '');
+  const sourceAgent = ['workbuddy', 'workbuddy-ai'].includes(requestedSource) ? requestedSource : 'claude-code';
 
   // 端口来自运行时写的端点文件，不再写死——4173 撞上 Vite preview 的概率不低。
   const port = discoverPort();
@@ -175,11 +175,11 @@ async function main() {
 
   // WorkBuddy 的 command hook 会解析 stdout 作为决策结果。状态通道必须立即
   // 返回空对象，表示完全不介入它的原生工具与权限流程；空 stdout 会被记为错误。
-  if (sourceAgent === 'workbuddy') process.stdout.write('{}\n');
+  if (['workbuddy', 'workbuddy-ai'].includes(sourceAgent)) process.stdout.write('{}\n');
 
   // 没有真实会话 id 的 WorkBuddy 事件无法归属。用 "default" 上报会造出一个
   // 后续事件永远清不掉的幽灵会话，因此只回答 Hook，不进入 Maclawd。
-  if (sourceAgent === 'workbuddy') {
+  if (['workbuddy', 'workbuddy-ai'].includes(sourceAgent)) {
     const sessionId = payload.session_id == null ? '' : String(payload.session_id).trim();
     if (!sessionId) return;
     payload.session_id = sessionId;
@@ -196,11 +196,12 @@ async function main() {
   }
 
   const event = buildEvent(eventName, payload, sourceAgent);
+  if (sourceAgent === 'workbuddy-ai') event.sessionId = `workbuddy-ai:${event.sessionId}`;
   await enrich(eventName, payload, event);
   // 租约先写、再 POST。顺序是刻意的：**写租约不依赖服务在线**，
   // 而这正是它存在的理由——桌宠没开的时候，这是唯一留下的痕迹。
   recordLease(eventName, event);
-  await post(port, event, sourceAgent === 'workbuddy' ? WORKBUDDY_POST_TIMEOUT_MS : POST_TIMEOUT_MS);
+  await post(port, event, ['workbuddy', 'workbuddy-ai'].includes(sourceAgent) ? WORKBUDDY_POST_TIMEOUT_MS : POST_TIMEOUT_MS);
   process.exitCode = 0;
 }
 

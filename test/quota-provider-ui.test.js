@@ -119,7 +119,7 @@ test('WorkBuddy 订阅与额外额度对齐显示，额外积分包可展开查�
   );
   assert.match(block, /WorkBuddyQuotaPresentation/);
   assert.doesNotMatch(block, /DisclosureGroup/);
-  assert.match(block, /Button[\s\S]*workBuddyBonusExpanded\.toggle\(\)/);
+  assert.match(block, /Button[\s\S]*workBuddyBonusExpanded\.insert\(source\.id\)/);
   assert.match(block, /chevron\.(up|down)/);
   assert.match(block, /contentShape\(Rectangle\(\)\)/);
   assert.match(block, /bonusDetails/);
@@ -132,7 +132,7 @@ test('WorkBuddy 订阅与额外额度对齐显示，额外积分包可展开查�
 test('WorkBuddy 额外积分包在有限的独立滚动区展开，不撑乱整个概览页', () => {
   const block = panelSource.slice(
     panelSource.indexOf('if workBuddyBonusExpanded'),
-    panelSource.indexOf('private var workBuddyStatus'),
+    panelSource.indexOf('private func workBuddyStatus'),
   );
   assert.match(block, /ScrollView\(\.vertical,\s*showsIndicators:\s*false\)/,
     '额外包明细必须使用自己的纵向滚动区，不能全部塞进概览外层滚动区');

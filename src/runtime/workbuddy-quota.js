@@ -197,6 +197,7 @@ function credentialFromJson(raw, sourcePath) {
 
 /** 只读发现本机 WorkBuddy 登录凭据；调用方不得持久化或记录返回值。 */
 export function findWorkBuddyCredential({
+  source = 'workbuddy',
   authDirs = workBuddyAuthDirectories(),
   readdir = readdirSync,
   readFile = readFileSync,
@@ -206,15 +207,9 @@ export function findWorkBuddyCredential({
     try {
       const directoryNames = readdir(authDir);
       const present = new Set(directoryNames);
-      names = directoryNames
-        .filter((name) => typeof name === 'string' && name.endsWith('.info'))
-        .filter((name) => !present.has(`${name}.logged-out`))
-        .sort((a, b) => {
-          const priority = (name) => (name === 'workbuddy-desktop.info' ? 0
-            : name === 'workbuddy-desktop-ai.info' ? 1
-              : name.toLowerCase().includes('workbuddy') ? 2 : 3);
-          return priority(a) - priority(b) || a.localeCompare(b);
-        });
+      const filename = source === 'workbuddy' ? 'workbuddy-desktop.info'
+        : source === 'workbuddy-ai' ? 'workbuddy-desktop-ai.info' : null;
+      names = directoryNames.filter((name) => name === filename && !present.has(`${name}.logged-out`));
     } catch {
       continue;
     }
@@ -240,13 +235,16 @@ function allowedWorkBuddyHost(value) {
   } catch {
     return null;
   }
-  const allowed = ['codebuddy.cn', 'codebuddy.ai', 'tencent.com'];
+  const allowed = ['codebuddy.cn', 'codebuddy.ai', 'workbuddy.ai', 'tencent.com'];
   return allowed.some((suffix) => hostname === suffix || hostname.endsWith(`.${suffix}`))
     ? hostname : null;
 }
 
-function workBuddyHosts(domain, enterprise) {
+function workBuddyHosts(domain, enterprise, source) {
   const preferred = allowedWorkBuddyHost(domain);
+  if (!preferred && (domain || source === 'workbuddy-ai')) {
+    throw quotaError('EDOMAIN', '当前版本缺少有效的计费域名，请重新登录');
+  }
   // WorkBuddy Token 具有域绑定语义，绝不能因为请求失败而带到另一个域名。
   return [preferred ?? (enterprise ? 'copilot.tencent.com' : 'www.codebuddy.cn')];
 }
@@ -266,7 +264,8 @@ function quotaError(code, message) {
 
 /** 用 WorkBuddy 本机身份读取一次账户积分。Token 只进入请求头，不返回、不落盘。 */
 export async function readWorkBuddyQuota({
-  credential = findWorkBuddyCredential(),
+  source = 'workbuddy',
+  credential = findWorkBuddyCredential({ source }),
   fetchImpl = globalThis.fetch,
   now = new Date(),
   signal = null,
@@ -296,7 +295,7 @@ export async function readWorkBuddyQuota({
   timeout.unref?.();
 
   try {
-    for (const host of workBuddyHosts(credential.domain, enterprise)) {
+    for (const host of workBuddyHosts(credential.domain, enterprise, source)) {
       try {
         const headers = {
           Accept: 'application/json, text/plain, */*',
@@ -314,7 +313,7 @@ export async function readWorkBuddyQuota({
         const response = await fetchImpl(
           `https://${host}${host === 'copilot.tencent.com' ? '' : '/v2'}/billing/meter/`
             + (enterprise ? 'get-enterprise-user-usage' : 'get-user-resource'),
-          { method: 'POST', headers, body, signal: requestController.signal },
+          { method: 'POST', headers, body, signal: requestController.signal, redirect: 'error' },
         );
         if (!response?.ok) {
           const code = response?.status === 401 || response?.status === 403 ? 'EAUTH'
@@ -340,7 +339,7 @@ export async function readWorkBuddyQuota({
           ? workBuddyEnterpriseQuotaReport(payload, { timeZoneOffsetMinutes })
           : workBuddyQuotaReport(payload, { timeZoneOffsetMinutes });
         if (!report) throw quotaError('ENODATA', 'WorkBuddy 暂未返回可用积分');
-        return report;
+        return { ...report, source, sourceLabel: source === 'workbuddy-ai' ? 'WorkBuddy AI（海外版）' : 'WorkBuddy（国内版）' };
       } catch (error) {
         if (requestController.signal.aborted) {
           if (signal?.aborted) {
@@ -362,9 +361,10 @@ export async function readWorkBuddyQuota({
 
 /** 后台额度采集器：有界刷新、并发合并、成功缓存、关闭后丢弃在途结果。 */
 export function createWorkBuddyQuotaCollector({
+  source = 'workbuddy',
   intervalMs = DEFAULT_REFRESH_MS,
   enabled = () => loadSettings().quotaTracking === true,
-  read = readWorkBuddyQuota,
+  read = (options) => readWorkBuddyQuota({ ...options, source }),
   record = recordQuota,
   onError = null,
 } = {}) {

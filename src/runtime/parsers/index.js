@@ -1,6 +1,7 @@
 import * as claudeCode from './claude-code.js';
 import * as codex from './codex.js';
 import * as workbuddy from './workbuddy.js';
+import * as workbuddyAI from './workbuddy-ai.js';
 import * as kimiCode from './kimi-code.js';
 import * as qwenCode from './qwen-code.js';
 import * as grok from './grok.js';
@@ -46,6 +47,7 @@ export const parsers = [
   claudeCode,
   codex,
   workbuddy,
+  workbuddyAI,
   kimiCode,
   qwenCode,
   grok,

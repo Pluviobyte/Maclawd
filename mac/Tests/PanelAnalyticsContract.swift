@@ -106,6 +106,17 @@ struct PanelAnalyticsContract {
             "empty": true,
         ], workBuddyInstalled: true)
         precondition(quota.workBuddy.installed)
+        precondition(!quota.workBuddyAI.installed)
+        let overseasQuota = QuotaSnapshot.decode([
+            "workBuddyAI": ["lastError": ["code": "EAUTH"]],
+        ], workBuddyAIInstalled: true)
+        precondition(overseasQuota.workBuddyAI.installed)
+        precondition(overseasQuota.workBuddyAI.lastErrorCode == "EAUTH")
+        precondition(!overseasQuota.workBuddy.installed)
+        precondition(WorkBuddyInstallationDetector.isInstalled(
+            bundleIdentifier: WorkBuddyInstallationDetector.overseasBundleIdentifier,
+            locateApplication: { $0 == "com.workbuddy.workbuddy-ai" ? URL(fileURLWithPath: "/Moved/WorkBuddy AI.app") : nil }
+        ))
 
         // UI reset semantics cross-checked against OpenUsage 70acd4f and CodexBar f74117a:
         // the expired usage value stays absent, while the newly reset allowance renders full.

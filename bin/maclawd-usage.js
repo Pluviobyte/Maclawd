@@ -600,6 +600,7 @@ function runOffboard() {
     },
     codexHooks: (a) => (a.existing.length ? `移除 ${a.existing.length} 个事件` : '本来就没装'),
     codexPermission: (a) => (a.existing.length ? '已移除' : '本来就没装'),
+    workBuddyAIHooks: (a) => (a.removed.length ? `移除 ${a.removed.length} 个事件` : '本来就没装'),
     workBuddyHooks: (a) => (a.removed.length ? `移除 ${a.removed.length} 个事件` : '本来就没装'),
     codexPet: (a) => {
       if (a.removed) return '已移除';
@@ -613,7 +614,8 @@ function runOffboard() {
     statusline: 'Claude Code 状态行',
     codexHooks: 'Codex hooks',
     codexPermission: 'Codex 权限通道',
-    workBuddyHooks: 'WorkBuddy hooks',
+    workBuddyHooks: 'WorkBuddy 国内版 hooks',
+    workBuddyAIHooks: 'WorkBuddy AI 海外版 hooks',
     codexPet: 'Codex 宠物包',
   };
   for (const [key, label] of Object.entries(labels)) {

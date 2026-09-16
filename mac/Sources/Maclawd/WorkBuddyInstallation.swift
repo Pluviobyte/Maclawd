@@ -9,7 +9,10 @@ import AppKit
 enum WorkBuddyInstallationDetector {
     static let bundleIdentifier = "com.workbuddy.workbuddy"
 
+    static let overseasBundleIdentifier = "com.workbuddy.workbuddy-ai"
+
     static func isInstalled(
+        bundleIdentifier: String = bundleIdentifier,
         locateApplication: (String) -> URL? = {
             NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0)
         }

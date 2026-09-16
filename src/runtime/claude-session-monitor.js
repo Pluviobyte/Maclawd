@@ -1,5 +1,6 @@
 import { getProjectDirs } from './claude-roots.js';
 import { projectsDir as workBuddyProjectsDir } from './parsers/workbuddy.js';
+import { projectsDir as workBuddyAIProjectsDir } from './parsers/workbuddy-ai.js';
 import { createJsonlSessionMonitor } from './jsonl-session-monitor.js';
 
 /**
@@ -46,7 +47,8 @@ export function claudeJsonlEvent(row, context = {}, agentId = 'claude-code') {
   const type = row?.type;
   if (type !== 'user' && type !== 'assistant') return null;
 
-  const sessionId = row.sessionId ?? context.sessionId;
+  const rawSessionId = row.sessionId ?? context.sessionId;
+  const sessionId = rawSessionId && agentId === 'workbuddy-ai' ? `workbuddy-ai:${rawSessionId}` : rawSessionId;
   // 没有会话 id 就没法归属。用 'default' 顶上会造出一个永远清不掉的幽灵会话
   // （与 hook 写入器对 WorkBuddy 的处理同一个道理）。
   if (!sessionId) return null;
@@ -100,7 +102,7 @@ function learnClaudeContext(row, context) {
  */
 export function createClaudeSessionMonitor({
   agentId = 'claude-code',
-  roots = agentId === 'workbuddy' ? () => [workBuddyProjectsDir()] : getProjectDirs,
+  roots = agentId === 'workbuddy-ai' ? () => [workBuddyAIProjectsDir()] : agentId === 'workbuddy' ? () => [workBuddyProjectsDir()] : getProjectDirs,
   ...options
 } = {}) {
   return createJsonlSessionMonitor({

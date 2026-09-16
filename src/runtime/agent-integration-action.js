@@ -39,6 +39,11 @@ const AGENTS = {
     install: () => installWorkBuddyHooks(),
     uninstall: () => uninstallWorkBuddyHooks(),
   },
+  'workbuddy-ai': {
+    settingKey: 'workBuddyAIHookEnhancement',
+    install: () => installWorkBuddyHooks({ source: 'workbuddy-ai' }),
+    uninstall: () => uninstallWorkBuddyHooks({ source: 'workbuddy-ai' }),
+  },
   cursor: {
     settingKey: 'cursorHookEnhancement',
     install: () => installCursorHook(),

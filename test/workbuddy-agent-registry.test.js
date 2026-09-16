@@ -9,7 +9,9 @@ test('Agent 注册表把 WorkBuddy 暴露为无权限接管的实时来源', asy
   const data = join(root, 'projects');
   mkdirSync(data, { recursive: true });
   process.env.MACLAWD_WORKBUDDY_DIR = data;
+  process.env.MACLAWD_WORKBUDDY_AI_DIR = data;
   process.env.MACLAWD_WORKBUDDY_SETTINGS = join(root, 'settings.json');
+  process.env.MACLAWD_WORKBUDDY_AI_SETTINGS = join(root, 'settings.json') + ".overseas";
   try {
     const { agentConnections, runAgentDoctor } = await import(
       `../src/runtime/agent-registry.js?workbuddy=${Date.now()}`
@@ -22,6 +24,13 @@ test('Agent 注册表把 WorkBuddy 暴露为无权限接管的实时来源', asy
       'WorkBuddy 额度由本地登录凭据和计费查询提供，与 Hooks 通道相互独立');
     assert.equal(workBuddy.integration.status, 'available');
 
+    const overseas = agentConnections().find((agent) => agent.id === 'workbuddy-ai');
+    assert.equal(overseas.installed, true);
+    assert.match(overseas.label, /海外版/);
+    assert.match(workBuddy.label, /国内版/);
+    assert.equal(overseas.capabilities.permissions, false);
+    assert.equal(overseas.capabilities.realtime, true);
+    assert.equal(overseas.integration.status, 'available');
     const doctor = runAgentDoctor({ workBuddyHookEnhancement: true });
     const check = doctor.checks.find((item) => item.agentId === 'workbuddy');
     assert.equal(check.level, 'warning');
@@ -30,6 +39,8 @@ test('Agent 注册表把 WorkBuddy 暴露为无权限接管的实时来源', asy
       'Doctor 的成功文案不能暗示 Agent 正在运行或事件已经送达');
   } finally {
     delete process.env.MACLAWD_WORKBUDDY_DIR;
+    delete process.env.MACLAWD_WORKBUDDY_AI_DIR;
+    delete process.env.MACLAWD_WORKBUDDY_AI_SETTINGS;
     delete process.env.MACLAWD_WORKBUDDY_SETTINGS;
     rmSync(root, { recursive: true, force: true });
   }

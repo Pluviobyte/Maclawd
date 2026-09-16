@@ -272,6 +272,7 @@ struct QuotaSnapshot: Equatable {
     var claudeMessage: String?
     var sources: [QuotaSource] = []
     var workBuddy = WorkBuddyQuotaStatus()
+    var workBuddyAI = WorkBuddyQuotaStatus()
     var desktopProviders: [DesktopQuotaStatus] = []
     var empty: Bool = true
     var statusline: StatuslineState = .unknown
@@ -289,7 +290,8 @@ struct QuotaSnapshot: Equatable {
     /// 解码 `/api/quota`。RuntimeClient 和 PanelStore 共用这一份。
     static func decode(
         _ json: [String: Any],
-        workBuddyInstalled: Bool = false
+        workBuddyInstalled: Bool = false,
+        workBuddyAIInstalled: Bool = false
     ) -> QuotaSnapshot {
         var out = QuotaSnapshot()
         out.sources = (json["sources"] as? [[String: Any]] ?? []).compactMap(QuotaSource.init)
@@ -303,6 +305,8 @@ struct QuotaSnapshot: Equatable {
         }
         out.workBuddy.installed = workBuddyInstalled
         out.workBuddy.decode(json["workBuddy"])
+        out.workBuddyAI.installed = workBuddyAIInstalled
+        out.workBuddyAI.decode(json["workBuddyAI"])
         out.desktopProviders = [
             DesktopQuotaStatus(id: "kimi", label: "Kimi", raw: json["kimi"]),
             DesktopQuotaStatus(id: "kimi-code", label: "Kimi Code CLI", raw: json["kimiCode"]),
@@ -964,7 +968,8 @@ final class PanelStore: ObservableObject {
             // RuntimeClient 的后台菜单栏轮询继续使用纯解码，不接触 AppKit。
             self.quota = QuotaSnapshot.decode(
                 json,
-                workBuddyInstalled: WorkBuddyInstallationDetector.isInstalled()
+                workBuddyInstalled: WorkBuddyInstallationDetector.isInstalled(),
+                workBuddyAIInstalled: WorkBuddyInstallationDetector.isInstalled(bundleIdentifier: WorkBuddyInstallationDetector.overseasBundleIdentifier)
             )
         }
         get("/api/sessions") { [weak self] json in

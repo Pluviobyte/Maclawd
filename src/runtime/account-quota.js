@@ -58,7 +58,7 @@ function validWindowKey(source, key) {
   if (WINDOW_ORDER.includes(key)) return true;
   if (source === 'grok' && key === 'billing_cycle') return true;
   if (source === 'cursor') return CURSOR_WINDOW_ORDER.includes(key);
-  if (source === 'workbuddy') return /^(base|bonus)_\d+$/.test(key);
+  if (['workbuddy', 'workbuddy-ai'].includes(source)) return /^(base|bonus)_\d+$/.test(key);
   return (source === 'codex' || source.startsWith('codex:'))
     && (/^duration_\d+$/.test(key) || /^codex_(primary|secondary)$/.test(key));
 }
@@ -71,7 +71,7 @@ function orderedWindowKeys(source, windows) {
         const order = ['total', 'work_five_hour', 'code_five_hour', 'work_seven_day', 'code_seven_day'];
         return order.indexOf(a) - order.indexOf(b);
       }
-      if (source === 'workbuddy') {
+      if (['workbuddy', 'workbuddy-ai'].includes(source)) {
         const [aKind, aIndex] = a.split('_');
         const [bKind, bIndex] = b.split('_');
         const kindOrder = { base: 0, bonus: 1 };
@@ -95,7 +95,8 @@ export const SOURCE_LABELS = {
   codex: 'Codex',
   cursor: 'Cursor',
   grok: 'Grok Build',
-  workbuddy: 'WorkBuddy',
+  workbuddy: 'WorkBuddy（国内版）',
+  'workbuddy-ai': 'WorkBuddy AI（海外版）',
   kimi: 'Kimi',
   'kimi-code': 'Kimi Code CLI',
 };
@@ -252,7 +253,7 @@ export function freshness(window, now = Date.now(), source = null) {
     : ['kimi', 'kimi-code'].includes(source) ? 15 * 60_000
     : source === 'cursor' ? CURSOR_QUIET_AFTER_MS
       : source === 'grok' ? GROK_QUIET_AFTER_MS
-        : source === 'workbuddy' ? WORKBUDDY_QUIET_AFTER_MS : QUIET_AFTER_MS;
+        : ['workbuddy', 'workbuddy-ai'].includes(source) ? WORKBUDDY_QUIET_AFTER_MS : QUIET_AFTER_MS;
   return now - lastSeenAt > quietAfter ? 'quiet' : 'live';
 }
 

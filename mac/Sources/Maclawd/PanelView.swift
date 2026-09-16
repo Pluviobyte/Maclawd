@@ -553,7 +553,7 @@ private struct QuotaSourceDropDelegate: DropDelegate {
 private struct QuotaBlock: View {
     @ObservedObject var store: PanelStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var workBuddyBonusExpanded = false
+    @State private var workBuddyBonusExpanded: Set<String> = []
     @State private var showingSourcePicker = false
     @State private var sourceDropTarget: String?
     @State private var sourceRowFrames: [String: CGRect] = [:]
@@ -786,7 +786,7 @@ private struct QuotaBlock: View {
                             Text(source.label)
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(.primary)
-                            if source.id == "workbuddy" {
+                            if ["workbuddy", "workbuddy-ai"].contains(source.id) {
                                 workBuddyQuota(source)
                             } else {
                                 ForEach(source.windows) { window in
@@ -796,10 +796,15 @@ private struct QuotaBlock: View {
                         }
                     }
                 }
-                if store.quota.workBuddy.installed
+                if store.quota.workBuddy.installed && !hiddenSourceIDs.contains("workbuddy")
                     && (!store.quota.sources.contains(where: { $0.id == "workbuddy" })
                         || store.quota.workBuddy.lastErrorCode != nil) {
-                    workBuddyStatus
+                    workBuddyStatus(store.quota.workBuddy, label: "WorkBuddy（国内版）")
+                }
+                if store.quota.workBuddyAI.installed && !hiddenSourceIDs.contains("workbuddy-ai")
+                    && (!store.quota.sources.contains(where: { $0.id == "workbuddy-ai" })
+                        || store.quota.workBuddyAI.lastErrorCode != nil) {
+                    workBuddyStatus(store.quota.workBuddyAI, label: "WorkBuddy AI（海外版）")
                 }
                 if store.quota.enabled && !hiddenSourceIDs.contains("claude-code"),
                    let message = store.quota.claudeMessage {
@@ -836,7 +841,11 @@ private struct QuotaBlock: View {
         if presentation.bonus != nil || !presentation.bonusDetails.isEmpty {
             Button {
                 withAnimation(.easeInOut(duration: 0.16)) {
-                    workBuddyBonusExpanded.toggle()
+                    if workBuddyBonusExpanded.contains(source.id) {
+                        workBuddyBonusExpanded.remove(source.id)
+                    } else {
+                        workBuddyBonusExpanded.insert(source.id)
+                    }
                 }
             } label: {
                 VStack(alignment: .leading, spacing: 2) {
@@ -849,7 +858,7 @@ private struct QuotaBlock: View {
                     HStack(spacing: 5) {
                         Text("\(presentation.bonusDetails.count) 个额外积分包 · 点击查看明细")
                         Spacer(minLength: 4)
-                        Image(systemName: workBuddyBonusExpanded ? "chevron.up" : "chevron.down")
+                        Image(systemName: workBuddyBonusExpanded.contains(source.id) ? "chevron.up" : "chevron.down")
                             .font(.system(size: 8.5, weight: .semibold))
                     }
                     .font(.system(size: 9.5))
@@ -861,7 +870,7 @@ private struct QuotaBlock: View {
             }
             .buttonStyle(.plain)
 
-            if workBuddyBonusExpanded {
+            if workBuddyBonusExpanded.contains(source.id) {
                 ScrollView(.vertical, showsIndicators: false) {
                     LazyVStack(alignment: .leading, spacing: 7) {
                         ForEach(Array(presentation.bonusDetails.enumerated()), id: \.element.id) { index, window in
@@ -891,11 +900,11 @@ private struct QuotaBlock: View {
         }
     }
 
-    private var workBuddyStatus: some View {
+    private func workBuddyStatus(_ status: WorkBuddyQuotaStatus, label: String) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text("WorkBuddy")
+            Text(label)
                 .font(.system(size: 11, weight: .semibold))
-            Text(workBuddyStatusTitle)
+            Text(workBuddyStatusTitle(status))
                 .font(.system(size: 11, weight: .medium))
             Text("使用本机 WorkBuddy 登录状态查询计费服务；Token 只在请求期间驻留内存。")
                 .font(.system(size: 10))
@@ -904,9 +913,9 @@ private struct QuotaBlock: View {
         }
     }
 
-    private var workBuddyStatusTitle: String {
+    private func workBuddyStatusTitle(_ status: WorkBuddyQuotaStatus) -> String {
         guard store.quota.enabled else { return "开启额度读取后自动显示积分" }
-        switch store.quota.workBuddy.lastErrorCode {
+        switch status.lastErrorCode {
         case "ENOAUTH": return "请先登录 WorkBuddy"
         case "EAUTH": return "WorkBuddy 登录状态已失效"
         case "ENODATA": return "WorkBuddy 暂未返回可用积分"

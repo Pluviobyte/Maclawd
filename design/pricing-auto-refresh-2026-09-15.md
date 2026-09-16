@@ -4,7 +4,7 @@
 
 - `openai/codex` 默认分支 main：`fc269b66adc37f3c855df222ad80b02733355c46`；最新稳定 release `rust-v0.154.0`。此前同会话已核对 `4e6450bbfd60bdfa845182f30aaa9d6f068e8bbd` 的 `codex-rs/protocol/src/protocol.rs`：TokenUsage 是用量字段，不是美元账单。最新提交涉及 daemon 替换与 fork 附件，不改变本次刷新调度。
 - `ccusage/ccusage` main：`62b3541c6804574909b9e3ee8c91ab42f83628d0`；稳定 release `v20.0.20`。核对最新 `rust/crates/ccusage-core/src/pricing.rs` 的公开价表缓存、失败重试退避，以及避免内置旧价覆盖新快照的注释。近期提交持续更新价格快照；Astra Fast 倍率相关 issue #1704、#1705 提醒估算不能等同实际扣费。使用最新默认分支作为设计参考，不移植稳定版或 Rust 实现。
-- `vibe-cafe/vibe-usage` main：`fcf1c3981890cf31267b1ee1adf88d61a75fdbb5`；稳定 release `v0.10.21`。已核对最新 `src/parsers/codex.js` 的 Token 计数；近期模型价表缺口 issue 也说明新模型需要及时同步。此次不修改本地日志解析。
+- `vibe-cafe/vibe-usage` main：`fcf1c3981890cf31267b1ee1adf88d61a75fdbb5`；稳定 release `v0.10.21`。已核对最新 [上游 Codex 解析器](https://github.com/vibe-cafe/vibe-usage/blob/fcf1c3981890cf31267b1ee1adf88d61a75fdbb5/src/parsers/codex.js) 的 Token 计数；近期模型价表缺口 issue 也说明新模型需要及时同步。此次不修改本地日志解析。
 - 公开价格目录：<https://openrouter.ai/api/v1/models>。本会话真实 GET 已返回 `openai/gpt-6-astra`；输入、缓存读、输出的标准每百万 Token 单价分别为 $10、$1、$50，与 <https://developers.openai.com/api/docs/models/gpt-6-astra> 核对一致。
 
 ## 原因与实现

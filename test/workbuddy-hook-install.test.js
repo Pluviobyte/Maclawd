@@ -9,6 +9,7 @@ import { join } from 'node:path';
 const root = mkdtempSync(join(tmpdir(), 'maclawd-workbuddy-hooks-'));
 const settingsPath = join(root, 'settings.json');
 process.env.MACLAWD_WORKBUDDY_SETTINGS = settingsPath;
+process.env.MACLAWD_WORKBUDDY_AI_SETTINGS = settingsPath + ".overseas";
 
 const {
   WORKBUDDY_HOOK_EVENTS,
@@ -105,16 +106,8 @@ test('安装后保持原配置权限，新配置默认仅当前用户可读写',
   assert.equal(statSync(settingsPath).mode & 0o777, 0o600);
 });
 
-test('配置路径优先当前目录，并兼容已有 5.3.x 旧目录', () => {
+test('国内与海外配置路径独立，不因另一版配置存在而改变', () => {
   const home = join(root, 'home');
-  const current = join(home, '.workbuddy-ai', 'settings.json');
-  const legacy = join(home, '.workbuddy', 'settings.json');
-  assert.equal(workBuddySettingsPath({ home, env: {}, exists: (path) => path === current }), current);
-  assert.equal(workBuddySettingsPath({ home, env: {}, exists: (path) => path === legacy }), legacy);
-  assert.equal(workBuddySettingsPath({
-    home,
-    env: {},
-    exists: (path) => path === join(home, '.workbuddy', 'projects'),
-  }), legacy);
-  assert.equal(workBuddySettingsPath({ home, env: {}, exists: () => false }), current);
+  assert.equal(workBuddySettingsPath({ home, env: {} }), join(home, '.workbuddy', 'settings.json'));
+  assert.equal(workBuddySettingsPath({ home, env: {}, source: 'workbuddy-ai' }), join(home, '.workbuddy-ai', 'settings.json'));
 });

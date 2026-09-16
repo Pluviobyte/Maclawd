@@ -83,6 +83,7 @@ export function offboard() {
     hookEnhancement: false,
     codexHookEnhancement: false,
     workBuddyHookEnhancement: false,
+    workBuddyAIHookEnhancement: false,
     cursorHookEnhancement: false,
     permissionBubble: false,
     quotaStatusline: false,
@@ -105,6 +106,7 @@ export function offboard() {
   attempt('codexHooks', () => uninstallCodexHooks());
   attempt('codexPermission', () => uninstallCodexPermissionHook());
   attempt('workBuddyHooks', () => uninstallWorkBuddyHooks());
+  attempt('workBuddyAIHooks', () => uninstallWorkBuddyHooks({ source: 'workbuddy-ai' }));
   attempt('cursorHook', () => uninstallCursorHook());
   attempt('codexPet', () => removeCodexPet());
 
@@ -113,6 +115,7 @@ export function offboard() {
     `${claudeSettingsPath()}.maclawd-backup`,
     `${codexHooksPath()}.maclawd-backup`,
     `${workBuddySettingsPath()}.maclawd-backup`,
+    `${workBuddySettingsPath({ source: 'workbuddy-ai' })}.maclawd-backup`,
     `${cursorHooksPath()}.maclawd-backup`,
   ].filter((path) => existsSync(path));
 

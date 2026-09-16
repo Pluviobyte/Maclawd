@@ -7,7 +7,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-test('WorkBuddy Hook 上报标准事件且不泄露命令原文', async () => {
+for (const source of ['workbuddy', 'workbuddy-ai']) {
+test(`${source} Hook 上报标准事件且不泄露命令原文`, async () => {
   const dataDir = mkdtempSync(join(tmpdir(), 'maclawd-workbuddy-event-'));
   let received;
   const server = createServer((req, res) => {
@@ -26,7 +27,7 @@ test('WorkBuddy Hook 上报标准事件且不泄露命令原文', async () => {
     const child = spawn(process.execPath, [
       fileURLToPath(new URL('../hooks/maclawd-hook.js', import.meta.url)),
       'PreToolUse',
-      '--maclawd-source=workbuddy',
+      `--maclawd-source=${source}`,
     ], {
       env: {
         ...process.env,
@@ -51,10 +52,10 @@ test('WorkBuddy Hook 上报标准事件且不泄露命令原文', async () => {
 
     assert.equal(exitCode, 0);
     assert.equal(stdout.trim(), '{}', 'WorkBuddy 命令 Hook 必须收到合法的空决策 JSON');
-    assert.equal(received.agentId, 'workbuddy');
+    assert.equal(received.agentId, source);
     assert.equal(received.channel, 'hook');
     assert.equal(received.type, 'PreToolUse');
-    assert.equal(received.sessionId, 'wb-session');
+    assert.equal(received.sessionId, source === 'workbuddy-ai' ? 'workbuddy-ai:wb-session' : 'wb-session');
     assert.equal(received.toolName, 'Bash');
     assert.equal(received.commandClass, 'working.building');
     assert.equal(JSON.stringify(received).includes('never-send-this'), false);
@@ -76,7 +77,7 @@ test('WorkBuddy Hook 缺少 session_id 时不创建幽灵会话', async () => {
     const child = spawn(process.execPath, [
       fileURLToPath(new URL('../hooks/maclawd-hook.js', import.meta.url)),
       'UserPromptSubmit',
-      '--maclawd-source=workbuddy',
+      `--maclawd-source=${source}`,
     ], {
       env: {
         ...process.env,
@@ -100,3 +101,5 @@ test('WorkBuddy Hook 缺少 session_id 时不创建幽灵会话', async () => {
     rmSync(dataDir, { recursive: true, force: true });
   }
 });
+
+}

@@ -21,6 +21,7 @@ process.env.MACLAWD_CLAUDE_DIRS = join(root, 'empty-claude');
 process.env.MACLAWD_CODEX_HOME = join(root, 'empty-codex');
 process.env.MACLAWD_WORKBUDDY_DIR = join(root, 'empty-wb');
 process.env.MACLAWD_WORKBUDDY_SETTINGS = join(root, 'workbuddy-settings.json');
+process.env.MACLAWD_WORKBUDDY_AI_SETTINGS = join(root, 'workbuddy-settings.json') + ".overseas";
 process.env.MACLAWD_CURSOR_HOOKS_PATH = join(root, 'cursor-hooks.json');
 process.env.MACLAWD_KIMI_CODE_DIR = join(root, 'empty-kimi');
 process.env.MACLAWD_KIMI_LEGACY_DIR = join(root, 'empty-kimi2');
@@ -97,6 +98,7 @@ before(async () => {
     },
     quotaCollector: quotaWorker,
     workBuddyQuotaCollector: workBuddyQuotaWorker,
+    workBuddyAIQuotaCollector: createWorkBuddyQuotaCollector({ enabled: () => false }),
   }));
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   base = `http://127.0.0.1:${server.address().port}`;

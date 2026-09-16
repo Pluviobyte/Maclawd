@@ -1,12 +1,12 @@
 import { homedir } from 'node:os';
-import { basename, join, sep } from 'node:path';
+import { basename, dirname, join, sep } from 'node:path';
 import {
   pickCount, resolveInclusiveInput, toCount, UNKNOWN_MODEL,
 } from '../usage-record.js';
 import { statelessParser } from '../parser-kit.js';
 
 export const id = 'workbuddy';
-export const label = 'WorkBuddy';
+export const label = 'WorkBuddy（国内版）';
 export const lineFilter = '"usage"';
 
 /** MACLAWD_WORKBUDDY_DIR 是测试与诊断用的覆盖入口。 */
@@ -17,12 +17,11 @@ export function projectsDir() {
 }
 
 export function dataDirs() {
-  return process.env.MACLAWD_WORKBUDDY_DIR?.trim() ? [projectsDir()]
-    : [join(homedir(), '.workbuddy-ai', 'projects'), projectsDir()];
+  return process.env.MACLAWD_WORKBUDDY_DIR?.trim() ? [projectsDir()] : [dirname(projectsDir())];
 }
 
 export function roots() {
-  return dataDirs();
+  return [projectsDir()];
 }
 
 function projectFromEncodedDir(relative) {
@@ -33,8 +32,8 @@ function projectFromEncodedDir(relative) {
   return parts.at(-1) || null;
 }
 
-export function discover({ listJsonl }) {
-  return dataDirs().flatMap(base => listJsonl(base)).map(({ path, size, mtimeMs, ino, relative }) => ({
+export function discover({ listJsonl }, directories = roots()) {
+  return directories.flatMap(base => listJsonl(base)).map(({ path, size, mtimeMs, ino, relative }) => ({
     path,
     size,
     mtimeMs,

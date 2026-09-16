@@ -5,7 +5,7 @@ import { codexHookStatus } from './codex-hook-install.js';
 import { workBuddyHookStatus } from './workbuddy-hook-install.js';
 import { cursorHookStatus } from './cursor-hook-install.js';
 
-const REALTIME = new Set(['claude-code', 'codex', 'workbuddy']);
+const REALTIME = new Set(['claude-code', 'codex', 'workbuddy', 'workbuddy-ai']);
 const MANAGED = new Set([...REALTIME, 'cursor']);
 
 export function agentConnections() {
@@ -13,10 +13,12 @@ export function agentConnections() {
   const codex = codexHookStatus();
   const workBuddy = workBuddyHookStatus();
   const cursor = cursorHookStatus();
+  const workBuddyAI = workBuddyHookStatus({ source: 'workbuddy-ai' });
   return parsers.map((parser) => {
     const realtime = REALTIME.has(parser.id);
     const status = parser.id === 'claude-code' ? claude
       : parser.id === 'codex' ? codex
+        : parser.id === 'workbuddy-ai' ? workBuddyAI
         : parser.id === 'workbuddy' ? workBuddy
           : parser.id === 'cursor' ? cursor : null;
     const ready = status ? status.missing.length === 0 : false;
@@ -29,16 +31,16 @@ export function agentConnections() {
         usage: true,
         realtime,
         localCapture: parser.id === 'cursor',
-        permissions: realtime && parser.id !== 'workbuddy',
+        permissions: realtime && !['workbuddy', 'workbuddy-ai'].includes(parser.id),
         terminalFocus: realtime,
         // WorkBuddy 额度来自本机登录凭据 + 计费查询，不依赖 Hooks 是否开启。
-        quota: parser.id === 'claude-code' || parser.id === 'codex' || parser.id === 'workbuddy',
+        quota: parser.id === 'claude-code' || parser.id === 'codex' || ['workbuddy', 'workbuddy-ai'].includes(parser.id),
       },
       integration: MANAGED.has(parser.id) ? {
         status: ready ? 'connected' : status.installed?.length ? 'partial' : 'available',
         installedEvents: status.installed?.length ?? 0,
         missingEvents: status.missing?.length ?? 0,
-        permissionInstalled: parser.id === 'workbuddy' ? false : parser.id === 'claude-code'
+        permissionInstalled: ['workbuddy', 'workbuddy-ai'].includes(parser.id) ? false : parser.id === 'claude-code'
           ? permissionHookStatus().installed
           : status.permissionInstalled,
         trustReviewRequired: status.trustReviewRequired === true,
@@ -53,6 +55,7 @@ export function runAgentDoctor(settings = {}) {
   const checks = [];
   for (const agent of agents) {
     const expected = agent.id === 'codex' ? settings.codexHookEnhancement
+      : agent.id === 'workbuddy-ai' ? settings.workBuddyAIHookEnhancement
       : agent.id === 'workbuddy' ? settings.workBuddyHookEnhancement
         : agent.id === 'cursor' ? settings.cursorHookEnhancement
           : settings.hookEnhancement;

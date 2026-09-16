@@ -1,6 +1,5 @@
-import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import {
   backupOnce, hookScriptPath, readSettings, writeSettings,
 } from './hook-install.js';
@@ -21,40 +20,29 @@ export const WORKBUDDY_HOOK_EVENTS = [
 ];
 
 const SCRIPT_NAME = 'maclawd-hook.js';
-const SOURCE_MARKER = '--maclawd-source=workbuddy';
+const sourceMarker = (source) => `--maclawd-source=${source}`;
 
 export function workBuddySettingsPath({
-  home = homedir(), env = process.env, exists = existsSync,
+  home = homedir(), env = process.env, source = 'workbuddy',
 } = {}) {
-  const override = env.MACLAWD_WORKBUDDY_SETTINGS?.trim();
+  if (!['workbuddy', 'workbuddy-ai'].includes(source)) throw new Error('未知 WorkBuddy 版本');
+  const overseas = source === 'workbuddy-ai';
+  const override = env[overseas ? 'MACLAWD_WORKBUDDY_AI_SETTINGS' : 'MACLAWD_WORKBUDDY_SETTINGS']?.trim();
   if (override) return override;
-
-  const configured = env.WORKBUDDY_CONFIG_DIR?.trim();
-  if (configured) return join(configured, 'settings.json');
-
-  const current = join(home, '.workbuddy-ai', 'settings.json');
-  const legacy = join(home, '.workbuddy', 'settings.json');
-  if (exists(current)) return current;
-  if (exists(legacy)) return legacy;
-
-  // settings 还没生成时，用已有数据目录判断。裸 ~/.workbuddy 也可能属于别的
-  // 工具，只有出现 WorkBuddy 自己的 projects 目录才采信它。
-  if (exists(dirname(current))) return current;
-  if (exists(join(dirname(legacy), 'projects'))) return legacy;
-  return current;
+  return join(home, overseas ? '.workbuddy-ai' : '.workbuddy', 'settings.json');
 }
 
-function isOurs(entry) {
+function isOurs(entry, source = 'workbuddy') {
   return entry?.type === 'command'
     && typeof entry.command === 'string'
     && entry.command.includes(SCRIPT_NAME)
-    && entry.command.trim().endsWith(SOURCE_MARKER);
+    && entry.command.trim().endsWith(sourceMarker(source));
 }
 
-function entry(event, nodePath) {
+function entry(event, nodePath, source) {
   return {
     type: 'command',
-    command: `${JSON.stringify(nodePath)} ${JSON.stringify(hookScriptPath())} ${event} ${SOURCE_MARKER}`,
+    command: `${JSON.stringify(nodePath)} ${JSON.stringify(hookScriptPath())} ${event} ${sourceMarker(source)}`,
     timeout: 5,
   };
 }
@@ -63,8 +51,9 @@ function groupsFor(hooks, event) {
   return Array.isArray(hooks[event]) ? hooks[event] : [];
 }
 
-export function installWorkBuddyHooks({ nodePath = process.execPath } = {}) {
-  const path = workBuddySettingsPath();
+export function installWorkBuddyHooks({ nodePath = process.execPath, source = 'workbuddy' } = {}) {
+  const path = workBuddySettingsPath({ source });
+  const owns = (hook) => isOurs(hook, source) || (source === 'workbuddy-ai' && isOurs(hook, 'workbuddy'));
   const settings = readSettings(path);
   const hooks = settings.hooks && typeof settings.hooks === 'object' ? settings.hooks : {};
   const installed = [];
@@ -76,12 +65,12 @@ export function installWorkBuddyHooks({ nodePath = process.execPath } = {}) {
     let found = false;
     for (const group of groups) {
       if (!Array.isArray(group?.hooks)) continue;
-      if (group.hooks.some(isOurs)) found = true;
-      group.hooks = group.hooks.map((hook) => (isOurs(hook) ? entry(event, nodePath) : hook));
+      if (group.hooks.some(owns)) found = true;
+      group.hooks = group.hooks.map((hook) => (owns(hook) ? entry(event, nodePath, source) : hook));
     }
     if (found) alreadyInstalled.push(event);
     else {
-      groups.push({ hooks: [entry(event, nodePath)] });
+      groups.push({ hooks: [entry(event, nodePath, source)] });
       installed.push(event);
     }
     hooks[event] = groups;
@@ -92,8 +81,9 @@ export function installWorkBuddyHooks({ nodePath = process.execPath } = {}) {
   return { path, installed, alreadyInstalled, backedUp };
 }
 
-export function uninstallWorkBuddyHooks() {
-  const path = workBuddySettingsPath();
+export function uninstallWorkBuddyHooks({ source = 'workbuddy' } = {}) {
+  const path = workBuddySettingsPath({ source });
+  const owns = (hook) => isOurs(hook, source) || (source === 'workbuddy-ai' && isOurs(hook, 'workbuddy'));
   const settings = readSettings(path);
   const hooks = settings.hooks && typeof settings.hooks === 'object' ? settings.hooks : {};
   const removed = [];
@@ -103,7 +93,7 @@ export function uninstallWorkBuddyHooks() {
     let touched = false;
     for (const group of groupsFor(hooks, event)) {
       if (!Array.isArray(group?.hooks)) { kept.push(group); continue; }
-      const remaining = group.hooks.filter((hook) => !isOurs(hook));
+      const remaining = group.hooks.filter((hook) => !owns(hook));
       if (remaining.length !== group.hooks.length) touched = true;
       if (remaining.length) kept.push({ ...group, hooks: remaining });
     }
@@ -119,8 +109,8 @@ export function uninstallWorkBuddyHooks() {
   return { path, removed };
 }
 
-export function workBuddyHookStatus() {
-  const path = workBuddySettingsPath();
+export function workBuddyHookStatus({ source = 'workbuddy' } = {}) {
+  const path = workBuddySettingsPath({ source });
   let settings;
   try {
     settings = readSettings(path);
@@ -132,7 +122,7 @@ export function workBuddyHookStatus() {
   }
   const hooks = settings.hooks && typeof settings.hooks === 'object' ? settings.hooks : {};
   const installed = WORKBUDDY_HOOK_EVENTS.filter((event) =>
-    groupsFor(hooks, event).some((group) => Array.isArray(group?.hooks) && group.hooks.some(isOurs)));
+    groupsFor(hooks, event).some((group) => Array.isArray(group?.hooks) && group.hooks.some((hook) => isOurs(hook, source))));
   return {
     path,
     script: hookScriptPath(),

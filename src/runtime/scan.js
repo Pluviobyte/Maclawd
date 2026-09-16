@@ -45,7 +45,8 @@ import { usageEnabled } from './settings.js';
 // 16: Codex 按真实会话合并分段，并使用父会话重放边界。
 // 17: Cline SDK 和旧版逐调用明细；依赖 metadata 参与缓存签名。
 // 18: Roo 逐调用明细与 _index.entries。
-const CACHE_VERSION = 18;
+// Split domestic/overseas WorkBuddy: rebuild previously merged file provenance.
+const CACHE_VERSION = 19;
 const MAX_WARNINGS = 20;
 const DEFAULT_BUDGET_MS = 20_000;
 

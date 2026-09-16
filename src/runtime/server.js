@@ -429,6 +429,7 @@ export function createUsageServer({
   cursorQuotaCollector = null,
   grokQuotaCollector = null,
   workBuddyQuotaCollector = null,
+  workBuddyAIQuotaCollector = null,
   kimiQuotaCollector = null,
   kimiCodeQuotaCollector = null,
   identity = createRuntimeIdentity(),
@@ -450,6 +451,7 @@ export function createUsageServer({
   const cursorQuotaWorker = cursorQuotaCollector ?? createCursorQuotaCollector();
   const grokQuotaWorker = grokQuotaCollector ?? createGrokQuotaCollector();
   const workBuddyQuotaWorker = workBuddyQuotaCollector ?? createWorkBuddyQuotaCollector();
+  const workBuddyAIQuotaWorker = workBuddyAIQuotaCollector ?? createWorkBuddyQuotaCollector({ source: 'workbuddy-ai' });
   const desktopQuotaWorkers = {
     kimi: kimiQuotaCollector ?? createKimiQuotaCollector(),
     kimiCode: kimiCodeQuotaCollector ?? createKimiCodeQuotaCollector(),
@@ -500,6 +502,7 @@ export function createUsageServer({
     createCodexSessionMonitor({ onEvent: observeFallback }),
     createClaudeSessionMonitor({ agentId: 'claude-code', onEvent: observeFallback }),
     createClaudeSessionMonitor({ agentId: 'workbuddy', onEvent: observeFallback }),
+    createClaudeSessionMonitor({ agentId: 'workbuddy-ai', onEvent: observeFallback }),
   ];
   // 桌宠没开的那段时间里，hook 写的租约是唯一留下的痕迹。启动时读回来，
   // 免得一个任务跑到一半时桌宠从 idle 开始演。
@@ -943,6 +946,7 @@ export function createUsageServer({
           void cursorQuotaWorker.refresh().catch(() => {});
           void grokQuotaWorker.refresh().catch(() => {});
           void workBuddyQuotaWorker.refresh().catch(() => {});
+          void workBuddyAIQuotaWorker.refresh().catch(() => {});
           for (const collector of Object.values(desktopQuotaWorkers)) void collector.refresh().catch(() => {});
         }
         const settings = loadSettings();
@@ -957,6 +961,7 @@ export function createUsageServer({
           cursor: cursorQuotaWorker.status(),
           grok: grokQuotaWorker.status(),
           workBuddy: workBuddyQuotaWorker.status(),
+          workBuddyAI: workBuddyAIQuotaWorker.status(),
           ...Object.fromEntries(Object.entries(desktopQuotaWorkers).map(([key, collector]) => [key, collector.status()])),
           alert: {
             enabled: settings.quotaAlert === true,
@@ -1122,6 +1127,15 @@ export function createUsageServer({
                 effects.push(`已移除 ${r.removed.length} 个 WorkBuddy 状态事件`);
               }
             }
+            if (next.workBuddyAIHookEnhancement !== before.workBuddyAIHookEnhancement) {
+              if (next.workBuddyAIHookEnhancement) {
+                const r = installWorkBuddyHooks({ source: 'workbuddy-ai' });
+                effects.push(`已安装 ${r.installed.length + r.alreadyInstalled.length} 个 WorkBuddy AI 状态事件`);
+              } else {
+                const r = uninstallWorkBuddyHooks({ source: 'workbuddy-ai' });
+                effects.push(`已移除 ${r.removed.length} 个 WorkBuddy AI 状态事件`);
+              }
+            }
             if (next.cursorHookEnhancement !== before.cursorHookEnhancement) {
               if (next.cursorHookEnhancement) {
                 const r = installCursorHook();
@@ -1153,6 +1167,7 @@ export function createUsageServer({
                   void cursorQuotaWorker.refresh({ force: true }).catch(() => {});
                   void grokQuotaWorker.refresh({ force: true }).catch(() => {});
                   void workBuddyQuotaWorker.refresh({ force: true }).catch(() => {});
+                  void workBuddyAIQuotaWorker.refresh({ force: true }).catch(() => {});
                   for (const collector of Object.values(desktopQuotaWorkers)) void collector.refresh({ force: true }).catch(() => {});
                   sendJson(res, 200, {
                     settings: next,
@@ -1168,6 +1183,7 @@ export function createUsageServer({
                 void cursorQuotaWorker.refresh({ force: true }).catch(() => {});
                 void grokQuotaWorker.refresh({ force: true }).catch(() => {});
                 void workBuddyQuotaWorker.refresh({ force: true }).catch(() => {});
+                void workBuddyAIQuotaWorker.refresh({ force: true }).catch(() => {});
                 for (const collector of Object.values(desktopQuotaWorkers)) void collector.refresh({ force: true }).catch(() => {});
               } else {
                 const r = uninstallStatusline();
@@ -1203,6 +1219,7 @@ export function createUsageServer({
                 void grokQuotaWorker.refresh({ force: true }).catch(() => {});
                 void cursorQuotaWorker.refresh({ force: true }).catch(() => {});
                 void workBuddyQuotaWorker.refresh({ force: true }).catch(() => {});
+                void workBuddyAIQuotaWorker.refresh({ force: true }).catch(() => {});
                 for (const collector of Object.values(desktopQuotaWorkers)) void collector.refresh({ force: true }).catch(() => {});
               } else {
                 const r = uninstallStatusline();
@@ -1220,6 +1237,8 @@ export function createUsageServer({
             try {
               if (before.hookEnhancement) installHooks(); else uninstallHooks();
               if (before.codexHookEnhancement) installCodexHooks(); else uninstallCodexHooks();
+              if (before.workBuddyAIHookEnhancement) installWorkBuddyHooks({ source: 'workbuddy-ai' });
+              else uninstallWorkBuddyHooks({ source: 'workbuddy-ai' });
               if (before.workBuddyHookEnhancement) installWorkBuddyHooks();
               else uninstallWorkBuddyHooks();
               if (before.cursorHookEnhancement) installCursorHook();
@@ -1382,13 +1401,14 @@ export function createUsageServer({
     cursorQuotaWorker.stop();
     grokQuotaWorker.stop();
     workBuddyQuotaWorker.stop();
+    workBuddyAIQuotaWorker.stop();
     for (const collector of Object.values(desktopQuotaWorkers)) collector.stop();
     clearInterval(ticker);
     for (const resolve of waiters) resolve();
     waiters.clear();
   });
 
-  return { server, priceRefresher, worker, quotaWorker, claudeQuotaWorker, cursorQuotaWorker, grokQuotaWorker, workBuddyQuotaWorker, desktopQuotaWorkers, identity };
+  return { server, priceRefresher, worker, quotaWorker, claudeQuotaWorker, cursorQuotaWorker, grokQuotaWorker, workBuddyQuotaWorker, workBuddyAIQuotaWorker, desktopQuotaWorkers, identity };
 }
 
 /** 端口被占时最多往后试几个。够覆盖「同机开了几个 Vite」，又不会无限游走。 */
@@ -1428,7 +1448,7 @@ async function probeMaclawd(port, timeoutMs = 400) {
  */
 export function serve({ port = 4173, host = null, collector = null, pricingAutoRefresh = true } = {}) {
   const {
-    server, priceRefresher, worker, quotaWorker, claudeQuotaWorker, cursorQuotaWorker, grokQuotaWorker, workBuddyQuotaWorker, desktopQuotaWorkers, identity,
+    server, priceRefresher, worker, quotaWorker, claudeQuotaWorker, cursorQuotaWorker, grokQuotaWorker, workBuddyQuotaWorker, workBuddyAIQuotaWorker, desktopQuotaWorkers, identity,
   } = createUsageServer({ collector });
   // 只有显式开启局域网镜像才监听外部地址；否则严格绑回环。
   const bind = host ?? (loadSettings().lanMirror === true ? '0.0.0.0' : '127.0.0.1');
@@ -1479,9 +1499,10 @@ export function serve({ port = 4173, host = null, collector = null, pricingAutoR
       cursorQuotaWorker.start();
       grokQuotaWorker.start();
       workBuddyQuotaWorker.start();
+      workBuddyAIQuotaWorker.start();
       for (const collector of Object.values(desktopQuotaWorkers)) collector.start();
       resolvePromise({
-        server, worker, quotaWorker, claudeQuotaWorker, cursorQuotaWorker, grokQuotaWorker, workBuddyQuotaWorker, desktopQuotaWorkers,
+        server, worker, quotaWorker, claudeQuotaWorker, cursorQuotaWorker, grokQuotaWorker, workBuddyQuotaWorker, workBuddyAIQuotaWorker, desktopQuotaWorkers,
         identity, port: actual, host: bind,
       });
     });

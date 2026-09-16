@@ -28,6 +28,7 @@ process.env.MACLAWD_CLAUDE_SETTINGS = CLAUDE_SETTINGS;
 process.env.MACLAWD_CODEX_HOME = CODEX_HOME;
 process.env.MACLAWD_CODEX_HOOKS_PATH = CODEX_HOOKS;
 process.env.MACLAWD_WORKBUDDY_SETTINGS = WORKBUDDY_SETTINGS;
+  process.env.MACLAWD_WORKBUDDY_AI_SETTINGS = WORKBUDDY_SETTINGS + ".overseas";
 process.env.MACLAWD_CURSOR_HOOKS_PATH = CURSOR_HOOKS;
 
 const { offboard, removeCodexPet, codexPetDir } = await import('../src/runtime/offboard.js');
