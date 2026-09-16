@@ -1,3 +1,4 @@
+import { QUOTA_SOURCE_IDS } from './tool-discovery.js';
 import { APPLICATIONS, OTHER_APPLICATIONS, registeredApplications, installationEvidence } from './application-catalog.js';
 import { existsSync } from 'node:fs';
 import { parsers, VERIFIED_SOURCES } from './parsers/index.js';
@@ -26,7 +27,7 @@ export function agentConnections({ registered = registeredApplications() } = {})
     return {
       id: parser.id,
       label: parser.label,
-      ...installationEvidence(APPLICATIONS[parser.id], parser.dataDirs().some(existsSync), registered),
+      ...installationEvidence(APPLICATIONS[parser.id], (() => { try { return parser.dataDirs().some(existsSync); } catch { return false; } })(), registered),
       scope: APPLICATIONS[parser.id]?.scope ?? '仅此来源支持的本地用量；不代表支持所有同名桌面或网页产品。',
       verified: VERIFIED_SOURCES.has(parser.id),
       capabilities: {
@@ -36,7 +37,7 @@ export function agentConnections({ registered = registeredApplications() } = {})
         permissions: realtime && !['workbuddy', 'workbuddy-ai'].includes(parser.id),
         terminalFocus: realtime,
         // WorkBuddy 额度来自本机登录凭据 + 计费查询，不依赖 Hooks 是否开启。
-        quota: parser.id === 'claude-code' || parser.id === 'codex' || ['workbuddy', 'workbuddy-ai'].includes(parser.id),
+        quota: QUOTA_SOURCE_IDS.has(parser.id),
       },
       integration: MANAGED.has(parser.id) ? {
         status: ready ? 'connected' : status.installed?.length ? 'partial' : 'available',

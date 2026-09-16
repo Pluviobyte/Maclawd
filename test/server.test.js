@@ -43,6 +43,7 @@ let base;
 let quotaWorker;
 let workBuddyQuotaWorker;
 let scanCalls = 0;
+let discoveredAgents = [];
 const collectorLive = {
   tokensPerMin: 0,
   tokensPerMinBySource: {},
@@ -87,6 +88,7 @@ before(async () => {
     }),
   });
   ({ server } = createUsageServer({
+    discoverAgents: () => discoveredAgents,
     collector: {
       live: () => ({ ...collectorLive }),
       status: () => ({ running: false, scanning: false, enabled: true, live: {}, lastScan: null }),
@@ -100,6 +102,7 @@ before(async () => {
     quotaCollector: quotaWorker,
     workBuddyQuotaCollector: workBuddyQuotaWorker,
     workBuddyAIQuotaCollector: createWorkBuddyQuotaCollector({ enabled: () => false }),
+    kimiCodeQuotaCollector: createProviderQuotaCollector({ enabled: () => false, installed: () => false }),
     kimiQuotaCollector: createProviderQuotaCollector({ enabled: () => true, read: async () => ({
       source: 'kimi', sourceLabel: 'Kimi', completeSnapshot: true,
       windows: { total: { usedPercent: 0, resetAt: Date.now() + 86_400_000 } },
@@ -513,3 +516,19 @@ test('mini 档下主状态被收敛，且能看出是从哪收敛来的', async 
   const leaving = await post('/api/event', { type: 'shell.miniExit' });
   await wait(leaving.plan.durationMs + 120);
 });
+
+ test('新安装工具无需重启即可进入额度选择器和统计来源，卸载不抹掉已有历史', async () => {
+   discoveredAgents = [{ id: 'cursor', installed: true, capabilities: { usage: true, quota: true } },
+     { id: 'mcode', installed: true, capabilities: { usage: true, quota: false } }];
+   try {
+     const quota = await json('/api/quota?refresh=false');
+     const cursor = quota.sources.find(s => s.id === 'cursor');
+     assert.ok(cursor); assert.deepEqual(cursor.windows, []);
+     assert.ok(!quota.sources.some(s => s.id === 'mcode'));
+     const analytics = await json('/api/analytics?range=7d');
+     assert.ok(analytics.dimensions.sources.includes('mcode'));
+     assert.equal(analytics.dimensions.sourceLabels.mcode, 'MiniMax Code');
+     discoveredAgents = [];
+     assert.ok(!(await json('/api/analytics?range=7d')).dimensions.sources.includes('mcode'));
+   } finally { discoveredAgents = []; }
+ });

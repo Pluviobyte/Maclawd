@@ -1,3 +1,4 @@
+import { discoverQuotaSources, discoverUsageSources } from './tool-discovery.js';
 import { createServer } from 'node:http';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { execFile } from 'node:child_process';
@@ -275,10 +276,12 @@ function buildSummary(query, priceBucket = costOf) {
   };
 }
 
-function buildAnalytics(query, priceBucket = costOf) {
+function buildAnalytics(query, priceBucket = costOf, agents = []) {
   const rollup = loadRollup();
-  if (!rollup) return { empty: true, pricing: pricingMeta() };
-  if (rollup.stale) return { empty: true, stale: true, pricing: pricingMeta() };
+  const detected = discoverUsageSources([], agents);
+  const emptyDimensions = { sources: detected, models: [], projects: [], sourceLabels: Object.fromEntries(detected.map(id => [id, SOURCE_LABELS[id] ?? id])) };
+  if (!rollup) return { empty: true, pricing: pricingMeta(), dimensions: emptyDimensions };
+  if (rollup.stale) return { empty: true, stale: true, pricing: pricingMeta(), dimensions: emptyDimensions };
 
   const multi = (name) => {
     const values = query.getAll(name).filter(Boolean);
@@ -303,6 +306,7 @@ function buildAnalytics(query, priceBucket = costOf) {
     // 只加不改：dimensions.sources 仍是 id 数组，老客户端不受影响。原生面板要在
     // 区间条上直接显示筛选中的工具，不能再像现在这样显示 `claude-code` 这种裸 id。
     if (result.dimensions) {
+      result.dimensions.sources = discoverUsageSources(result.dimensions.sources, agents);
       result.dimensions.sourceLabels = Object.fromEntries(
         (result.dimensions.sources ?? []).map((id) => [id, SOURCE_LABELS[id] ?? id]),
       );
@@ -424,6 +428,7 @@ function openProject(action, path) {
 // ---------- 服务 ----------
 
 export function createUsageServer({
+  discoverAgents = agentConnections,
   collector = null,
   quotaCollector = null,
   claudeQuotaCollector = null,
@@ -741,7 +746,7 @@ export function createUsageServer({
       }
 
       if (pathname === '/api/analytics') {
-        sendJson(res, 200, buildAnalytics(url.searchParams, priceRefresher.priceBucket));
+        sendJson(res, 200, buildAnalytics(url.searchParams, priceRefresher.priceBucket, discoverAgents()));
         return;
       }
 
@@ -810,13 +815,13 @@ export function createUsageServer({
           } catch (error) {
             const current = loadSettings();
             sendJson(res, 200, {
-              agents: agentConnections(), doctor: runAgentDoctor(current), error: error.message,
+              agents: discoverAgents(), doctor: runAgentDoctor(current), error: error.message,
             });
             return;
           }
         }
         const current = loadSettings();
-        sendJson(res, 200, { agents: agentConnections(), doctor: runAgentDoctor(current) });
+        sendJson(res, 200, { agents: discoverAgents(), doctor: runAgentDoctor(current) });
         return;
       }
 
@@ -953,7 +958,12 @@ export function createUsageServer({
           for (const collector of Object.values(desktopQuotaWorkers)) void collector.refresh().catch(() => {});
         }
         const settings = loadSettings();
-        const snapshot = readQuota();
+        const statuses = {
+          codex: quotaWorker.status(), claude: claudeQuotaWorker.status(), cursor: cursorQuotaWorker.status(),
+          grok: grokQuotaWorker.status(), workBuddy: workBuddyQuotaWorker.status(), workBuddyAI: workBuddyAIQuotaWorker.status(),
+          ...Object.fromEntries(Object.entries(desktopQuotaWorkers).map(([key, collector]) => [key, collector.status()])),
+        };
+        const snapshot = discoverQuotaSources(readQuota(), { agents: discoverAgents(), statuses, enabled: settings.quotaTracking === true });
         sendJson(res, 200, {
           ...snapshot,
           // 面板要能区分「没装通道」和「装了但还没数据」——

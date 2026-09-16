@@ -153,6 +153,11 @@ struct PanelAnalyticsContract {
         // 展示顺序核对：OpenUsage 70acd4f 的 WidgetRegistry 按已保存的有效 id 排序，并把
         // 新 provider 按注册顺序追加；其重复 provider 查找采用 first-wins。Vibe Usage
         // 26522ec 仅定义本地用量来源顺序，没有可编辑的订阅额度卡片顺序。
+        let discoveredQuota = QuotaSource(["id": "new", "label": "New tool", "windows": [],
+            "availability": "needs-login", "statusMessage": "请先登录"])!
+        precondition(discoveredQuota.windows.isEmpty)
+        precondition(discoveredQuota.availability == "needs-login")
+        precondition(discoveredQuota.statusMessage == "请先登录")
         let reorderSources = [
             QuotaSource(["id": "claude", "label": "Claude Code", "windows": []])!,
             QuotaSource(["id": "codex", "label": "Codex", "windows": []])!,

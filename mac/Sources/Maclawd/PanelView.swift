@@ -664,7 +664,7 @@ private struct QuotaBlock: View {
         .popover(isPresented: $showingSourcePicker, arrowEdge: .bottom) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("显示工具")
+                    Text("自动发现的额度工具")
                         .font(.system(size: 11, weight: .semibold))
                     Spacer()
                     Text("拖动排序")
@@ -786,6 +786,12 @@ private struct QuotaBlock: View {
                             Text(source.label)
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(.primary)
+                            if let message = source.statusMessage {
+                                Text(message)
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
                             if ["workbuddy", "workbuddy-ai"].contains(source.id) {
                                 workBuddyQuota(source)
                             } else {
@@ -798,15 +804,16 @@ private struct QuotaBlock: View {
                 }
                 if store.quota.workBuddy.installed && !hiddenSourceIDs.contains("workbuddy")
                     && (!store.quota.sources.contains(where: { $0.id == "workbuddy" })
-                        || store.quota.workBuddy.lastErrorCode != nil) {
+                        || (store.quota.workBuddy.lastErrorCode != nil && !store.quota.sources.contains { $0.id == "workbuddy" && $0.availability != nil })) {
                     workBuddyStatus(store.quota.workBuddy, label: "WorkBuddy（国内版）")
                 }
                 if store.quota.workBuddyAI.installed && !hiddenSourceIDs.contains("workbuddy-ai")
                     && (!store.quota.sources.contains(where: { $0.id == "workbuddy-ai" })
-                        || store.quota.workBuddyAI.lastErrorCode != nil) {
+                        || (store.quota.workBuddyAI.lastErrorCode != nil && !store.quota.sources.contains { $0.id == "workbuddy-ai" && $0.availability != nil })) {
                     workBuddyStatus(store.quota.workBuddyAI, label: "WorkBuddy AI（海外版）")
                 }
-                if store.quota.enabled && !hiddenSourceIDs.contains("claude-code"),
+                if store.quota.enabled && !hiddenSourceIDs.contains("claude-code")
+                    && !store.quota.sources.contains(where: { $0.id == "claude-code" && $0.availability != nil }),
                    let message = store.quota.claudeMessage {
                     Text(message)
                         .font(.system(size: 11))
@@ -814,6 +821,7 @@ private struct QuotaBlock: View {
                 }
                 ForEach(store.quota.desktopProviders.filter { provider in
                     provider.enabled && provider.installed && !hiddenSourceIDs.contains(provider.id)
+                        && !store.quota.sources.contains { $0.id == provider.id && $0.availability != nil }
                         && (provider.errorMessage != nil || !store.quota.sources.contains { $0.id == provider.id })
                 }) { provider in
                     VStack(alignment: .leading, spacing: 3) {

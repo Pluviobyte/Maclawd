@@ -107,6 +107,8 @@ struct QuotaSource: Identifiable, Equatable {
     let windows: [QuotaWindow]
     let context: QuotaContext?
     let model: String?
+    let availability: String?
+    let statusMessage: String?
 
     init?(_ raw: [String: Any]) {
         guard let id = raw["id"] as? String else { return nil }
@@ -115,6 +117,8 @@ struct QuotaSource: Identifiable, Equatable {
         self.windows = (raw["windows"] as? [[String: Any]] ?? []).compactMap(QuotaWindow.init)
         self.context = QuotaContext(raw["context"])
         self.model = raw["model"] as? String
+        self.availability = raw["availability"] as? String
+        self.statusMessage = raw["statusMessage"] as? String
     }
 }
 
