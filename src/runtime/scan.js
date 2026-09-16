@@ -1,3 +1,4 @@
+import { pathAttribution } from './usage-attribution.js';
 import { readdirSync, statSync } from 'node:fs';
 import { join, relative as relativePath } from 'node:path';
 import { dedupe } from './dedupe.js';
@@ -46,7 +47,7 @@ import { usageEnabled } from './settings.js';
 // 17: Cline SDK 和旧版逐调用明细；依赖 metadata 参与缓存签名。
 // 18: Roo 逐调用明细与 _index.entries。
 // Split domestic/overseas WorkBuddy: rebuild previously merged file provenance.
-const CACHE_VERSION = 19;
+const CACHE_VERSION = 20;
 const MAX_WARNINGS = 20;
 const DEFAULT_BUDGET_MS = 20_000;
 
@@ -123,7 +124,7 @@ function packRecords(records) {
     }
     rows.push([
       r.ts, r.input, r.output, r.cacheRead, r.write5m, r.write1h, r.reasoning, mi,
-      r.messageId ?? 0, r.requestId ?? 0, r.uuid ?? 0, r.sidechain ? 1 : 0,
+      r.messageId ?? 0, r.requestId ?? 0, r.uuid ?? 0, r.sidechain ? 1 : 0, r.usageSource ?? null, r.project ?? null,
     ]);
   }
   return { m: models, r: rows };
@@ -134,7 +135,7 @@ function unpackRecords(packed, source, project) {
   const models = packed.m ?? [];
   return packed.r.map((row) => ({
     source,
-    project,
+    project: row[13] ?? project,
     ts: row[0],
     input: row[1],
     output: row[2],
@@ -147,6 +148,7 @@ function unpackRecords(packed, source, project) {
     requestId: row[9] || null,
     uuid: row[10] || null,
     sidechain: row[11] === 1,
+    ...(row[12] ? { usageSource: row[12] } : {}),
   }));
 }
 
@@ -189,12 +191,21 @@ async function runParser(parser, candidate, { start, end, prevState }) {
     mode: 'scan',
   });
 
+  const finish = async () => {
+    const result = await fileParser.finish();
+    const usageSource = pathAttribution(parser.id, candidate.path);
+    if (usageSource) {
+      for (const record of result.records) record.usageSource = usageSource;
+      if (result.session) result.session.usageSource = usageSource;
+    }
+    return result;
+  };
   // 读取模式：
   //   'lines'（默认）逐行 JSONL
   //   'whole'         整份 JSON（amp 的 thread、Cline/Roo 的 taskHistory）
   //   'none'          解析器自己取数据（SQLite 库不能当文本读）
   const mode = parser.readMode ?? 'lines';
-  if (mode === 'none') return fileParser.finish();
+  if (mode === 'none') return finish();
 
   if (mode === 'whole') {
     const chunks = [];
@@ -207,7 +218,7 @@ async function runParser(parser, candidate, { start, end, prevState }) {
         // 文件正在被写、或历史文件损坏；下次签名变化时会重试。
       }
     }
-    return fileParser.finish();
+    return finish();
   }
   // lineFilter 可以是子串（最便宜）或谓词（Codex 需要匹配三类行）。
   // 为 null 时不过滤，代价是每行都要 JSON.parse。
@@ -236,7 +247,7 @@ async function runParser(parser, candidate, { start, end, prevState }) {
       // 单条记录解析失败不应带掉整个文件。
     }
   });
-  return fileParser.finish();
+  return finish();
 }
 
 export async function scanAll({
@@ -394,6 +405,7 @@ export async function scanAll({
     for (const candidate of orderedCandidates) {
       livePaths.add(candidate.path);
       const entry = cache.files[candidate.path];
+      if (entry?.projectPaths) Object.assign(projectPaths, entry.projectPaths);
       const sig = `${candidate.mtimeMs}:${candidate.size}${candidate.cacheKey ? `:${candidate.cacheKey}` : ''}`;
 
       // ---- 第 1 级：签名未变，零读取 ----
@@ -466,7 +478,7 @@ export async function scanAll({
                 ?? projectFromRecords(result.records, candidate.fallbackProject);
               const projectPath = entry.projectPath ?? projectPathFromRecords(result.records);
               for (const record of result.records) {
-                record.project = project;
+                record.project ??= project;
                 delete record.cwd;
               }
               const merged = result.resetRecords
@@ -538,11 +550,12 @@ export async function scanAll({
           end: boundary,
           prevState: null,
         });
+        if (result.projectPaths) Object.assign(projectPaths, result.projectPaths);
         const project = projectFromRecords(result.records, candidate.fallbackProject);
         const projectPath = projectPathFromRecords(result.records);
         if (project && projectPath) projectPaths[project] = projectPath;
         for (const record of result.records) {
-          record.project = project;
+          record.project ??= project;
           delete record.cwd;
         }
         const partial = chunkable && boundary < fullBoundary;
@@ -557,6 +570,7 @@ export async function scanAll({
           state: result.state,
           session: result.session ?? null,
           packed: packRecords(result.records),
+          ...(result.projectPaths ? { projectPaths: result.projectPaths } : {}),
           auditedAt: clock(),
           ...(Number.isFinite(configuredCacheTtl) && configuredCacheTtl > 0
             ? { refreshedAt: clock() } : {}),

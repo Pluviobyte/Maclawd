@@ -82,6 +82,17 @@ struct PanelAnalyticsContract {
         // 没有空格的尾缀不是尾缀，不能砍成 "Open" / "Work"。
         precondition(names.shortLabel(forSource: "opencode") == "OpenCode")
         precondition(names.shortLabel(forSource: "workbuddy") == "WorkBuddy")
+        precondition(names.shortLabel(forSource: "codex:cli") == "Codex CLI")
+        precondition(names.shortLabel(forSource: "codex:desktop") == "Codex 桌面")
+        precondition(names.shortLabel(forSource: "kiro") == "Kiro CLI")
+        let unsupported = AgentConnection([
+            "id": "grok-bot", "label": "Grok Bot", "installed": true,
+            "installation": "application", "capabilities": ["usage": false],
+            "scope": "尚未接入", "integration": ["status": "unsupported"],
+        ])!
+        precondition(unsupported.installed && !unsupported.usage)
+        precondition(unsupported.installation == "application")
+        precondition(unsupported.status == "unsupported")
         // 砍完会变空的，宁可原样显示。
         precondition(names.shortLabel(forSource: "pi") == "pi")
 
@@ -117,6 +128,18 @@ struct PanelAnalyticsContract {
             bundleIdentifier: WorkBuddyInstallationDetector.overseasBundleIdentifier,
             locateApplication: { $0 == "com.workbuddy.workbuddy-ai" ? URL(fileURLWithPath: "/Moved/WorkBuddy AI.app") : nil }
         ))
+        let desktopQuota = QuotaSnapshot.decode([
+            "sources": [["id": "doubao-work", "label": "豆包工作", "windows": [
+                ["id": "h5", "unlimited": true, "usedPercent": NSNull()],
+                ["id": "week", "usedPercent": 0.0, "lessThanOnePercent": true],
+                ["id": "initial", "usedPercent": 0.0, "notStarted": true],
+            ]]],
+            "kimi": ["installed": true, "lastError": ["message": "登录已过期"]],
+        ])
+        precondition(desktopQuota.sources[0].windows[0].remainingPercent == nil)
+        precondition(desktopQuota.sources[0].windows[1].lessThanOnePercent)
+        precondition(desktopQuota.sources[0].windows[2].notStarted)
+        precondition(desktopQuota.desktopProviders.first?.errorMessage == "登录已过期")
 
         // UI reset semantics cross-checked against OpenUsage 70acd4f and CodexBar f74117a:
         // the expired usage value stays absent, while the newly reset allowance renders full.

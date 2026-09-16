@@ -1,3 +1,4 @@
+import { codexAttribution } from '../usage-attribution.js';
 import { createHash } from 'node:crypto';
 import { toCount, UNKNOWN_MODEL } from '../usage-record.js';
 
@@ -27,7 +28,7 @@ export function createAccountingIndex(previous) {
       this.advance(ts);
       let event;
       if (obj.type === 'session_meta') {
-        event = { kind: 'meta', id: p.id || p.session_id || null, cwd: p.cwd || null,
+        event = { kind: 'meta', usageSource: codexAttribution(p), id: p.id || p.session_id || null, cwd: p.cwd || null,
           start: timestamp(p.timestamp) ?? ts, fork: p.forked_from_id || null,
           parent: p.parent_thread_id || p.source?.subagent?.thread_spawn?.parent_thread_id || null,
           sub: p.thread_source === 'subagent' || p.source === 'subagent'
@@ -154,7 +155,7 @@ function recordsFor(session, skip) {
     if (ordinal < skip || duplicate || !delta || event.ts == null) continue;
     const [input, cached, write, output, reasoning] = delta;
     if (input + cached + write + output === 0) continue;
-    records.push({ source: 'codex', project, ts: event.ts, model: event.model,
+    records.push({ source: 'codex', ...(session.usageSource ? { usageSource: session.usageSource } : {}), project, ts: event.ts, model: event.model,
       input: Math.max(0, input - cached - write), cacheRead: cached, write5m: write, write1h: 0,
       output, reasoning: Math.min(output, reasoning),
       // Identity is scoped to the logical session, never a global numeric hash.
@@ -173,12 +174,19 @@ export function reconcileSource(entries) {
   }
   const byId = new Map([...groups].map(([id, members]) => [id, { ...indexSession(members), id }]));
   const records = [], sessions = [];
+  function origin(session, seen = new Set()) {
+    if (session.usageSource || seen.has(session.id)) return session.usageSource;
+    seen.add(session.id);
+    const parent = session.sub && byId.get(session.parent);
+    return parent ? origin(parent, seen) : null;
+  }
   for (const session of byId.values()) {
+    session.usageSource = origin(session);
     records.push(...recordsFor(session, replayCount(session, byId)));
     // Do not add overlapping physical-file timing summaries. Keep the most
     // complete summary until message timelines have their own merge contract.
     const summary = session.members.filter(e => e.session).sort((a, b) => b.session.messageCount - a.session.messageCount)[0];
-    if (summary) sessions.push({ ...summary.session, project: summary.project });
+    if (summary) sessions.push({ ...summary.session, project: summary.project, ...(session.usageSource ? { usageSource: session.usageSource } : {}) });
   }
   return { records, sessions };
 }

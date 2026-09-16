@@ -1,3 +1,4 @@
+import { displaySource } from './usage-attribution.js';
 import {
   addInto, billable, cacheWrite, emptyBucket, hitRate, mergeBucket, throughput,
 } from './usage-record.js';
@@ -13,7 +14,7 @@ import {
  */
 
 // v5：Claude 从 UUID 改为调用级去重，旧聚合不可继续展示，需重新扫描。
-export const ROLLUP_VERSION = 12;
+export const ROLLUP_VERSION = 13;
 
 export const RANGES = [
   'today', 'yesterday', 'week', 'last_week', 'month', 'year', 'all',
@@ -121,7 +122,7 @@ function emptySlot() {
 }
 
 function addRecordToSource(container, record) {
-  const sourceId = record.source ?? 'unknown';
+  const sourceId = displaySource(record) ?? 'unknown';
   const source = container.sources[sourceId] ?? (container.sources[sourceId] = emptySource());
   addInto(source, record);
 
@@ -154,7 +155,10 @@ export function buildRollup(records, sessionsBySource = {}, projectPaths = {}, c
   // 区间过滤在读取时按 firstTs/lastTs 做。
   const sessions = {};
   for (const [source, list] of Object.entries(sessionsBySource)) {
-    if (Array.isArray(list) && list.length > 0) sessions[source] = list;
+    for (const session of Array.isArray(list) ? list : []) {
+      const key = displaySource({ source, usageSource: session.usageSource });
+      (sessions[key] ??= []).push(session);
+    }
   }
   return {
     v: ROLLUP_VERSION,

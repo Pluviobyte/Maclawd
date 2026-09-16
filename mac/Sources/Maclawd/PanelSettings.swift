@@ -69,6 +69,9 @@ struct SettingsPage: View {
                     VStack(alignment: .leading, spacing: 5) {
                         HStack {
                             Text(agent.label).font(.system(size: 11.5, weight: .semibold))
+                            Text(agent.installation == "application" ? "已安装"
+                                 : agent.installation == "data-only" ? "检测到数据" : "未检测到")
+                                .font(.system(size: 8.5)).foregroundStyle(.secondary)
                             Spacer()
                             if agent.realtime || agent.localCapture {
                                 Toggle("", isOn: Binding(
@@ -83,7 +86,7 @@ struct SettingsPage: View {
                             }
                         }
                         HStack(spacing: 5) {
-                            capability("用量", active: true)
+                            capability("用量", active: agent.usage)
                             if agent.localCapture {
                                 capability("本地精确", active: agent.status == "connected",
                                            hint: "开启右侧连接后生效")
@@ -96,6 +99,10 @@ struct SettingsPage: View {
                             }
                             capability("额度", active: agent.quota)
                             if agent.verified { Text("已验证").font(.system(size: 8.5)).foregroundStyle(PanelTheme.accent) }
+                        }
+                        if let scope = agent.scope {
+                            Text(scope).font(.system(size: 9.5)).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                         if agent.id == "codex", agent.trustReviewRequired {
                             Text("安装后请在 Codex /hooks 中确认一次信任。JSONL 仅作尽力而为的后备通道。")
@@ -128,6 +135,8 @@ struct SettingsPage: View {
         case "connected": return "已连接"
         case "partial": return "需修复"
         case "usage-only": return "用量支持"
+        case "quota-only": return "仅支持额度"
+        case "unsupported": return "已识别 · 暂未接入"
         default: return "可连接"
         }
     }
@@ -172,7 +181,7 @@ struct SettingsPage: View {
                     title: "读取订阅额度",
                     info: "Codex 通过官方 CLI 自动读取；Claude Code 通过官方客户端主动查询，状态行作为补充；"
                           + "WorkBuddy 会读取本机登录文件，并使用其中的 Token 查询计费服务。"
-                          + "Kimi 桌面版复用桌面登录；独立 Kimi Code CLI 额度需单独开启。"
+                          + "Kimi 和豆包工作会复用桌面应用登录与 macOS 钥匙串查询额度；独立 Kimi Code CLI 额度需单独开启。"
                           + "Token 只在内存中使用，不写入 Maclawd 数据或日志。"
                           + "Maclawd 会自动兼容 Claude HUD 并保持它原有的显示。\n\n"
                           + "Claude 打开面板时按一分钟缓存刷新，后台每五分钟查询。"

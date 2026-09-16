@@ -55,6 +55,7 @@ const CURSOR_WINDOW_ORDER = [
 function validWindowKey(source, key) {
   if (source === 'kimi') return ['total', 'work_five_hour', 'work_seven_day', 'code_five_hour', 'code_seven_day'].includes(key);
   if (source === 'kimi-code') return /^duration_\d+$/.test(key);
+  if (source === 'doubao-work') return /^(personal|enterprise|package)_[1-4]_[a-f0-9]{12}$/.test(key);
   if (WINDOW_ORDER.includes(key)) return true;
   if (source === 'grok' && key === 'billing_cycle') return true;
   if (source === 'cursor') return CURSOR_WINDOW_ORDER.includes(key);
@@ -70,6 +71,10 @@ function orderedWindowKeys(source, windows) {
       if (source === 'kimi') {
         const order = ['total', 'work_five_hour', 'code_five_hour', 'work_seven_day', 'code_seven_day'];
         return order.indexOf(a) - order.indexOf(b);
+      }
+      if (source === 'doubao-work') {
+        const rank = { 1: 0, 2: 1, 4: 2, 3: 3 };
+        return rank[a.split('_')[1]] - rank[b.split('_')[1]] || a.localeCompare(b);
       }
       if (['workbuddy', 'workbuddy-ai'].includes(source)) {
         const [aKind, aIndex] = a.split('_');
@@ -99,6 +104,7 @@ export const SOURCE_LABELS = {
   'workbuddy-ai': 'WorkBuddy AI（海外版）',
   kimi: 'Kimi',
   'kimi-code': 'Kimi Code CLI',
+  'doubao-work': '豆包工作',
 };
 
 function emptyStore() {
@@ -165,7 +171,8 @@ export function recordQuota(report, { now = Date.now() } = {}) {
   for (const key of Object.keys(windows)) {
     if (!validWindowKey(source, key)) continue;
     const usedPercent = clampPercent(windows[key]?.usedPercent);
-    if (usedPercent === null) continue;
+    const unlimited = source === 'doubao-work' && windows[key]?.unlimited === true;
+    if (usedPercent === null && !unlimited) continue;
     const resetAt = num(windows[key]?.resetAt);
     const before = next.windows[key];
     // updatedAt 只在数值真的变了才动；lastSeenAt 每次都动。
@@ -175,8 +182,14 @@ export function recordQuota(report, { now = Date.now() } = {}) {
       || before.used !== num(windows[key]?.used)
       || before.limit !== num(windows[key]?.limit)
       || before.remaining !== num(windows[key]?.remaining);
+    const presentationChanged = before?.unlimited !== unlimited
+      || before?.lessThanOnePercent !== (windows[key]?.lessThanOnePercent === true)
+      || before?.notStarted !== (windows[key]?.notStarted === true);
     next.windows[key] = {
-      usedPercent,
+      usedPercent: unlimited ? null : usedPercent,
+      unlimited,
+      lessThanOnePercent: source === 'doubao-work' && windows[key]?.lessThanOnePercent === true,
+      notStarted: source === 'doubao-work' && windows[key]?.notStarted === true,
       resetAt,
       used: num(windows[key]?.used),
       limit: num(windows[key]?.limit),
@@ -185,7 +198,7 @@ export function recordQuota(report, { now = Date.now() } = {}) {
       label: typeof windows[key]?.label === 'string'
         ? windows[key].label.trim().slice(0, 48) : (before?.label ?? null),
       durationMinutes: num(windows[key]?.durationMinutes) ?? before?.durationMinutes ?? null,
-      updatedAt: changed ? now : (before?.updatedAt ?? now),
+      updatedAt: changed || presentationChanged ? now : (before?.updatedAt ?? now),
       lastSeenAt: now,
     };
   }
@@ -250,7 +263,7 @@ export function freshness(window, now = Date.now(), source = null) {
   if (resetAt !== null && now > resetAt) return 'reset';
   const lastSeenAt = num(window?.lastSeenAt) ?? 0;
   const quietAfter = source === 'codex' ? CODEX_QUIET_AFTER_MS
-    : ['kimi', 'kimi-code'].includes(source) ? 15 * 60_000
+    : ['kimi', 'kimi-code', 'doubao-work'].includes(source) ? 15 * 60_000
     : source === 'cursor' ? CURSOR_QUIET_AFTER_MS
       : source === 'grok' ? GROK_QUIET_AFTER_MS
         : ['workbuddy', 'workbuddy-ai'].includes(source) ? WORKBUDDY_QUIET_AFTER_MS : QUIET_AFTER_MS;
@@ -276,6 +289,11 @@ export function readQuota({ now = Date.now() } = {}) {
         label: w.label ?? WINDOW_LABELS[key] ?? key,
         // 已重置的窗口不给百分比——那个数字是重置前的，已经不成立了。
         usedPercent: state === 'reset' ? null : w.usedPercent,
+        ...(id === 'doubao-work' ? {
+          unlimited: state !== 'reset' && w.unlimited === true,
+          lessThanOnePercent: state !== 'reset' && w.lessThanOnePercent === true,
+          notStarted: state !== 'reset' && w.notStarted === true,
+        } : {}),
         used: state === 'reset' ? null : (w.used ?? null),
         limit: state === 'reset' ? null : (w.limit ?? null),
         remaining: state === 'reset' ? null : (w.remaining ?? null),
@@ -319,6 +337,7 @@ export function pendingAlerts({ threshold = 85, now = Date.now() } = {}) {
       const w = entry?.windows?.[key];
       if (!w) continue;
       if (freshness(w, now, id) === 'reset') continue;
+      if (w.unlimited) continue;
       if (!(w.usedPercent >= threshold)) continue;
       const alertKey = `${id}:${key}:${w.resetAt ?? 0}`;
       if (store.alerted[alertKey]) continue;

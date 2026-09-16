@@ -1,7 +1,9 @@
+import { ATTRIBUTION_LABELS } from '../usage-attribution.js';
 import * as claudeCode from './claude-code.js';
 import * as codex from './codex.js';
 import * as workbuddy from './workbuddy.js';
 import * as workbuddyAI from './workbuddy-ai.js';
+import * as mcode from './mcode.js';
 import * as kimiCode from './kimi-code.js';
 import * as qwenCode from './qwen-code.js';
 import * as grok from './grok.js';
@@ -48,6 +50,7 @@ export const parsers = [
   codex,
   workbuddy,
   workbuddyAI,
+  mcode,
   kimiCode,
   qwenCode,
   grok,
@@ -87,6 +90,7 @@ export const VERIFIED_SOURCES = new Set([
   // 用本机 Cursor 真实 hook 日志核对过：stop 事件的四类 token 均为非零，
   // generation_id 可稳定去重；数据库 bubble token 字段为 0，刻意不读取。
   'cursor',
+  'mcode', // 37 real ledger rows verified against MiniMax Code 3.0.68.
   // 2026-09-14：238 条离线 SQLite usage，bot/step 身份、时间及
   // output = visible + reasoning 均已真机交叉核对（见多来源审计）。
   'antigravity',
@@ -96,6 +100,6 @@ export function parserById(id) {
   return parsers.find((p) => p.id === id) ?? null;
 }
 
-export const SOURCE_LABELS = Object.fromEntries(
+export const SOURCE_LABELS = { ...Object.fromEntries(
   parsers.map((p) => [p.id, p.label]),
-);
+), ...ATTRIBUTION_LABELS };

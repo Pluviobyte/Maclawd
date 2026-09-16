@@ -1,3 +1,4 @@
+import { APPLICATIONS, OTHER_APPLICATIONS, registeredApplications, installationEvidence } from './application-catalog.js';
 import { existsSync } from 'node:fs';
 import { parsers, VERIFIED_SOURCES } from './parsers/index.js';
 import { hookStatus, permissionHookStatus } from './hook-install.js';
@@ -8,13 +9,13 @@ import { cursorHookStatus } from './cursor-hook-install.js';
 const REALTIME = new Set(['claude-code', 'codex', 'workbuddy', 'workbuddy-ai']);
 const MANAGED = new Set([...REALTIME, 'cursor']);
 
-export function agentConnections() {
+export function agentConnections({ registered = registeredApplications() } = {}) {
   const claude = hookStatus();
   const codex = codexHookStatus();
   const workBuddy = workBuddyHookStatus();
   const cursor = cursorHookStatus();
   const workBuddyAI = workBuddyHookStatus({ source: 'workbuddy-ai' });
-  return parsers.map((parser) => {
+  const connections = parsers.map((parser) => {
     const realtime = REALTIME.has(parser.id);
     const status = parser.id === 'claude-code' ? claude
       : parser.id === 'codex' ? codex
@@ -25,7 +26,8 @@ export function agentConnections() {
     return {
       id: parser.id,
       label: parser.label,
-      installed: parser.dataDirs().some(existsSync),
+      ...installationEvidence(APPLICATIONS[parser.id], parser.dataDirs().some(existsSync), registered),
+      scope: APPLICATIONS[parser.id]?.scope ?? '仅此来源支持的本地用量；不代表支持所有同名桌面或网页产品。',
       verified: VERIFIED_SOURCES.has(parser.id),
       capabilities: {
         usage: true,
@@ -48,6 +50,15 @@ export function agentConnections() {
       } : { status: 'usage-only' },
     };
   });
+  for (const app of OTHER_APPLICATIONS) {
+    const evidence = installationEvidence(app, false, registered);
+    if (!evidence.installed) continue;
+    connections.push({ id: app.id, label: app.label, ...evidence, scope: app.scope, verified: false,
+      capabilities: { usage: false, realtime: false, localCapture: false, permissions: false,
+        terminalFocus: false, quota: app.quota === true },
+      integration: { status: app.quota ? 'quota-only' : 'unsupported' } });
+  }
+  return connections;
 }
 
 export function runAgentDoctor(settings = {}) {

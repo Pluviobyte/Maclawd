@@ -14,8 +14,6 @@ process.env.MACLAWD_DATA_DIR = join(root, 'data');
 const CLAUDE_SETTINGS = join(root, 'claude-settings.json');
 process.env.MACLAWD_CLAUDE_SETTINGS = CLAUDE_SETTINGS;
 process.env.MACLAWD_CLAUDE_BIN = join(root, 'missing-claude');
-process.env.MACLAWD_KIMI_DESKTOP_DIR = join(root, 'empty-kimi-desktop');
-process.env.MACLAWD_KIMI_CODE_DIR = join(root, 'empty-kimi');
 // 不让测试碰到真实工具目录。
 process.env.MACLAWD_CLAUDE_DIRS = join(root, 'empty-claude');
 process.env.MACLAWD_CODEX_HOME = join(root, 'empty-codex');
@@ -24,6 +22,8 @@ process.env.MACLAWD_WORKBUDDY_SETTINGS = join(root, 'workbuddy-settings.json');
 process.env.MACLAWD_WORKBUDDY_AI_SETTINGS = join(root, 'workbuddy-settings.json') + ".overseas";
 process.env.MACLAWD_CURSOR_HOOKS_PATH = join(root, 'cursor-hooks.json');
 process.env.MACLAWD_KIMI_CODE_DIR = join(root, 'empty-kimi');
+process.env.MACLAWD_KIMI_DESKTOP_DIR = join(root, 'empty-kimi-desktop');
+process.env.MACLAWD_DOUBAO_WORK_DIR = join(root, 'empty-doubao-work');
 process.env.MACLAWD_KIMI_LEGACY_DIR = join(root, 'empty-kimi2');
 process.env.MACLAWD_QWEN_DIR = join(root, 'empty-qwen');
 process.env.MACLAWD_GROK_DIR = join(root, 'empty-grok');
@@ -36,6 +36,7 @@ const { ROLLUP_FILE } = await import('../src/runtime/paths.js');
 const { clearQuota, recordQuota } = await import('../src/runtime/account-quota.js');
 const { createCodexQuotaCollector } = await import('../src/runtime/codex-quota.js');
 const { createWorkBuddyQuotaCollector } = await import('../src/runtime/workbuddy-quota.js');
+const { createProviderQuotaCollector } = await import('../src/runtime/provider-quota-collector.js');
 
 let server;
 let base;
@@ -99,6 +100,14 @@ before(async () => {
     quotaCollector: quotaWorker,
     workBuddyQuotaCollector: workBuddyQuotaWorker,
     workBuddyAIQuotaCollector: createWorkBuddyQuotaCollector({ enabled: () => false }),
+    kimiQuotaCollector: createProviderQuotaCollector({ enabled: () => true, read: async () => ({
+      source: 'kimi', sourceLabel: 'Kimi', completeSnapshot: true,
+      windows: { total: { usedPercent: 0, resetAt: Date.now() + 86_400_000 } },
+    }) }),
+    doubaoWorkQuotaCollector: createProviderQuotaCollector({ enabled: () => true, read: async () => ({
+      source: 'doubao-work', sourceLabel: '豆包工作', completeSnapshot: true,
+      windows: { personal_1_aaaaaaaaaaaa: { usedPercent: 0, notStarted: true } },
+    }) }),
   }));
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   base = `http://127.0.0.1:${server.address().port}`;
@@ -256,7 +265,7 @@ test('/api/actions 返回全部动作与角色合同', async () => {
   assert.equal(d.contract.bodyColor, '#DE886D');
 });
 
-test('/api/quota 刷新 Codex 与 WorkBuddy 后和 Claude Code 按服务商分开返回', async () => {
+test('/api/quota 返回独立的 Claude、Codex、WorkBuddy、Kimi、豆包工作额度与状态', async () => {
   clearQuota();
   recordQuota({
     source: 'claude-code',
@@ -271,14 +280,20 @@ test('/api/quota 刷新 Codex 与 WorkBuddy 后和 Claude Code 按服务商分�
   do {
     snapshot = await json('/api/quota');
     if (snapshot.sources.some((source) => source.id === 'codex')
-      && snapshot.sources.some((source) => source.id === 'workbuddy')) break;
+      && snapshot.sources.some((source) => source.id === 'workbuddy')
+      && snapshot.sources.some((source) => source.id === 'kimi')
+      && snapshot.sources.some((source) => source.id === 'doubao-work')) break;
     await new Promise((resolve) => setTimeout(resolve, 5));
   } while (Date.now() < deadline);
 
-  assert.deepEqual(snapshot.sources.map((source) => source.label), ['Claude', 'Codex', 'WorkBuddy']);
+  assert.deepEqual(new Set(snapshot.sources.map((source) => source.label)), new Set(['Claude', 'Codex', 'WorkBuddy', 'Kimi', '豆包工作']));
   assert.equal(snapshot.sources.find((source) => source.id === 'codex').windows[0].usedPercent, 51);
   assert.equal(snapshot.sources.find((source) => source.id === 'workbuddy').windows[0].remaining, 75);
   assert.equal(snapshot.workBuddy.lastError, null);
+  assert.equal(snapshot.kimi.lastError, null);
+  assert.equal(snapshot.doubaoWork.lastError, null);
+  assert.equal(snapshot.sources.find((source) => source.id === 'kimi').windows[0].usedPercent, 0);
+  assert.equal(snapshot.sources.find((source) => source.id === 'doubao-work').windows[0].notStarted, true);
 });
 
 test('/api/settings 只接受已知键，未知键被丢弃', async () => {

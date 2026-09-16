@@ -5,7 +5,7 @@ import { pickCount, toCount, UNKNOWN_MODEL } from '../usage-record.js';
 import { queryDbJson, sqliteParser } from './sqlite.js';
 
 export const id = 'kiro';
-export const label = 'Kiro';
+export const label = 'Kiro CLI';
 
 /**
  * ⚠️ 未在真实数据上验证（开发机未安装 Kiro）。

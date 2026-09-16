@@ -47,6 +47,7 @@ import { createCursorQuotaCollector } from './cursor-quota.js';
 import { createGrokQuotaCollector } from './grok-quota.js';
 import { createWorkBuddyQuotaCollector } from './workbuddy-quota.js';
 import { createKimiQuotaCollector, createKimiCodeQuotaCollector } from './kimi-quota.js';
+import { createDoubaoWorkQuotaCollector } from './doubao-work-quota.js';
 import { createPermissionBroker, decisionResponse } from './permissions.js';
 import { authorize, currentToken, pairingUrls, resetToken, rotateToken } from './lan.js';
 import { createOrchestrator } from './orchestrator.js';
@@ -432,6 +433,7 @@ export function createUsageServer({
   workBuddyAIQuotaCollector = null,
   kimiQuotaCollector = null,
   kimiCodeQuotaCollector = null,
+  doubaoWorkQuotaCollector = null,
   identity = createRuntimeIdentity(),
 } = {}) {
   // 面板不该要求用户手动点刷新，所以服务端自带后台采集循环。
@@ -455,6 +457,7 @@ export function createUsageServer({
   const desktopQuotaWorkers = {
     kimi: kimiQuotaCollector ?? createKimiQuotaCollector(),
     kimiCode: kimiCodeQuotaCollector ?? createKimiCodeQuotaCollector(),
+    doubaoWork: doubaoWorkQuotaCollector ?? createDoubaoWorkQuotaCollector(),
   };
   if (loadSettings().kimiCodeQuotaTracking !== true) removeQuotaSource('kimi-code');
   function syncKimiCodeQuotaWorker() {

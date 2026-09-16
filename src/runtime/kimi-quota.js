@@ -147,25 +147,33 @@ async function queryWithCredentialReread(auth, request, options) {
 }
 
 export async function readKimiMembershipQuota({ auth = readKimiDesktopAuth, ...options } = {}) {
+  let serviceOrigin;
   const payload = await queryWithCredentialReread(auth, ({ token, origin }) => {
     if (!['https://www.kimi.com', 'https://www.kimi.ai'].includes(origin)) throw quotaError('EORIGIN', 'Kimi 登录所属服务不受支持');
+    serviceOrigin = origin;
     return quotaJson(origin + MEMBERSHIP_PATH, {
       ...options, headers: { Authorization: `Bearer ${token}`, 'Connect-Protocol-Version': '1' }, body: {},
     });
   }, options);
   const report = kimiMembershipReport(payload);
   if (!report) throw quotaError('ENODATA', 'Kimi 暂未返回可用额度');
-  return report;
+  // Official kimi-code 402ee71c region profiles: .com mainland, .ai global.
+  const region = new URL(serviceOrigin).hostname.endsWith('.ai') ? '海外版' : '国内版';
+  return { ...report, sourceLabel: `${report.sourceLabel}（${region}）` };
 }
 
 export async function readKimiCodeQuota({ auth = readKimiCodeAuth, ...options } = {}) {
+  let serviceOrigin;
   const payload = await queryWithCredentialReread(auth, ({ token, origin }) => {
     if (!CODE_ORIGINS.has(origin)) throw quotaError('EORIGIN', 'Kimi Code 服务地址不受支持');
+    serviceOrigin = origin;
     return quotaJson(origin + '/coding/v1/usages', { ...options, headers: { Authorization: `Bearer ${token}` } });
   }, options);
   const report = kimiCodeReport(payload);
   if (!report) throw quotaError('ENODATA', 'Kimi Code 暂未返回可用额度');
-  return report;
+  // Official kimi-code 402ee71c region profiles: .com mainland, .ai global.
+  const region = new URL(serviceOrigin).hostname.endsWith('.ai') ? '海外版' : '国内版';
+  return { ...report, sourceLabel: `${report.sourceLabel}（${region}）` };
 }
 
 export function createKimiQuotaCollector(options = {}) {

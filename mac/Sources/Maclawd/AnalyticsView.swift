@@ -83,12 +83,14 @@ struct StatsPage: View {
     private var scopedComplete: Bool {
         guard let source = store.selectedSource else { return store.analytics.collection.complete }
         return store.analytics.collection.sources[source]?.complete
+            ?? store.analytics.collection.sources[String(source.split(separator: ":").first ?? "")]?.complete
             ?? store.analytics.collection.complete
     }
 
     private var scopedProgress: Double? {
         guard let source = store.selectedSource else { return store.analytics.collection.progress }
         return store.analytics.collection.sources[source]?.progress
+            ?? store.analytics.collection.sources[String(source.split(separator: ":").first ?? "")]?.progress
     }
 
     var body: some View {

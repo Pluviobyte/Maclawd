@@ -22,6 +22,35 @@ const {
 after(() => rmSync(DATA, { recursive: true, force: true }));
 beforeEach(() => clearQuota());
 
+test('Kimi and Doubao windows survive storage in deterministic order with special states', () => {
+  const now = 1789000000000;
+  recordQuota({ source: 'kimi', completeSnapshot: true, windows: {
+    code_seven_day: { usedPercent: 20, durationMinutes: 10080 },
+    total: { usedPercent: 0, resetAt: now + 100000 },
+    code_five_hour: { usedPercent: 10, durationMinutes: 300 },
+  } }, { now });
+  recordQuota({ source: 'kimi-code', completeSnapshot: true, windows: {
+    duration_10080: { usedPercent: 12, durationMinutes: 10080 },
+    duration_300: { usedPercent: 2, durationMinutes: 300 },
+  } }, { now });
+  recordQuota({ source: 'doubao-work', completeSnapshot: true, windows: {
+    personal_2_aaaaaaaaaaaa: { usedPercent: 1, resetAt: now + 100000 },
+    personal_1_aaaaaaaaaaaa: { usedPercent: null, unlimited: true, resetAt: now + 100000 },
+    package_3_aaaaaaaaaaaa: { usedPercent: 0, lessThanOnePercent: true },
+  } }, { now });
+  const sources = readQuota({ now: now + 10 * 60000 }).sources;
+  assert.deepEqual(sources.find((s) => s.id === 'kimi').windows.map((w) => w.id), ['total', 'code_five_hour', 'code_seven_day']);
+  assert.deepEqual(sources.find((s) => s.id === 'kimi-code').windows.map((w) => w.id), ['duration_300', 'duration_10080']);
+  const db = readQuota({ now }).sources.find((s) => s.id === 'doubao-work');
+  assert.equal(db.windows[0].unlimited, true);
+  assert.equal(db.windows[0].usedPercent, null);
+  assert.equal(db.windows[2].lessThanOnePercent, true);
+  assert.equal(pendingAlerts({ threshold: 0, now }).some((a) => a.window === 'personal_1_aaaaaaaaaaaa'), false);
+  assert.equal(sources.find((s) => s.id === 'kimi-code').windows[0].state, 'live');
+  recordQuota({ source: 'kimi', completeSnapshot: true, windows: { total: { usedPercent: 0 } } }, { now });
+  assert.equal(readQuota({ now }).sources.find((s) => s.id === 'kimi').windows.length, 1);
+});
+
 const T0 = 1_785_000_000_000;
 const HOUR = 3600_000;
 

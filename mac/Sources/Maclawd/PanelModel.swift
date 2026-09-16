@@ -31,10 +31,14 @@ struct QuotaWindow: Identifiable, Equatable {
     let limit: Double?
     let remaining: Double?
     let kind: String?
+    let unlimited: Bool
+    let lessThanOnePercent: Bool
+    let notStarted: Bool
 
     var isReset: Bool { state == "reset" }
     var isQuiet: Bool { state == "quiet" }
     var remainingPercent: Double? {
+        if unlimited { return nil }
         // 重置前的 usedPercent 已被后端清空；对展示层而言，新周期额度已经恢复为满格。
         if isReset { return 100 }
         return usedPercent.map { max(0, min(100, 100 - $0)) }
@@ -52,6 +56,9 @@ struct QuotaWindow: Identifiable, Equatable {
         self.limit = raw["limit"] as? Double
         self.remaining = raw["remaining"] as? Double
         self.kind = raw["kind"] as? String
+        self.unlimited = raw["unlimited"] as? Bool ?? false
+        self.lessThanOnePercent = raw["lessThanOnePercent"] as? Bool ?? false
+        self.notStarted = raw["notStarted"] as? Bool ?? false
     }
 
     init(
@@ -75,6 +82,9 @@ struct QuotaWindow: Identifiable, Equatable {
         self.state = state
         self.staleSeconds = staleSeconds
         self.kind = kind
+        self.unlimited = false
+        self.lessThanOnePercent = false
+        self.notStarted = false
     }
 }
 
@@ -310,6 +320,7 @@ struct QuotaSnapshot: Equatable {
         out.desktopProviders = [
             DesktopQuotaStatus(id: "kimi", label: "Kimi", raw: json["kimi"]),
             DesktopQuotaStatus(id: "kimi-code", label: "Kimi Code CLI", raw: json["kimiCode"]),
+            DesktopQuotaStatus(id: "doubao-work", label: "豆包工作", raw: json["doubaoWork"]),
         ]
         out.empty = json["empty"] as? Bool ?? out.sources.isEmpty
         out.enabled = json["enabled"] as? Bool ?? false
@@ -610,6 +621,14 @@ struct AnalyticsDimensions: Equatable {
      只砍已知尾缀，砍不动的交给调用方截断——宁可截断也不要猜。
      */
     func shortLabel(forSource id: String) -> String {
+        let variants: [String: String] = [
+            "codex:cli": "Codex CLI", "codex:desktop": "Codex 桌面",
+            "codex:vscode": "Codex 扩展", "codex:exec": "Codex Exec",
+            "codex:integration": "Codex 集成", "claude-code:cowork": "Cowork",
+            "claude-code:local": "Claude Code", "antigravity:desktop": "AG 桌面",
+            "antigravity:cli": "AG CLI", "kiro": "Kiro CLI",
+        ]
+        if let label = variants[id] { return label }
         let full = label(forSource: id)
         for suffix in [" Code", " CLI", " Build"] where full.hasSuffix(suffix) {
             let trimmed = String(full.dropLast(suffix.count))
@@ -838,6 +857,9 @@ struct AgentConnection: Identifiable {
     let realtime: Bool
     let localCapture: Bool
     let installed: Bool
+    let usage: Bool
+    let installation: String
+    let scope: String?
     let permissions: Bool
     let quota: Bool
     let terminalFocus: Bool
@@ -851,7 +873,10 @@ struct AgentConnection: Identifiable {
         label = json["label"] as? String ?? id
         verified = json["verified"] as? Bool ?? false
         installed = json["installed"] as? Bool ?? false
+        installation = json["installation"] as? String ?? "not-found"
+        scope = json["scope"] as? String
         let capabilities = json["capabilities"] as? [String: Any] ?? [:]
+        usage = capabilities["usage"] as? Bool ?? true
         realtime = capabilities["realtime"] as? Bool ?? false
         localCapture = capabilities["localCapture"] as? Bool ?? false
         permissions = capabilities["permissions"] as? Bool ?? false

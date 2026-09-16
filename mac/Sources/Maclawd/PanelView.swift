@@ -980,7 +980,9 @@ private struct QuotaRow: View {
                 // 进度条和文字都使用剩余值，避免方向相反。
                 Text(window.isReset
                      ? "已重置"
-                     : "剩余 \(Int((window.remainingPercent ?? 0).rounded()))%")
+                     : window.unlimited ? "暂无限制"
+                     : window.lessThanOnePercent ? "剩余 >99%"
+                     : window.remainingPercent.map { "剩余 \(Int($0.rounded()))%" } ?? "暂不可用")
                     .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .foregroundStyle(window.isReset ? Color.secondary : .primary)
                     .fixedSize(horizontal: true, vertical: false)
@@ -1000,7 +1002,8 @@ private struct QuotaRow: View {
                     Text("\(Fmt.credits(remaining)) / \(Fmt.credits(limit)) Credits")
                 }
                 if !window.isReset {
-                    Text(Fmt.until(window.resetAt, action: deadlineAction)
+                    Text(window.notStarted ? "开始使用后计时"
+                         : Fmt.until(window.resetAt, action: deadlineAction)
                          ?? "\(deadlineAction.label)时间暂未提供")
                 }
                 // 状态行只在交互式界面渲染，`claude -p` 与 CI 都不触发。
