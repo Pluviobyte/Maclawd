@@ -14,7 +14,7 @@ import {
  */
 
 // v5：Claude 从 UUID 改为调用级去重，旧聚合不可继续展示，需重新扫描。
-export const ROLLUP_VERSION = 14;
+export const ROLLUP_VERSION = 15;
 
 export const RANGES = [
   'today', 'yesterday', 'week', 'last_week', 'month', 'year', 'all',
@@ -137,11 +137,17 @@ function addRecordToSource(container, record) {
 export function buildRollup(records, sessionsBySource = {}, projectPaths = {}, collection = null) {
   const days = {};
   const slots = {};
+  const dayOnly = {};
 
   for (const record of records) {
     const dayKey = localDayKey(record.ts);
     const day = days[dayKey] ?? (days[dayKey] = emptyDay());
     addRecordToSource(day, record);
+
+    if (record.billing?.resolution === 'day') {
+      addRecordToSource(dayOnly[dayKey] ??= emptySlot(), record);
+      continue; // Daily ledgers cannot establish an hour or an active session.
+    }
 
     const slotKey = String(halfHourStart(record.ts));
     const slot = slots[slotKey] ?? (slots[slotKey] = emptySlot());
@@ -164,6 +170,7 @@ export function buildRollup(records, sessionsBySource = {}, projectPaths = {}, c
     v: ROLLUP_VERSION,
     days,
     slots,
+    dayOnly,
     sessions,
     projectPaths,
     collection: collection ?? {

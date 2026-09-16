@@ -47,7 +47,7 @@ import { usageEnabled } from './settings.js';
 // 17: Cline SDK 和旧版逐调用明细；依赖 metadata 参与缓存签名。
 // 18: Roo 逐调用明细与 _index.entries。
 // Split domestic/overseas WorkBuddy: rebuild previously merged file provenance.
-const CACHE_VERSION = 21;
+const CACHE_VERSION = 22;
 const MAX_WARNINGS = 20;
 const DEFAULT_BUDGET_MS = 20_000;
 
@@ -205,7 +205,7 @@ async function runParser(parser, candidate, { start, end, prevState }) {
   //   'lines'（默认）逐行 JSONL
   //   'whole'         整份 JSON（amp 的 thread、Cline/Roo 的 taskHistory）
   //   'none'          解析器自己取数据（SQLite 库不能当文本读）
-  const mode = parser.readMode ?? 'lines';
+  const mode = candidate.readMode ?? parser.readMode ?? 'lines';
   if (mode === 'none') return finish();
 
   if (mode === 'whole') {
@@ -450,7 +450,7 @@ export async function scanAll({
       // 只有逐行追加的日志才能做增量尾读。
       let appended = false;
       if (
-        (parser.readMode ?? 'lines') === 'lines'
+        (candidate.readMode ?? parser.readMode ?? 'lines') === 'lines'
         && entry
         && entry.packed
         && entry.ino === candidate.ino
@@ -534,7 +534,7 @@ export async function scanAll({
 
       // ---- 第 3 级：全量重读 ----
       try {
-        const chunkable = (parser.readMode ?? 'lines') === 'lines';
+        const chunkable = (candidate.readMode ?? parser.readMode ?? 'lines') === 'lines';
         // A complete JSON document need not end in a newline. Only append-only
         // JSONL uses newline boundaries; otherwise valid SDK artifacts read as 0.
         const fullBoundary = chunkable ? await lastNewlineBoundary(candidate.path, candidate.size) : candidate.size;

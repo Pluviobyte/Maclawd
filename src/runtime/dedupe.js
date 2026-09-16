@@ -37,6 +37,9 @@ export function prefer(candidate, existing) {
   const a = throughput(candidate);
   const b = throughput(existing);
   if (a !== b) return a > b;
+  if (candidate.source === 'cola' && existing.source === 'cola') {
+    return JSON.stringify(candidate.billing?.copyOwner ?? []) < JSON.stringify(existing.billing?.copyOwner ?? []);
+  }
   // 3. 先出现者优先，保证结果确定
   return false;
 }

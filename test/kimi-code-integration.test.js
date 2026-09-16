@@ -17,7 +17,7 @@ const { recordQuota, readQuota } = await import('../src/runtime/account-quota.js
 const { createKimiCodeQuotaCollector, createKimiQuotaCollector, kimiMembershipReport } = await import('../src/runtime/kimi-quota.js');
 after(() => rmSync(root, { recursive: true, force: true }));
 
-test('desktop stays healthy; CLI is not queried until opt-in and disappears cleanly on opt-out', async t => {
+test('desktop stays healthy; CLI is not queried until opt-in and keeps a disabled discovery entry on opt-out', async t => {
   saveSettings({ recordUsage: true, quotaTracking: true });
   assert.equal(loadSettings().kimiCodeQuotaTracking, false);
   recordQuota({ source: 'kimi-code', windows: { duration_10080: { usedPercent: 10 } } });
@@ -44,7 +44,9 @@ test('desktop stays healthy; CLI is not queried until opt-in and disappears clea
   assert.equal(cliReads, 0); assert.equal(quota.kimiCode.enabled, false);
   assert.equal(quota.kimi.lastError, null);
   assert.equal(quota.sources.find(s => s.id === 'kimi').windows[0].usedPercent, 0);
-  assert.ok(!quota.sources.some(s => s.id === 'kimi-code'));
+  const discoveredCLI = quota.sources.find(s => s.id === 'kimi-code');
+  assert.equal(discoveredCLI.availability, 'disabled');
+  assert.deepEqual(discoveredCLI.windows, []);
   assert.ok(quota.sources.some(s => s.id === 'codex'));
   await request('/api/settings', { kimiCodeQuotaTracking: true }); await cli.refresh();
   quota = await request('/api/quota?refresh=false');

@@ -87,6 +87,7 @@ function rowsToRecords(path) {
 
     records.push({
       source: id,
+      billing: { promptTokens: null },
       input,
       // Hermes 各字段独立，reasoning 不含在 output 里；为满足不变量 2 加进去。
       output: toCount(output) + toCount(reasoning),

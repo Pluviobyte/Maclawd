@@ -36,7 +36,8 @@ function period(from, to) {
 
 function relativeBounds(range, now, { from, to, rollup } = {}) {
   if (range === 'all') {
-    const starts = Object.keys(rollup?.slots ?? {}).map(Number).filter(Number.isFinite);
+    const starts = [...Object.keys(rollup?.slots ?? {}).map(Number),
+      ...Object.keys(rollup?.dayOnly ?? {}).map(day => new Date(`${day}T00:00:00`).getTime())].filter(Number.isFinite);
     const first = starts.length > 0 ? new Date(Math.min(...starts)) : startOfDay(now);
     return { current: period(first, now), previous: null };
   }
@@ -141,6 +142,13 @@ function visitSlots(rollup, bounds, filters, visitor) {
     if (!inPeriod(slotStart, bounds)) continue;
     visitCells(slot, filters, (cell) => visitor({ slotStart, ...cell }));
   }
+  if (bounds.includeDaily !== false) {
+    for (const [day, slot] of Object.entries(rollup?.dayOnly ?? {})) {
+      if (day < bounds.from || day > bounds.to) continue;
+      const slotStart = new Date(`${day}T00:00:00`).getTime();
+      visitCells(slot, filters, cell => visitor({ slotStart, resolution: 'day', ...cell }));
+    }
+  }
 }
 
 function bucketForPeriod(rollup, bounds, filters) {
@@ -222,9 +230,10 @@ function distributions(rollup, bounds, filters, priceBucket) {
 
 function slotRows(rollup, bounds, filters, priceBucket) {
   const rows = [];
-  visitSlots(rollup, bounds, filters, ({ slotStart, source, model, project, bucket }) => {
+  visitSlots(rollup, bounds, filters, ({ slotStart, resolution, source, model, project, bucket }) => {
     rows.push({
       slotStart, source, model, project, ...publicTotals(bucket),
+      ...(resolution ? { resolution } : {}),
       estimatedCost: priceBucket ? priceBucket(model, bucket) : null,
     });
   });
@@ -272,6 +281,7 @@ function heatmap(rows, sessions = [], bounds) {
     }
   }
   for (const row of rows) {
+    if (row.resolution === 'day') continue;
     const date = new Date(row.slotStart);
     const weekday = ((date.getDay() + 6) % 7) + 1;
     const cell = cells[(weekday - 1) * 24 + date.getHours()];
@@ -402,6 +412,12 @@ export function queryUsageAnalytics(rollup, {
 } = {}) {
   const bounds = relativeBounds(range, now, { from, to, rollup });
   if (!bounds) throw new Error(`不支持的分析区间: ${range}`);
+  bounds.current.includeDaily = range !== '24h';
+  if (bounds.previous) bounds.previous.includeDaily = range !== '24h';
+  let hasDaily = false;
+  for (const [day, value] of Object.entries(rollup?.dayOnly ?? {})) {
+    if (day >= bounds.current.from && day <= bounds.current.to) visitCells(value, filters, () => { hasDaily = true; });
+  }
   const totals = publicTotals(bucketForPeriod(rollup, bounds.current, filters));
   const cost = priceSummary(rollup, bounds.current, filters, priceBucket);
   const currentSessionList = sessionsForPeriod(rollup, bounds.current, filters);
@@ -442,7 +458,10 @@ export function queryUsageAnalytics(rollup, {
     totals,
     previous,
     // 缺失文件对前后区间的影响通常不对称，不完整索引不能产出可信同比。
-    comparison: collection.complete && previous ? compare(currentComparable, previous) : null,
+    comparison: collection.complete && previous && !hasDaily ? compare(currentComparable, previous) : null,
+    resolutionNote: hasDaily ? range === '24h'
+      ? '部分工具仅提供日账本，未计入最近 24 小时；请切换今天或更长区间。'
+      : '包含日账本用量；该部分不参与小时热图、会话时长及同期比较。' : null,
     dimensions: dimensions(rollup),
     collection,
     cost,

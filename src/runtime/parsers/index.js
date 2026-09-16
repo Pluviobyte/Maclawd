@@ -27,6 +27,11 @@ import * as dimagent from './dimagent.js';
 import * as omp from './omp.js';
 import * as craftAgent from './craft-agent.js';
 import * as cursor from './cursor.js';
+import * as qoder from './qoder.js';
+import * as qoderCN from './qoder-cn.js';
+import * as cindy from './cindy.js';
+import * as cindyGlobal from './cindy-global.js';
+import * as cola from './cola.js';
 
 /**
  * 解析器注册表。新增工具只需实现同一组导出并在这里登记：
@@ -74,6 +79,11 @@ export const parsers = [
   dimagent,
   omp,
   craftAgent,
+  qoder,
+  qoderCN,
+  cindy,
+  cindyGlobal,
+  cola,
   // 本地 hook 日志默认读取；云端历史由 cursorCloud 显式开启
   cursor,
 ];

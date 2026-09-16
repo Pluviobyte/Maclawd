@@ -26,3 +26,12 @@
 - 用量型工具在产生第一条记录之前就进入统计筛选；仅支持用量、没有额度接口的工具不会生成虚假额度。Cursor、Grok、Kimi Code 的 capability 与实际采集器统一。
 - 保留用户已有隐藏/排序偏好，新发现 ID 默认显示并追加。Swift 兼容旧 runtime。
 - 31 项针对性测试通过，包括 HTTP 动态发现、地区应用身份、Swift 解码及排序合同；release Swift 编译通过。
+
+## 第四部分：补齐本地来源与解析差异
+
+- 独立实现 Qoder / Qoder CN 的 IDE SQLite 与 CLI JSONL、Cola Pi 会话和 Cindy / CindyGlobal 日账本，来源依据及最新 revision 见 missing-source-contracts-2026-09-16.md。均保留待真机验证状态。
+- SQL 仅选择用量字段，活跃 WAL 变化触发替换快照，schema 失败保留旧结果。Qoder 积分不反推 Token；Cola 复制记录按复合身份去重；Cindy 排除原生 Claude，当用户配置扫描 Cindy 私有 Codex/Pi 路径时停用对应账本，避免相加。
+- Trae CLI 微秒时间、主 span / failover 层、模型字段、推理输出和增量重选对齐当前 Vibe 行为。该产品具体字段仍缺独立官方/真机证明，文档明确限制。
+- 现代 Pi 1h 缓存写保留；未知 TTL 阻止伪造 5m 费用。Cindy billing 尾标记可用于已核实的价格别名；日/任务累计量不用于判定逐请求长上下文。
+- 日账本保存到单独日聚合，统计总量和日趋势可用，小时热图和最近24小时不混入；界面明确日粒度与缺失范围。聚合15、扫描缓存22。
+- 42项解析/费用/分析测试通过，release Swift编译通过。全量753项中发现并更新1条与新自动发现语义冲突的旧 Kimi 测试；该测试仍验证未开启时绝不请求及关闭后清除真实额度。

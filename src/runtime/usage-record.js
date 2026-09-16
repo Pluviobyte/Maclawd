@@ -119,7 +119,9 @@ export function addInto(bucket, record, { pricing = false } = {}) {
     // Exact prompt sizes survive aggregation, so a future published threshold can reprice history.
     const prompt = record.billing && Object.hasOwn(record.billing, 'promptTokens')
       ? record.billing.promptTokens : toCount(record.input) + toCount(record.cacheRead) + cacheWrite(record);
-    const key = JSON.stringify([record.billing?.serviceTier ?? 'standard', prompt]);
+    const context = [record.billing?.serviceTier ?? 'standard', prompt];
+    if (record.billing?.unknownWriteTTL) context.push(true);
+    const key = JSON.stringify(context);
     const groups = bucket.chargeGroups ??= {};
     const group = groups[key] ??= emptyBucket();
     for (const field of BUCKET_FIELDS) group[field] += toCount(record[field]);

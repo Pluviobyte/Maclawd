@@ -170,7 +170,7 @@ export function createTaskIndexParser({ id, label, extensionId, indexFiles }) {
             for (const info of items(root)) {
               if (candidate.fallbackIds && !candidate.fallbackIds.includes(String(info?.id))) continue;
               const record = taskToRecord(info, { source: id, fallbackModel: info?.modelId });
-              if (record) records.push(record);
+              if (record) { record.billing = { promptTokens: null }; records.push(record); }
             }
           }
           return { records, state: null, session: tracker.snapshot() };

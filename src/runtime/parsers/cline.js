@@ -146,7 +146,7 @@ export function createFileParser({ candidate = {} } = {}) {
           if (candidate.fallbackIds && !candidate.fallbackIds.includes(String(item?.id ?? ''))) continue;
           const details = taskMetadata(item ?? {});
           const record = taskToRecord({ ...item, cwd: details.cwd }, { source: id, fallbackModel: details.model });
-          if (record) records.push(record);
+          if (record) { record.billing = { promptTokens: null }; records.push(record); }
         }
       }
       return { records, state: null, session: tracker.snapshot() };

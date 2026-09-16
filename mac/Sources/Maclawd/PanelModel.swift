@@ -704,6 +704,7 @@ struct AnalyticsCollection: Equatable {
 struct AnalyticsRecord: Identifiable, Equatable {
     var id: String { "\(Int(slotStart))-\(source)-\(model)-\(project)" }
     let slotStart: Double
+    let resolution: String?
     let source: String
     let model: String
     let project: String
@@ -719,6 +720,7 @@ struct AnalyticsRecord: Identifiable, Equatable {
               let model = raw["model"] as? String,
               let project = raw["project"] as? String else { return nil }
         slotStart = jsonDouble(raw["slotStart"])
+        resolution = raw["resolution"] as? String
         self.source = source
         self.model = model
         self.project = project
@@ -748,6 +750,7 @@ struct AnalyticsRecords: Equatable {
 struct AnalyticsSnapshot: Equatable {
     var empty = true
     var range = "30d"
+    var resolutionNote: String?
     var totals = AnalyticsTotals()
     var previous = AnalyticsTotals()
     var comparison: [String: Double] = [:]
@@ -765,6 +768,7 @@ struct AnalyticsSnapshot: Equatable {
         out.empty = json["empty"] as? Bool ?? false
 
         out.range = json["range"] as? String ?? "30d"
+        out.resolutionNote = json["resolutionNote"] as? String
         out.totals = AnalyticsTotals(json["totals"])
         out.previous = AnalyticsTotals(json["previous"])
         if let comparisons = json["comparison"] as? [String: Any] {

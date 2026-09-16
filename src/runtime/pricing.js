@@ -22,7 +22,7 @@ function writePricing(value) {
 }
 // Only verified syntax aliases; arbitrary preview/code suffixes may represent different prices.
 export function nameVariants(model) {
-  const base=String(model??'').trim().toLowerCase(); if(!base)return [];
+  const base=String(model??'').trim().toLowerCase().replace(/#billing=(api|subscription)$/,''); if(!base)return [];
   const variants=new Set();
   for(const seed of [base,base.replace(/^[^/]*\//,'')]) {
     const plain=seed.replace(/-\d{8}$/,'').replace(/\[[^\]]*\]$/,'');
@@ -58,7 +58,8 @@ export function priceFor(model) {
   for(const v of variants){const p=byId.get(v)??byBare.get(v);if(p)return p;}
   return null;
 }
-function priceRequest(price,bucket,{serviceTier='standard',promptTokens=null}={}) {
+function priceRequest(price,bucket,{serviceTier='standard',promptTokens=null,unknownWriteTTL=false}={}) {
+  if (unknownWriteTTL && toCount(bucket.write5m) > 0) return null;
   const tier=normalizeServiceTier(serviceTier);
   let p=tier==='standard'?price:price.tiers?.[tier];
   if(!p)return null;
@@ -80,8 +81,8 @@ export function quoteBucket(model,bucket) {
   let cost=0,pricedTokens=0,unpricedTokens=0;
   const groups=bucket.chargeGroups?Object.entries(bucket.chargeGroups):[[JSON.stringify([bucket.serviceTier??'standard',bucket.promptTokens??(toCount(bucket.input)+toCount(bucket.cacheRead)+toCount(bucket.write5m)+toCount(bucket.write1h))]),bucket]];
   for(const [key,group] of groups){
-    const [serviceTier,promptTokens]=JSON.parse(key);
-    const value=price?priceRequest(price,group,{serviceTier,promptTokens}):null;
+    const [serviceTier,promptTokens,unknownWriteTTL]=JSON.parse(key);
+    const value=price?priceRequest(price,group,{serviceTier,promptTokens,unknownWriteTTL}):null;
     if(value===null)unpricedTokens+=throughput(group);else{cost+=value;pricedTokens+=throughput(group);}
   }
   return {cost:pricedTokens>0?cost:null,pricedTokens,unpricedTokens,provenance:price?.provenance??'unknown',source:price?.source??null,verifiedAt:price?.verifiedAt??null};

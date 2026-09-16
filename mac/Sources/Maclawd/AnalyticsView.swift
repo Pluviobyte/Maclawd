@@ -96,6 +96,9 @@ struct StatsPage: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
             rangeAndFilterBar
+            if let note = store.analytics.resolutionNote {
+                Text(note).font(.system(size: 10)).foregroundStyle(.secondary)
+            }
             if disabled {
                 VStack(alignment: .leading, spacing: 5) {
                     Text("用量记录已关闭").font(.system(size: 12, weight: .medium))
@@ -414,11 +417,13 @@ struct StatsPage: View {
     }
 
     private var detailCard: some View {
-        SectionCard(title: "30 分钟明细") {
+        SectionCard(title: "用量明细") {
             VStack(spacing: 7) {
                 ForEach(store.analytics.records.items) { row in
                     HStack(spacing: 7) {
-                        Text(Self.slotFormatter.string(from: Date(timeIntervalSince1970: row.slotStart / 1000)))
+                        Text(row.resolution == "day"
+                             ? Date(timeIntervalSince1970: row.slotStart / 1000).formatted(.dateTime.month().day()) + "（日）"
+                             : Self.slotFormatter.string(from: Date(timeIntervalSince1970: row.slotStart / 1000)))
                             .font(.system(size: 9.5, design: .monospaced)).foregroundStyle(.secondary)
                             .frame(width: 72, alignment: .leading)
                         VStack(alignment: .leading, spacing: 1) {

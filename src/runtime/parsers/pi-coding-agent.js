@@ -56,6 +56,7 @@ export function parseObject(obj) {
   const output = pickCount(usage, 'output', 'outputTokens', 'output_tokens');
   const cacheRead = pickCount(usage, 'cacheRead', 'cache_read', 'cacheReadTokens');
   const cacheWrite = pickCount(usage, 'cacheWrite', 'cache_write', 'cacheWriteTokens');
+  const write1h = Math.min(cacheWrite, pickCount(usage, 'cacheWrite1h'));
   const reasoning = pickCount(usage, 'reasoning', 'reasoningTokens');
   if (input + output + cacheRead + cacheWrite === 0) return null;
 
@@ -64,8 +65,10 @@ export function parseObject(obj) {
     input,
     output: toCount(output),
     cacheRead,
-    write5m: cacheWrite,
-    write1h: 0,
+    write5m: cacheWrite - write1h,
+    write1h,
+    billing: { promptTokens: input + cacheRead + cacheWrite,
+      ...(cacheWrite > write1h ? { unknownWriteTTL: true } : {}) },
     reasoning: Math.min(reasoning, toCount(output)),
     model: String(msg.model ?? UNKNOWN_MODEL).trim() || UNKNOWN_MODEL,
     cwd: typeof obj.cwd === 'string' ? obj.cwd : null,
