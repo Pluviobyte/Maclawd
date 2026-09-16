@@ -45,3 +45,22 @@ test('catalog refresh updates first-party tables, then retains them on provider 
   assert.equal(priceFor('gpt-6-astra').input,11);assert.equal(pricingMeta().officialStatus.openai.ok,false);
  }finally{server.close();}
 });
+
+test('official refresh proceeds when the catalog fails, retaining the last catalog and retrying partial updates',async()=>{
+ const {createServer}=await import('node:http');const {updatePrices,pricingMeta}=await import('../src/runtime/pricing.js');
+ let catalogFail=false;
+ const server=createServer((req,res)=>{
+  if(req.url==='/official')res.end('### Standard pricing data\n| gpt-6-astra | $12 | $1 | $12.5 | $50 | $20 | $2 | $25 | $75 |\n| gpt-5.6-sol | $4 | $0.4 | $5 | $20 | $8 | $0.8 | $10 | $30 |');
+  else if(catalogFail){res.writeHead(503);res.end('unavailable');}
+  else res.end(JSON.stringify({data:[{id:'vendor/retained',pricing:{prompt:'0.000003',completion:'0.000006'}}]}));
+ });
+ await new Promise(r=>server.listen(0,'127.0.0.1',r));const url=`http://127.0.0.1:${server.address().port}`;
+ try{
+  await updatePrices({url,officialUrls:{}});catalogFail=true;
+  const result=await updatePrices({url,officialUrls:{openai:url+'/official'}});
+  assert.equal(result.partial,true);assert.equal(result.catalogStatus.ok,false);assert.equal(result.officialStatus.openai.ok,true);
+  assert.equal(priceFor('vendor/retained').input,3);assert.equal(priceFor('gpt-6-astra').input,12);
+  assert.equal(pricingMeta().requiresRefresh,true);
+  assert.equal(costOf('gpt-6-astra',{input:300000,output:100,promptTokens:null}),null);
+ }finally{server.close();}
+});

@@ -95,3 +95,13 @@ test('manual and automatic refresh share one in-flight request; shutdown cancels
   await f.manager.check();
   assert.equal(f.calls, 1);
 });
+
+test('partial provider failures retry after an hour even if the catalog timestamp is fresh',async()=>{
+ let now=Date.parse('2026-09-16T00:00:00Z'),calls=0;
+ const manager=createPricingRefresher({now:()=>now,meta:()=>({models:5,fetchedAt:new Date(now).toISOString(),requiresRefresh:true}),update:async()=>{calls++;}});
+ try{
+  manager.start();await manager.check();assert.equal(calls,1);
+  now+=PRICE_RETRY_MS-1;await manager.check();assert.equal(calls,1);
+  now++;await manager.check();assert.equal(calls,2);
+ }finally{manager.stop();}
+});

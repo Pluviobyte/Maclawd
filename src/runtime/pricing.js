@@ -48,7 +48,7 @@ function loadTables() {
 export function pricingMeta(){
   const {meta,byId,official}=loadTables();
   return {...meta,models:byId.size,officialModels:Object.keys(official).length,officialSource:OFFICIAL_URLS.anthropic,
-    officialSources:OFFICIAL_URLS,requiresRefresh:meta?.schemaVersion!==2,estimateBasis:'current-api-prices'};
+    officialSources:OFFICIAL_URLS,requiresRefresh:meta?.schemaVersion!==2 || meta?.partial===true,estimateBasis:'current-api-prices'};
 }
 export function priceFor(model) {
   if(!isPricingCandidate(model))return null;
@@ -79,7 +79,7 @@ function priceRequest(price,bucket,{serviceTier='standard',promptTokens=null,unk
 export function quoteBucket(model,bucket) {
   const price=priceFor(model);
   let cost=0,pricedTokens=0,unpricedTokens=0;
-  const groups=bucket.chargeGroups?Object.entries(bucket.chargeGroups):[[JSON.stringify([bucket.serviceTier??'standard',bucket.promptTokens??(toCount(bucket.input)+toCount(bucket.cacheRead)+toCount(bucket.write5m)+toCount(bucket.write1h))]),bucket]];
+  const groups=bucket.chargeGroups?Object.entries(bucket.chargeGroups):[[JSON.stringify([bucket.serviceTier??'standard',Object.hasOwn(bucket,'promptTokens')?bucket.promptTokens:(toCount(bucket.input)+toCount(bucket.cacheRead)+toCount(bucket.write5m)+toCount(bucket.write1h))]),bucket]];
   for(const [key,group] of groups){
     const [serviceTier,promptTokens,unknownWriteTTL]=JSON.parse(key);
     const value=price?priceRequest(price,group,{serviceTier,promptTokens,unknownWriteTTL}):null;
@@ -115,18 +115,50 @@ export async function updatePrices({url=OPENROUTER_URL,timeoutMs=30_000,now=null
     if(!response.ok)throw new Error(`价格表请求失败 HTTP ${response.status}`);
     return response;
   };
-  const payload=await (await request(url)).json();
-  const list=Array.isArray(payload?.data)?payload.data:[];
-  if(!list.length)throw new Error('价格表为空，未覆盖本地文件');
-  const models={};let skipped=0;
-  for(const entry of list){const p=normalizeOpenRouter(entry);if(!p||!entry.id){skipped++;continue;}models[entry.id]={...p,verifiedAt:stamp};}
-  if(!Object.keys(models).length)throw new Error('没有解析出任何价格，未覆盖本地文件');
-  const previous=readPricing();const officialModels={...previous?.officialModels};const officialStatus={};
-  await Promise.all(Object.entries(officialUrls).map(async ([provider,target])=>{
-    try {const prices=parseOfficialPrices(provider,await (await request(target)).text(),stamp);Object.assign(officialModels,prices);officialStatus[provider]={ok:true,verifiedAt:stamp};}
-    catch(error){officialStatus[provider]={ok:false,error:error.message,lastSuccessAt:previous?._meta?.officialStatus?.[provider]?.verifiedAt??previous?._meta?.officialStatus?.[provider]?.lastSuccessAt??BUNDLED_OFFICIAL.verifiedAt};}
-  }));
+  const previous = readPricing();
+  let models = { ...previous?.models }, skipped = 0, catalogError = null;
+  const officialModels = { ...previous?.officialModels };
+  const officialStatus = { ...previous?._meta?.officialStatus };
+  let catalogStatus;
+  await Promise.all([
+    (async () => {
+      try {
+        const payload = await (await request(url)).json();
+        const list = Array.isArray(payload?.data) ? payload.data : [];
+        if (!list.length) throw new Error('价格表为空，未覆盖本地文件');
+        const next = {};
+        for (const entry of list) {
+          const p = normalizeOpenRouter(entry);
+          if (!p || !entry.id) { skipped++; continue; }
+          next[entry.id] = { ...p, verifiedAt: stamp };
+        }
+        if (!Object.keys(next).length) throw new Error('没有解析出任何价格，未覆盖本地文件');
+        models = next;
+        catalogStatus = { ok: true, verifiedAt: stamp };
+      } catch (error) {
+        catalogError = error;
+        catalogStatus = { ok: false, error: error.message,
+          lastSuccessAt: previous?._meta?.catalogStatus?.verifiedAt ?? previous?._meta?.fetchedAt ?? null };
+      }
+    })(),
+    ...Object.entries(officialUrls).map(async ([provider, target]) => {
+      try {
+        const prices = parseOfficialPrices(provider, await (await request(target)).text(), stamp);
+        Object.assign(officialModels, prices);
+        officialStatus[provider] = { ok: true, verifiedAt: stamp };
+      } catch (error) {
+        officialStatus[provider] = { ok: false, error: error.message,
+          lastSuccessAt: previous?._meta?.officialStatus?.[provider]?.verifiedAt
+            ?? previous?._meta?.officialStatus?.[provider]?.lastSuccessAt ?? BUNDLED_OFFICIAL.verifiedAt };
+      }
+    }),
+  ]);
   signal?.throwIfAborted();
-  writePricing({_meta:{schemaVersion:2,source:url,fetchedAt:stamp,count:Object.keys(models).length,officialStatus},models,officialModels});
-  resetPricingCache();return {count:Object.keys(models).length,skipped,officialStatus};
+  const anyOfficialSuccess = Object.keys(officialUrls).some(provider => officialStatus[provider]?.ok);
+  if (catalogError && !anyOfficialSuccess) throw catalogError;
+  const partial = !catalogStatus.ok || Object.values(officialStatus).some(status => !status.ok);
+  writePricing({ _meta: { schemaVersion: 2, source: url, fetchedAt: stamp,
+    count: Object.keys(models).length, officialStatus, catalogStatus, partial }, models, officialModels });
+  resetPricingCache();
+  return { count: Object.keys(models).length, skipped, officialStatus, catalogStatus, partial };
 }

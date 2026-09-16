@@ -376,7 +376,7 @@ struct SettingsPage: View {
 
                     Button {
                         store.updatePrices { json in
-                            rescanNote = (json?["count"] as? Int).map { "价格表 \($0) 个模型" }
+                            rescanNote = (json?["count"] as? Int).map { "价格表 \($0) 个模型" + ((json?["partial"] as? Bool == true) ? "；部分来源失败，保留旧价并自动重试" : "") }
                                 ?? "更新失败"
                         }
                     } label: { Text("更新价格表").font(.system(size: 11)) }
@@ -386,7 +386,9 @@ struct SettingsPage: View {
                     }
                 }
 
-                Text("价格表每 24 小时自动更新；未计价模型会触发限频刷新。")
+                Text("价格表每 24 小时自动更新；新模型与更新失败会触发限频重试。")
+                    .font(.system(size: 10)).foregroundStyle(.secondary)
+                Text("按当前官方 API 价格估算，历史费用会随价表重算，不代表订阅账单。")
                     .font(.system(size: 10)).foregroundStyle(.secondary)
                 Text("价格来源：供应商官方与 OpenRouter · 仅下载公开价格，不上传用量或凭据。")
                     .font(.system(size: 10)).foregroundStyle(.secondary)
