@@ -61,18 +61,18 @@ test('normalizeOpenRouter 把每 token 单价换算成每 1M', () => {
   assert.equal(price.write1h, 20);
 });
 
-test('normalizeOpenRouter 缺 1h 档时按 2× 输入价推导', () => {
+test('normalizeOpenRouter 缺失缓存价保持未知，不套其他供应商倍率', () => {
   const price = normalizeOpenRouter({
     pricing: { prompt: '0.000001', completion: '0.000003' },
   });
   assert.equal(price.input, 1);
-  assert.equal(price.write1h, 2, '1h TTL 是 2× 输入价');
-  assert.equal(price.write5m, 1.25);
-  assert.equal(price.cacheRead, 0.1);
+  assert.equal(price.write1h, null);
+  assert.equal(price.write5m, null);
+  assert.equal(price.cacheRead, null);
 });
 
-test('normalizeOpenRouter 拒绝免费模型与缺价条目', () => {
-  assert.equal(normalizeOpenRouter({ pricing: { prompt: '0', completion: '0' } }), null);
+test('normalizeOpenRouter 保留明确免费模型，拒绝缺价条目', () => {
+  assert.equal(normalizeOpenRouter({ pricing: { prompt: '0', completion: '0' } }).input, 0);
   assert.equal(normalizeOpenRouter({ pricing: {} }), null);
   assert.equal(normalizeOpenRouter({}), null);
 });
@@ -126,7 +126,7 @@ test('拉取到的价格表能命中归一化后的名称', () => {
   resetPricingCache();
   // 官方表与手工关键词表都没有 novel-model，这条正是自动适配要解决的场景
   assert.equal(priceFor('novel-model').input, 5);
-  assert.equal(priceFor('gpt-5.6-sol').output, 8);
+  assert.equal(priceFor('gpt-5.6-sol').output, 20, '官方核验价压过有冲突的目录价');
   assert.equal(pricingMeta().models, 2);
 });
 
@@ -135,7 +135,7 @@ test('overrides 优先于价格表，且可以只写 input/output', () => {
   resetPricingCache();
   const k3 = priceFor('kimi-code/k3');
   assert.equal(k3.input, 2);
-  assert.equal(k3.write1h, 4, '缺省档位按倍率补齐');
+  assert.equal(k3.write1h, undefined, '用户未提供的缓存价不推测');
 
   writeJson(OVERRIDES_FILE, { 'claude-fable-5': { input: 99, output: 99, cacheRead: 9, write5m: 9, write1h: 9 } });
   resetPricingCache();
@@ -176,8 +176,8 @@ test('updatePrices 写入价格表但绝不触碰 overrides', async () => {
   const result = await updatePrices({ url, now: '2026-07-30T12:00:00.000Z' });
   server.close();
 
-  assert.equal(result.count, 1, '只有一条有效价格');
-  assert.equal(result.skipped, 2, '免费与缺价条目被跳过');
+  assert.equal(result.count, 2, '免费也是已知有效价格');
+  assert.equal(result.skipped, 1, '仅跳过缺价条目');
   assert.equal(priceFor('claude-opus-9').input, 20);
   // overrides 必须原样保留
   assert.equal(priceFor('my-model').input, 1);

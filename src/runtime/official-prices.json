@@ -1,0 +1,1354 @@
+{
+  "verifiedAt": "2026-09-16T00:00:00.000Z",
+  "models": {
+    "gpt-6-astra": {
+      "tiers": {
+        "batch": {
+          "input": 5.0,
+          "cacheRead": 0.5,
+          "write5m": 6.25,
+          "write1h": null,
+          "output": 25.0,
+          "overrides": [
+            {
+              "above": 272000,
+              "input": 10.0,
+              "cacheRead": 1.0,
+              "write5m": 12.5,
+              "write1h": null,
+              "output": 37.5
+            }
+          ]
+        },
+        "flex": {
+          "input": 5.0,
+          "cacheRead": 0.5,
+          "write5m": 6.25,
+          "write1h": null,
+          "output": 25.0,
+          "overrides": [
+            {
+              "above": 272000,
+              "input": 10.0,
+              "cacheRead": 1.0,
+              "write5m": 12.5,
+              "write1h": null,
+              "output": 37.5
+            }
+          ]
+        },
+        "fast": {
+          "input": 20.0,
+          "cacheRead": 2.0,
+          "write5m": 25.0,
+          "write1h": null,
+          "output": 100.0,
+          "overrides": [
+            {
+              "above": 272000,
+              "input": 40.0,
+              "cacheRead": 4.0,
+              "write5m": 50.0,
+              "write1h": null,
+              "output": 150.0
+            }
+          ]
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 10.0,
+      "cacheRead": 1.0,
+      "write5m": 12.5,
+      "write1h": null,
+      "output": 50.0,
+      "overrides": [
+        {
+          "above": 272000,
+          "input": 20.0,
+          "cacheRead": 2.0,
+          "write5m": 25.0,
+          "write1h": null,
+          "output": 75.0
+        }
+      ]
+    },
+    "gpt-5.6-sol": {
+      "tiers": {
+        "batch": {
+          "input": 2.0,
+          "cacheRead": 0.2,
+          "write5m": 2.5,
+          "write1h": null,
+          "output": 10.0,
+          "overrides": [
+            {
+              "above": 272000,
+              "input": 4.0,
+              "cacheRead": 0.4,
+              "write5m": 5.0,
+              "write1h": null,
+              "output": 15.0
+            }
+          ]
+        },
+        "flex": {
+          "input": 2.0,
+          "cacheRead": 0.2,
+          "write5m": 2.5,
+          "write1h": null,
+          "output": 10.0,
+          "overrides": [
+            {
+              "above": 272000,
+              "input": 4.0,
+              "cacheRead": 0.4,
+              "write5m": 5.0,
+              "write1h": null,
+              "output": 15.0
+            }
+          ]
+        },
+        "fast": {
+          "input": 8.0,
+          "cacheRead": 0.8,
+          "write5m": 10.0,
+          "write1h": null,
+          "output": 40.0,
+          "overrides": [
+            {
+              "above": 272000,
+              "input": 16.0,
+              "cacheRead": 1.6,
+              "write5m": 20.0,
+              "write1h": null,
+              "output": 60.0
+            }
+          ]
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 4.0,
+      "cacheRead": 0.4,
+      "write5m": 5.0,
+      "write1h": null,
+      "output": 20.0,
+      "overrides": [
+        {
+          "above": 272000,
+          "input": 8.0,
+          "cacheRead": 0.8,
+          "write5m": 10.0,
+          "write1h": null,
+          "output": 30.0
+        }
+      ]
+    },
+    "gpt-5.6-terra": {
+      "tiers": {
+        "batch": {
+          "input": 1.0,
+          "cacheRead": 0.1,
+          "write5m": 1.25,
+          "write1h": null,
+          "output": 6.0,
+          "overrides": [
+            {
+              "above": 272000,
+              "input": 2.0,
+              "cacheRead": 0.2,
+              "write5m": 2.5,
+              "write1h": null,
+              "output": 9.0
+            }
+          ]
+        },
+        "flex": {
+          "input": 1.0,
+          "cacheRead": 0.1,
+          "write5m": 1.25,
+          "write1h": null,
+          "output": 6.0,
+          "overrides": [
+            {
+              "above": 272000,
+              "input": 2.0,
+              "cacheRead": 0.2,
+              "write5m": 2.5,
+              "write1h": null,
+              "output": 9.0
+            }
+          ]
+        },
+        "fast": {
+          "input": 4.0,
+          "cacheRead": 0.4,
+          "write5m": 5.0,
+          "write1h": null,
+          "output": 24.0,
+          "overrides": [
+            {
+              "above": 272000,
+              "input": 8.0,
+              "cacheRead": 0.8,
+              "write5m": 10.0,
+              "write1h": null,
+              "output": 36.0
+            }
+          ]
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 2.0,
+      "cacheRead": 0.2,
+      "write5m": 2.5,
+      "write1h": null,
+      "output": 12.0,
+      "overrides": [
+        {
+          "above": 272000,
+          "input": 4.0,
+          "cacheRead": 0.4,
+          "write5m": 5.0,
+          "write1h": null,
+          "output": 18.0
+        }
+      ]
+    },
+    "gpt-5.6-luna": {
+      "tiers": {
+        "batch": {
+          "input": 0.1,
+          "cacheRead": 0.01,
+          "write5m": 0.125,
+          "write1h": null,
+          "output": 0.6,
+          "overrides": [
+            {
+              "above": 272000,
+              "input": 0.2,
+              "cacheRead": 0.02,
+              "write5m": 0.25,
+              "write1h": null,
+              "output": 0.9
+            }
+          ]
+        },
+        "flex": {
+          "input": 0.1,
+          "cacheRead": 0.01,
+          "write5m": 0.125,
+          "write1h": null,
+          "output": 0.6,
+          "overrides": [
+            {
+              "above": 272000,
+              "input": 0.2,
+              "cacheRead": 0.02,
+              "write5m": 0.25,
+              "write1h": null,
+              "output": 0.9
+            }
+          ]
+        },
+        "fast": {
+          "input": 0.4,
+          "cacheRead": 0.04,
+          "write5m": 0.5,
+          "write1h": null,
+          "output": 2.4,
+          "overrides": [
+            {
+              "above": 272000,
+              "input": 0.8,
+              "cacheRead": 0.08,
+              "write5m": 1.0,
+              "write1h": null,
+              "output": 3.6
+            }
+          ]
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 0.2,
+      "cacheRead": 0.02,
+      "write5m": 0.25,
+      "write1h": null,
+      "output": 1.2,
+      "overrides": [
+        {
+          "above": 272000,
+          "input": 0.4,
+          "cacheRead": 0.04,
+          "write5m": 0.5,
+          "write1h": null,
+          "output": 1.8
+        }
+      ]
+    },
+    "gpt-5.5": {
+      "tiers": {
+        "batch": {
+          "input": 2.5,
+          "cacheRead": 0.25,
+          "write5m": null,
+          "write1h": null,
+          "output": 15.0,
+          "overrides": [
+            {
+              "above": 272000,
+              "input": 5.0,
+              "cacheRead": 0.5,
+              "write5m": null,
+              "write1h": null,
+              "output": 22.5
+            }
+          ]
+        },
+        "flex": {
+          "input": 2.5,
+          "cacheRead": 0.25,
+          "write5m": null,
+          "write1h": null,
+          "output": 15.0,
+          "overrides": [
+            {
+              "above": 272000,
+              "input": 5.0,
+              "cacheRead": 0.5,
+              "write5m": null,
+              "write1h": null,
+              "output": 22.5
+            }
+          ]
+        },
+        "fast": {
+          "input": 12.5,
+          "cacheRead": 1.25,
+          "write5m": null,
+          "write1h": null,
+          "output": 75.0
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 5.0,
+      "cacheRead": 0.5,
+      "write5m": null,
+      "write1h": null,
+      "output": 30.0,
+      "overrides": [
+        {
+          "above": 272000,
+          "input": 10.0,
+          "cacheRead": 1.0,
+          "write5m": null,
+          "write1h": null,
+          "output": 45.0
+        }
+      ]
+    },
+    "gpt-5.5-pro": {
+      "tiers": {
+        "batch": {
+          "input": 15.0,
+          "cacheRead": null,
+          "write5m": null,
+          "write1h": null,
+          "output": 90.0
+        },
+        "flex": {
+          "input": 15.0,
+          "cacheRead": null,
+          "write5m": null,
+          "write1h": null,
+          "output": 90.0
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 30.0,
+      "cacheRead": null,
+      "write5m": null,
+      "write1h": null,
+      "output": 180.0,
+      "overrides": [
+        {
+          "above": 272000,
+          "input": 60.0,
+          "cacheRead": null,
+          "write5m": null,
+          "write1h": null,
+          "output": 270.0
+        }
+      ]
+    },
+    "gpt-5.4": {
+      "tiers": {
+        "batch": {
+          "input": 1.25,
+          "cacheRead": 0.13,
+          "write5m": null,
+          "write1h": null,
+          "output": 7.5,
+          "overrides": [
+            {
+              "above": 272000,
+              "input": 2.5,
+              "cacheRead": 0.25,
+              "write5m": null,
+              "write1h": null,
+              "output": 11.25
+            }
+          ]
+        },
+        "flex": {
+          "input": 1.25,
+          "cacheRead": 0.13,
+          "write5m": null,
+          "write1h": null,
+          "output": 7.5,
+          "overrides": [
+            {
+              "above": 272000,
+              "input": 2.5,
+              "cacheRead": 0.25,
+              "write5m": null,
+              "write1h": null,
+              "output": 11.25
+            }
+          ]
+        },
+        "fast": {
+          "input": 5.0,
+          "cacheRead": 0.5,
+          "write5m": null,
+          "write1h": null,
+          "output": 30.0
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 2.5,
+      "cacheRead": 0.25,
+      "write5m": null,
+      "write1h": null,
+      "output": 15.0,
+      "overrides": [
+        {
+          "above": 272000,
+          "input": 5.0,
+          "cacheRead": 0.5,
+          "write5m": null,
+          "write1h": null,
+          "output": 22.5
+        }
+      ]
+    },
+    "gpt-5.4-mini": {
+      "tiers": {
+        "batch": {
+          "input": 0.375,
+          "cacheRead": 0.0375,
+          "write5m": null,
+          "write1h": null,
+          "output": 2.25
+        },
+        "flex": {
+          "input": 0.375,
+          "cacheRead": 0.0375,
+          "write5m": null,
+          "write1h": null,
+          "output": 2.25
+        },
+        "fast": {
+          "input": 1.5,
+          "cacheRead": 0.15,
+          "write5m": null,
+          "write1h": null,
+          "output": 9.0
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 0.75,
+      "cacheRead": 0.075,
+      "write5m": null,
+      "write1h": null,
+      "output": 4.5
+    },
+    "gpt-5.4-nano": {
+      "tiers": {
+        "batch": {
+          "input": 0.1,
+          "cacheRead": 0.01,
+          "write5m": null,
+          "write1h": null,
+          "output": 0.625
+        },
+        "flex": {
+          "input": 0.1,
+          "cacheRead": 0.01,
+          "write5m": null,
+          "write1h": null,
+          "output": 0.625
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 0.2,
+      "cacheRead": 0.02,
+      "write5m": null,
+      "write1h": null,
+      "output": 1.25
+    },
+    "gpt-5.4-pro": {
+      "tiers": {
+        "batch": {
+          "input": 15.0,
+          "cacheRead": null,
+          "write5m": null,
+          "write1h": null,
+          "output": 90.0,
+          "overrides": [
+            {
+              "above": 272000,
+              "input": 30.0,
+              "cacheRead": null,
+              "write5m": null,
+              "write1h": null,
+              "output": 135.0
+            }
+          ]
+        },
+        "flex": {
+          "input": 15.0,
+          "cacheRead": null,
+          "write5m": null,
+          "write1h": null,
+          "output": 90.0,
+          "overrides": [
+            {
+              "above": 272000,
+              "input": 30.0,
+              "cacheRead": null,
+              "write5m": null,
+              "write1h": null,
+              "output": 135.0
+            }
+          ]
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 30.0,
+      "cacheRead": null,
+      "write5m": null,
+      "write1h": null,
+      "output": 180.0,
+      "overrides": [
+        {
+          "above": 272000,
+          "input": 60.0,
+          "cacheRead": null,
+          "write5m": null,
+          "write1h": null,
+          "output": 270.0
+        }
+      ]
+    },
+    "gpt-5.2": {
+      "tiers": {
+        "batch": {
+          "input": 0.875,
+          "cacheRead": 0.0875,
+          "write5m": null,
+          "write1h": null,
+          "output": 7.0
+        },
+        "flex": {
+          "input": 0.875,
+          "cacheRead": 0.0875,
+          "write5m": null,
+          "write1h": null,
+          "output": 7.0
+        },
+        "fast": {
+          "input": 3.5,
+          "cacheRead": 0.35,
+          "write5m": null,
+          "write1h": null,
+          "output": 28.0
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 1.75,
+      "cacheRead": 0.175,
+      "write5m": null,
+      "write1h": null,
+      "output": 14.0
+    },
+    "gpt-5.2-pro": {
+      "tiers": {
+        "batch": {
+          "input": 10.5,
+          "cacheRead": null,
+          "write5m": null,
+          "write1h": null,
+          "output": 84.0
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 21.0,
+      "cacheRead": null,
+      "write5m": null,
+      "write1h": null,
+      "output": 168.0
+    },
+    "gpt-5.1": {
+      "tiers": {
+        "batch": {
+          "input": 0.625,
+          "cacheRead": 0.0625,
+          "write5m": null,
+          "write1h": null,
+          "output": 5.0
+        },
+        "flex": {
+          "input": 0.625,
+          "cacheRead": 0.0625,
+          "write5m": null,
+          "write1h": null,
+          "output": 5.0
+        },
+        "fast": {
+          "input": 2.5,
+          "cacheRead": 0.25,
+          "write5m": null,
+          "write1h": null,
+          "output": 20.0
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 1.25,
+      "cacheRead": 0.125,
+      "write5m": null,
+      "write1h": null,
+      "output": 10.0
+    },
+    "gpt-5": {
+      "tiers": {
+        "batch": {
+          "input": 0.625,
+          "cacheRead": 0.0625,
+          "write5m": null,
+          "write1h": null,
+          "output": 5.0
+        },
+        "flex": {
+          "input": 0.625,
+          "cacheRead": 0.0625,
+          "write5m": null,
+          "write1h": null,
+          "output": 5.0
+        },
+        "fast": {
+          "input": 2.5,
+          "cacheRead": 0.25,
+          "write5m": null,
+          "write1h": null,
+          "output": 20.0
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 1.25,
+      "cacheRead": 0.125,
+      "write5m": null,
+      "write1h": null,
+      "output": 10.0
+    },
+    "gpt-5-mini": {
+      "tiers": {
+        "batch": {
+          "input": 0.125,
+          "cacheRead": 0.0125,
+          "write5m": null,
+          "write1h": null,
+          "output": 1.0
+        },
+        "flex": {
+          "input": 0.125,
+          "cacheRead": 0.0125,
+          "write5m": null,
+          "write1h": null,
+          "output": 1.0
+        },
+        "fast": {
+          "input": 0.45,
+          "cacheRead": 0.045,
+          "write5m": null,
+          "write1h": null,
+          "output": 3.6
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 0.25,
+      "cacheRead": 0.025,
+      "write5m": null,
+      "write1h": null,
+      "output": 2.0
+    },
+    "gpt-5-nano": {
+      "tiers": {
+        "batch": {
+          "input": 0.025,
+          "cacheRead": 0.0025,
+          "write5m": null,
+          "write1h": null,
+          "output": 0.2
+        },
+        "flex": {
+          "input": 0.025,
+          "cacheRead": 0.0025,
+          "write5m": null,
+          "write1h": null,
+          "output": 0.2
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 0.05,
+      "cacheRead": 0.005,
+      "write5m": null,
+      "write1h": null,
+      "output": 0.4
+    },
+    "gpt-5-pro": {
+      "tiers": {
+        "batch": {
+          "input": 7.5,
+          "cacheRead": null,
+          "write5m": null,
+          "write1h": null,
+          "output": 60.0
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 15.0,
+      "cacheRead": null,
+      "write5m": null,
+      "write1h": null,
+      "output": 120.0
+    },
+    "gpt-4.1": {
+      "tiers": {
+        "batch": {
+          "input": 1.0,
+          "cacheRead": null,
+          "write5m": null,
+          "write1h": null,
+          "output": 4.0
+        },
+        "fast": {
+          "input": 3.5,
+          "cacheRead": 0.875,
+          "write5m": null,
+          "write1h": null,
+          "output": 14.0
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 2.0,
+      "cacheRead": 0.5,
+      "write5m": null,
+      "write1h": null,
+      "output": 8.0
+    },
+    "gpt-4.1-mini": {
+      "tiers": {
+        "batch": {
+          "input": 0.2,
+          "cacheRead": null,
+          "write5m": null,
+          "write1h": null,
+          "output": 0.8
+        },
+        "fast": {
+          "input": 0.7,
+          "cacheRead": 0.175,
+          "write5m": null,
+          "write1h": null,
+          "output": 2.8
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 0.4,
+      "cacheRead": 0.1,
+      "write5m": null,
+      "write1h": null,
+      "output": 1.6
+    },
+    "gpt-4.1-nano": {
+      "tiers": {
+        "batch": {
+          "input": 0.05,
+          "cacheRead": null,
+          "write5m": null,
+          "write1h": null,
+          "output": 0.2
+        },
+        "fast": {
+          "input": 0.2,
+          "cacheRead": 0.05,
+          "write5m": null,
+          "write1h": null,
+          "output": 0.8
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 0.1,
+      "cacheRead": 0.025,
+      "write5m": null,
+      "write1h": null,
+      "output": 0.4
+    },
+    "gpt-4o": {
+      "tiers": {
+        "batch": {
+          "input": 1.25,
+          "cacheRead": null,
+          "write5m": null,
+          "write1h": null,
+          "output": 5.0
+        },
+        "fast": {
+          "input": 4.25,
+          "cacheRead": 2.125,
+          "write5m": null,
+          "write1h": null,
+          "output": 17.0
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 2.5,
+      "cacheRead": 1.25,
+      "write5m": null,
+      "write1h": null,
+      "output": 10.0
+    },
+    "gpt-4o-2024-05-13": {
+      "tiers": {
+        "batch": {
+          "input": 2.5,
+          "cacheRead": null,
+          "write5m": null,
+          "write1h": null,
+          "output": 7.5
+        },
+        "fast": {
+          "input": 8.75,
+          "cacheRead": null,
+          "write5m": null,
+          "write1h": null,
+          "output": 26.25
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 5.0,
+      "cacheRead": null,
+      "write5m": null,
+      "write1h": null,
+      "output": 15.0
+    },
+    "gpt-4o-mini": {
+      "tiers": {
+        "batch": {
+          "input": 0.075,
+          "cacheRead": null,
+          "write5m": null,
+          "write1h": null,
+          "output": 0.3
+        },
+        "fast": {
+          "input": 0.25,
+          "cacheRead": 0.125,
+          "write5m": null,
+          "write1h": null,
+          "output": 1.0
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 0.15,
+      "cacheRead": 0.075,
+      "write5m": null,
+      "write1h": null,
+      "output": 0.6
+    },
+    "o1": {
+      "tiers": {
+        "batch": {
+          "input": 7.5,
+          "cacheRead": null,
+          "write5m": null,
+          "write1h": null,
+          "output": 30.0
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 15.0,
+      "cacheRead": 7.5,
+      "write5m": null,
+      "write1h": null,
+      "output": 60.0
+    },
+    "o1-pro": {
+      "tiers": {
+        "batch": {
+          "input": 75.0,
+          "cacheRead": null,
+          "write5m": null,
+          "write1h": null,
+          "output": 300.0
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 150.0,
+      "cacheRead": null,
+      "write5m": null,
+      "write1h": null,
+      "output": 600.0
+    },
+    "o3-pro": {
+      "tiers": {
+        "batch": {
+          "input": 10.0,
+          "cacheRead": null,
+          "write5m": null,
+          "write1h": null,
+          "output": 40.0
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 20.0,
+      "cacheRead": null,
+      "write5m": null,
+      "write1h": null,
+      "output": 80.0
+    },
+    "o3": {
+      "tiers": {
+        "batch": {
+          "input": 1.0,
+          "cacheRead": null,
+          "write5m": null,
+          "write1h": null,
+          "output": 4.0
+        },
+        "flex": {
+          "input": 1.0,
+          "cacheRead": 0.25,
+          "write5m": null,
+          "write1h": null,
+          "output": 4.0
+        },
+        "fast": {
+          "input": 3.5,
+          "cacheRead": 0.875,
+          "write5m": null,
+          "write1h": null,
+          "output": 14.0
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 2.0,
+      "cacheRead": 0.5,
+      "write5m": null,
+      "write1h": null,
+      "output": 8.0
+    },
+    "o4-mini": {
+      "tiers": {
+        "batch": {
+          "input": 0.55,
+          "cacheRead": null,
+          "write5m": null,
+          "write1h": null,
+          "output": 2.2
+        },
+        "flex": {
+          "input": 0.55,
+          "cacheRead": 0.138,
+          "write5m": null,
+          "write1h": null,
+          "output": 2.2
+        },
+        "fast": {
+          "input": 2.0,
+          "cacheRead": 0.5,
+          "write5m": null,
+          "write1h": null,
+          "output": 8.0
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 1.1,
+      "cacheRead": 0.275,
+      "write5m": null,
+      "write1h": null,
+      "output": 4.4
+    },
+    "o3-mini": {
+      "tiers": {
+        "batch": {
+          "input": 0.55,
+          "cacheRead": null,
+          "write5m": null,
+          "write1h": null,
+          "output": 2.2
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 1.1,
+      "cacheRead": 0.55,
+      "write5m": null,
+      "write1h": null,
+      "output": 4.4
+    },
+    "gpt-4-turbo-2024-04-09": {
+      "tiers": {
+        "batch": {
+          "input": 5.0,
+          "cacheRead": null,
+          "write5m": null,
+          "write1h": null,
+          "output": 15.0
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 10.0,
+      "cacheRead": null,
+      "write5m": null,
+      "write1h": null,
+      "output": 30.0
+    },
+    "gpt-4-0613": {
+      "tiers": {
+        "batch": {
+          "input": 15.0,
+          "cacheRead": null,
+          "write5m": null,
+          "write1h": null,
+          "output": 30.0
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 30.0,
+      "cacheRead": null,
+      "write5m": null,
+      "write1h": null,
+      "output": 60.0
+    },
+    "gpt-3.5-turbo": {
+      "tiers": {},
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 0.5,
+      "cacheRead": null,
+      "write5m": null,
+      "write1h": null,
+      "output": 1.5
+    },
+    "gpt-3.5-turbo-0125": {
+      "tiers": {
+        "batch": {
+          "input": 0.25,
+          "cacheRead": null,
+          "write5m": null,
+          "write1h": null,
+          "output": 0.75
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 0.5,
+      "cacheRead": null,
+      "write5m": null,
+      "write1h": null,
+      "output": 1.5
+    },
+    "gpt-3.5-turbo-1106": {
+      "tiers": {
+        "batch": {
+          "input": 1.0,
+          "cacheRead": null,
+          "write5m": null,
+          "write1h": null,
+          "output": 2.0
+        }
+      },
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 1.0,
+      "cacheRead": null,
+      "write5m": null,
+      "write1h": null,
+      "output": 2.0
+    },
+    "gpt-3.5-turbo-instruct": {
+      "tiers": {},
+      "source": "https://developers.openai.com/api/docs/pricing.md",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "input": 1.5,
+      "cacheRead": null,
+      "write5m": null,
+      "write1h": null,
+      "output": 2.0
+    },
+    "claude-fable-5.1": {
+      "input": 10,
+      "output": 50,
+      "cacheRead": 0.25,
+      "write5m": 12.5,
+      "write1h": 20,
+      "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official"
+    },
+    "claude-mythos-5.1": {
+      "input": 10,
+      "output": 50,
+      "cacheRead": 0.25,
+      "write5m": 12.5,
+      "write1h": 20,
+      "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official"
+    },
+    "claude-fable-5": {
+      "input": 10,
+      "output": 50,
+      "cacheRead": 1.0,
+      "write5m": 12.5,
+      "write1h": 20,
+      "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official"
+    },
+    "claude-mythos-5": {
+      "input": 10,
+      "output": 50,
+      "cacheRead": 1.0,
+      "write5m": 12.5,
+      "write1h": 20,
+      "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official"
+    },
+    "claude-opus-5": {
+      "input": 5,
+      "output": 25,
+      "cacheRead": 0.5,
+      "write5m": 6.25,
+      "write1h": 10,
+      "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "tiers": {
+        "fast": {
+          "input": 10,
+          "output": 50,
+          "cacheRead": 1,
+          "write5m": 12.5,
+          "write1h": 20
+        }
+      }
+    },
+    "claude-opus-4.8": {
+      "input": 5,
+      "output": 25,
+      "cacheRead": 0.5,
+      "write5m": 6.25,
+      "write1h": 10,
+      "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official",
+      "tiers": {
+        "fast": {
+          "input": 10,
+          "output": 50,
+          "cacheRead": 1,
+          "write5m": 12.5,
+          "write1h": 20
+        }
+      }
+    },
+    "claude-opus-4.7": {
+      "input": 5,
+      "output": 25,
+      "cacheRead": 0.5,
+      "write5m": 6.25,
+      "write1h": 10,
+      "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official"
+    },
+    "claude-opus-4.6": {
+      "input": 5,
+      "output": 25,
+      "cacheRead": 0.5,
+      "write5m": 6.25,
+      "write1h": 10,
+      "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official"
+    },
+    "claude-opus-4.5": {
+      "input": 5,
+      "output": 25,
+      "cacheRead": 0.5,
+      "write5m": 6.25,
+      "write1h": 10,
+      "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official"
+    },
+    "claude-opus-4.1": {
+      "input": 15,
+      "output": 75,
+      "cacheRead": 1.5,
+      "write5m": 18.75,
+      "write1h": 30,
+      "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official"
+    },
+    "claude-opus-4": {
+      "input": 15,
+      "output": 75,
+      "cacheRead": 1.5,
+      "write5m": 18.75,
+      "write1h": 30,
+      "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official"
+    },
+    "claude-sonnet-5": {
+      "input": 2,
+      "output": 10,
+      "cacheRead": 0.2,
+      "write5m": 2.5,
+      "write1h": 4,
+      "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official"
+    },
+    "claude-sonnet-4.6": {
+      "input": 3,
+      "output": 15,
+      "cacheRead": 0.30000000000000004,
+      "write5m": 3.75,
+      "write1h": 6,
+      "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official"
+    },
+    "claude-sonnet-4.5": {
+      "input": 3,
+      "output": 15,
+      "cacheRead": 0.30000000000000004,
+      "write5m": 3.75,
+      "write1h": 6,
+      "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official"
+    },
+    "claude-sonnet-4": {
+      "input": 3,
+      "output": 15,
+      "cacheRead": 0.30000000000000004,
+      "write5m": 3.75,
+      "write1h": 6,
+      "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official"
+    },
+    "claude-haiku-4.5": {
+      "input": 1,
+      "output": 5,
+      "cacheRead": 0.1,
+      "write5m": 1.25,
+      "write1h": 2,
+      "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official"
+    },
+    "claude-haiku-3.5": {
+      "input": 0.8,
+      "output": 4,
+      "cacheRead": 0.08000000000000002,
+      "write5m": 1.0,
+      "write1h": 1.6,
+      "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "verifiedAt": "2026-09-16T00:00:00.000Z",
+      "provenance": "official"
+    }
+  }
+}

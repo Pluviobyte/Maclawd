@@ -39,7 +39,7 @@ export function createPricingRefresher({
     if (time >= lastAttempt && time - lastAttempt < PRICE_RETRY_MS) return;
     const info = meta();
     const fetched = Date.parse(info.fetchedAt);
-    const stale = !info.models || !Number.isFinite(fetched)
+    const stale = info.requiresRefresh === true || !info.models || !Number.isFinite(fetched)
       || fetched > time || time - fetched >= PRICE_MAX_AGE_MS;
     const unknown = [...missing].some((model) => !lookup(model));
     if (!stale && !unknown) return;
