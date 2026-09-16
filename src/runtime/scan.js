@@ -297,6 +297,9 @@ export async function scanAll({
   const reconcile = (parser, records, sessions, status) => {
     if (!parser.reconcileSource) return { records: dedupe(records), sessions };
     try {
+      // A failed replacement generation can have a different path. Preserve the
+      // last complete source instead of deleting its previous generation totals.
+      if (status.failedFiles > 0 && cache.reconciled?.[parser.id]) return cache.reconciled[parser.id];
       const entries = Object.entries(cache.files).filter(([path, entry]) => (
         entry.source === parser.id && livePaths.has(path)
       )).map(([path, entry]) => ({ ...entry, path }));
@@ -305,6 +308,10 @@ export async function scanAll({
         return cache.reconciled[parser.id];
       }
       const result = parser.reconcileSource(entries);
+      if (result.complete === false) {
+        status.complete = false;
+        if (result.warning) warn(result.warning);
+      }
       if (status.complete) {
         cache.reconciled ??= {};
         cache.reconciledSignatures ??= {};
