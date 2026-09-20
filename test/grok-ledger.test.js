@@ -21,6 +21,7 @@ test('Grok official ledger: original turn time, inclusive totals, forks, dual lo
   const scan=()=>scanAll({parsers:[grok],ignoreSettings:true});
   try {
     const dir=make('parent');make('fork','parent');
+    writeFileSync(join(dir,'updates.jsonl'),'{"sessionUpdate":"turn_completed"');
     const cold=await scan();assert.equal(cold.sourceStatus.grok.complete,true);assert.equal(cold.records.length,1);
     assert.equal(cold.records[0].ts,Date.parse(turn.endedAt));assert.equal(throughput(cold.records[0]),150);assert.equal(cold.records[0].reasoning,10);
     assert.deepEqual((await scan()).records,cold.records);

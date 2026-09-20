@@ -170,7 +170,8 @@ export function createFileParser({ candidate } = {}) {
     try {
       await readLines(updates, 0, statSync(updates).size, line => {
         if (!line.includes('turn_completed')) return;
-        const obj = JSON.parse(line);
+        let obj;
+        try { obj = JSON.parse(line); } catch { return; }
         if (obj?.params?.update?.sessionUpdate !== 'turn_completed') return;
         times.push(timestamp(obj.timestamp)); legacy.onObject(obj);
       });
