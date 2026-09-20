@@ -36,7 +36,6 @@ export function resolveModel(raw) {
       if (item?.id === raw && typeof item.model === 'string' && item.model.trim()) model = item.model.trim();
     }
   }
-  if (model === raw) model = model.match(/^custom:(.+)-\[[^\]]+\]-\d+$/)?.[1] || model;
   return /^(auto|default|default-model|fast|turbo|lite|ultimate|performance|efficient)$/i.test(model)
     ? `droid-${model.toLowerCase()}` : model || UNKNOWN_MODEL;
 }

@@ -27,5 +27,6 @@ test('Droid uncached input, catalog, sidecar-only updates, append and malformed 
     const appended=await scan();assert.equal(appended.records.length,1);assert.equal(appended.records[0].input,3456);
     writeFileSync(side,'{');const failed=await scan();assert.equal(failed.sourceStatus.droid.complete,false);assert.equal(failed.records[0].input,3456);
     assert.equal(droid.resolveModel('auto'),'droid-auto');
+    assert.equal(droid.resolveModel('custom:gpt-5.4-[gateway]-0'),'custom:gpt-5.4-[gateway]-0');
   } finally { process.env=old;rmSync(root,{recursive:true,force:true}); }
 });
