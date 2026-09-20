@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, appendFileSync, symlinkSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import * as kimi from '../src/runtime/parsers/kimi-code.js';
@@ -25,5 +25,9 @@ test('Kimi desktop + CLI discovery, project index refresh and physical-root dedu
   assert.deepEqual((await scan()).records,cold.records);
   put(join(desktop,'session_index.jsonl'),{sessionDir:join(desktop,'sessions/project/conv'),workDir:'/fixture/renamed'});
   assert.equal((await scan()).records.find(r=>displaySource(r)==='kimi-code:desktop').project,'renamed');
+  put(join(desktop,'session_index.jsonl'),{sessionDir:join(desktop,'sessions/project/conv'),workDir:'/fixture/moved-again'});
+  appendFileSync(join(desktop,'sessions/project/conv/agents/main/wire.jsonl'),JSON.stringify({type:'usage.record',time:Date.parse('2026-09-20T02:00:00Z'),model:'kimi-for-coding',usage:{inputOther:9,output:4}})+'\n');
+  const changed=(await scan()).records.filter(r=>displaySource(r)==='kimi-code:desktop');
+  assert.equal(changed.length,2);assert.deepEqual(changed.map(r=>r.project),['moved-again','moved-again']);
  }finally{process.env=old;rmSync(root,{recursive:true,force:true});}
 });

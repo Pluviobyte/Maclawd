@@ -47,7 +47,7 @@ import { usageEnabled } from './settings.js';
 // 17: Cline SDK 和旧版逐调用明细；依赖 metadata 参与缓存签名。
 // 18: Roo 逐调用明细与 _index.entries。
 // Split domestic/overseas WorkBuddy: rebuild previously merged file provenance.
-const CACHE_VERSION = 26; // Claude message.speed compatibility (Vibe b4a3874).
+const CACHE_VERSION = 27; // Persist parser context for safe incremental reads.
 const MAX_WARNINGS = 20;
 const DEFAULT_BUDGET_MS = 20_000;
 
@@ -460,6 +460,7 @@ export async function scanAll({
         (candidate.readMode ?? parser.readMode ?? 'lines') === 'lines'
         && entry
         && entry.packed
+        && entry.contextKey === candidate.cacheKey
         && entry.ino === candidate.ino
         && typeof entry.offset === 'number'
         && candidate.size > entry.offset
@@ -497,6 +498,7 @@ export async function scanAll({
                 source: parser.id,
                 sig: partial ? `partial:${candidate.mtimeMs}:${boundary}` : sig,
                 ino: candidate.ino,
+                contextKey: candidate.cacheKey,
                 offset: boundary,
                 tail: await tailFingerprint(candidate.path, boundary),
                 project,
@@ -571,6 +573,7 @@ export async function scanAll({
           source: parser.id,
           sig: partial ? `partial:${candidate.mtimeMs}:${boundary}` : sig,
           ino: candidate.ino,
+          contextKey: candidate.cacheKey,
           offset: boundary,
           tail: await tailFingerprint(candidate.path, boundary),
           project,
