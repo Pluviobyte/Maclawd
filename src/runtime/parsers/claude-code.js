@@ -87,7 +87,7 @@ export function parseObject(obj) {
 
   return {
     source: id,
-    billing: { serviceTier: normalizeServiceTier(usage.speed ?? usage.service_tier),
+    billing: { serviceTier: normalizeServiceTier(usage.speed ?? usage.service_tier ?? message.speed),
       promptTokens: toCount(usage.input_tokens) + toCount(usage.cache_read_input_tokens) + write5m + write1h },
     input: toCount(usage.input_tokens),
     output: toCount(usage.output_tokens),
