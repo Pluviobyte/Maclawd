@@ -222,7 +222,7 @@ function readToken(dbPath) {
 }
 
 /** 极简 CSV 解析：支持带引号字段与转义引号。 */
-export function parseCsv(text) {
+function csvTable(text) {
   const rows = [];
   let row = [];
   let field = '';
@@ -242,13 +242,15 @@ export function parseCsv(text) {
     field += ch;
   }
   if (field || row.length > 0) { row.push(field); rows.push(row); }
-  if (rows.length === 0) return [];
+  if (rows.length === 0) return { header: [], rows: [] };
 
   const header = rows[0].map((h) => h.trim());
-  return rows.slice(1)
+  return { header, rows: rows.slice(1)
     .filter((r) => r.length >= header.length && r.some((v) => v !== ''))
-    .map((r) => Object.fromEntries(header.map((h, i) => [h, r[i]])));
+    .map((r) => Object.fromEntries(header.map((h, i) => [h, r[i]]))) };
 }
+
+export function parseCsv(text) { return csvTable(text).rows; }
 
 function normalizedHeader(value) {
   return String(value).toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -268,7 +270,17 @@ function cursorCount(value) {
 }
 
 export function parseCursorUsageCsv(text) {
-  const rows = parseCsv(text);
+  const { header, rows } = csvTable(text);
+  const columns = new Set(header.map(normalizedHeader));
+  const has = names => names.some(name => columns.has(normalizedHeader(name)));
+  // Vibe b4a3874: an unknown export schema must preserve the previous snapshot.
+  if (!has(['date','timestamp','createdat','time']) || !has(['model'])
+    || !has(['Input (w/ Cache Write)','Input (w/o Cache Write)','inputtokens','input','prompttokens',
+      'outputtokens','output','completiontokens','Cache Read','cachereadtokens','cacheread'])) {
+    const error = new Error('Cursor 云端用量表头不受支持，请更新应用后重试');
+    error.code = 'EFORMAT';
+    throw error;
+  }
   const records = [];
   const occurrences = new Map();
   for (const row of rows) {
