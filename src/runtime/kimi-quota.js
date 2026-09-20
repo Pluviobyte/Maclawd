@@ -6,6 +6,7 @@ import { homedir } from 'node:os';
 import { readKimiDesktopAuth } from './desktop-quota-auth.js';
 import { finiteNumber, isoTime, quotaError, quotaJson } from './quota-client.js';
 import { createProviderQuotaCollector } from './provider-quota-collector.js';
+import { refreshKimiCredential } from './kimi-refresh.js';
 
 const MEMBERSHIP_PATH = '/apiv2/kimi.gateway.membership.v2.MembershipService/GetSubscriptionStats';
 const CODE_ORIGINS = new Set(['https://api.kimi.com', 'https://api.kimi.ai']);
@@ -102,7 +103,7 @@ export function kimiCodeConfigAuth(text = '') {
 
 export async function readKimiCodeAuth({ home = homedir(), env = process.env, read = readFile } = {}) {
   const roots = [env.MACLAWD_KIMI_CODE_DIR || env.KIMI_CODE_HOME || join(home, '.kimi-code'),
-    env.MACLAWD_KIMI_LEGACY_DIR || join(home, '.kimi')];
+    env.MACLAWD_KIMI_LEGACY_DIR || env.KIMI_SHARE_DIR || join(home, '.kimi')];
   for (const root of [...new Set(roots)]) {
     let configText = '';
     try { configText = await read(join(root, 'config.toml'), 'utf8'); } catch { /* Legacy installation may have no config. */ }
@@ -130,7 +131,9 @@ export async function readKimiCodeAuth({ home = homedir(), env = process.env, re
       data = JSON.parse(raw);
     } catch { continue; }
     if (typeof data.access_token !== 'string' || !data.access_token.trim() || /[\r\n]/.test(data.access_token)) continue;
-    return { token: data.access_token, origin };
+    return Object.defineProperty({ token: data.access_token, origin }, 'refreshContext', {
+      value: { root, name, path: join(root, 'credentials', `${name}.json`), data, legacy: root === roots[1] },
+    });
   }
   throw quotaError('ENOAUTH', '未找到 Kimi Code 登录，请在官方 CLI 中登录');
 }
@@ -164,11 +167,21 @@ export async function readKimiMembershipQuota({ auth = readKimiDesktopAuth, ...o
 
 export async function readKimiCodeQuota({ auth = readKimiCodeAuth, ...options } = {}) {
   let serviceOrigin;
-  const payload = await queryWithCredentialReread(auth, ({ token, origin }) => {
+  let credential = await refreshKimiCredential(await auth(options), options);
+  const request = ({ token, origin }) => {
     if (!CODE_ORIGINS.has(origin)) throw quotaError('EORIGIN', 'Kimi Code 服务地址不受支持');
     serviceOrigin = origin;
     return quotaJson(origin + '/coding/v1/usages', { ...options, headers: { Authorization: `Bearer ${token}` } });
-  }, options);
+  };
+  let payload;
+  try { payload = await request(credential); }
+  catch (error) {
+    if (error.code !== 'EAUTH') throw error;
+    const reread = await auth(options);
+    credential = reread.token === credential.token && reread.refreshContext?.data.refresh_token
+      ? await refreshKimiCredential(reread, { ...options, force: true }) : reread;
+    payload = await request(credential);
+  }
   const report = kimiCodeReport(payload);
   if (!report) throw quotaError('ENODATA', 'Kimi Code 暂未返回可用额度');
   // Official kimi-code 402ee71c region profiles: .com mainland, .ai global.

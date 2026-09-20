@@ -248,6 +248,7 @@ final class RuntimeClient: ObservableObject {
         task.currentDirectoryURL = repoRoot
         var environment = ProcessInfo.processInfo.environment
         environment["MACLAWD_RUNTIME_BUILD_ID"] = expectedBuildId()
+        environment["MACLAWD_NATIVE_HELPER"] = Bundle.main.executableURL?.path
         // 让运行时知道管理者是谁。外壳被强制退出时收不到终止回调，
         // 运行时靠看护这个 pid 发现自己成了孤儿，然后自行收摊
         // （见 src/runtime/manager-watch.js）。

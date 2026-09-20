@@ -3,6 +3,10 @@ import CoreServices
 import IOKit.ps
 import Network
 
+if CommandLine.arguments.count == 3, CommandLine.arguments[1] == "--credential-lock" {
+    exit(runCredentialLock(path: CommandLine.arguments[2]))
+}
+
 /**
  Maclawd macOS 外壳。
 
