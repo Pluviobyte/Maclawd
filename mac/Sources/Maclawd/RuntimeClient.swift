@@ -174,21 +174,11 @@ final class RuntimeClient: ObservableObject {
             return path
         }
         // 兜底：借一次 login shell 去问
-        let probe = Process()
-        probe.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        probe.arguments = ["-lc", "command -v node"]
-        let pipe = Pipe()
-        probe.standardOutput = pipe
-        probe.standardError = FileHandle.nullDevice
-        do {
-            try probe.run()
-            probe.waitUntilExit()
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            let found = String(decoding: data, as: UTF8.self)
+        if let output = BoundedProcess.output(executable: URL(fileURLWithPath: "/bin/zsh"),
+                                              arguments: ["-lc", "command -v node"]) {
+            let found = output
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             if !found.isEmpty, FileManager.default.isExecutableFile(atPath: found) { return found }
-        } catch {
-            // 探测失败就走下面的报错路径
         }
         return nil
     }
