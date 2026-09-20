@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { pickCount, toCount, UNKNOWN_MODEL } from '../usage-record.js';
@@ -15,11 +15,39 @@ export function dataDirs() {
   return [sessionsDir()];
 }
 
+function settingsPaths() {
+  if (process.env.MACLAWD_DROID_SETTINGS) return [process.env.MACLAWD_DROID_SETTINGS];
+  if (process.env.MACLAWD_DROID_DIR) return [];
+  return ['config.json', 'settings.json'].map(name => join(homedir(), '.factory', name));
+}
+function signature(path) {
+  try { const s = statSync(path); return [s.ino, s.size, s.mtimeMs]; }
+  catch (error) { if (error.code === 'ENOENT') return null; throw error; }
+}
+export function resolveModel(raw) {
+  let model = typeof raw === 'string' ? raw.trim() : '';
+  // Vibe b4a3874 / Factory BYOK: configuration id is not the API model name.
+  for (const path of settingsPaths()) {
+    let data;
+    try { data = JSON.parse(readFileSync(path, 'utf8')); }
+    catch (error) { if (error.code === 'ENOENT') continue; throw error; }
+    for (const item of [...(Array.isArray(data.custom_models) ? data.custom_models : []),
+      ...(Array.isArray(data.customModels) ? data.customModels : [])]) {
+      if (item?.id === raw && typeof item.model === 'string' && item.model.trim()) model = item.model.trim();
+    }
+  }
+  if (model === raw) model = model.match(/^custom:(.+)-\[[^\]]+\]-\d+$/)?.[1] || model;
+  return /^(auto|default|default-model|fast|turbo|lite|ultimate|performance|efficient)$/i.test(model)
+    ? `droid-${model.toLowerCase()}` : model || UNKNOWN_MODEL;
+}
+
 export function discover({ listJsonl }) {
   return listJsonl(sessionsDir())
     .filter(({ path }) => !path.endsWith('.settings.json'))
     .map(({ path, size, mtimeMs, ino }) => ({
-      path, size, mtimeMs, ino, sessionId: basename(path, '.jsonl'), fallbackProject: null,
+      path, size, mtimeMs, ino, sessionId: path, fallbackProject: null,
+      cacheKey: JSON.stringify([signature(path.replace(/\.jsonl$/, '.settings.json')),
+        ...settingsPaths().map(signature)]),
     }));
 }
 
@@ -29,11 +57,11 @@ export function discover({ listJsonl }) {
  *   sessions/<id>.settings.json  { model, tokenUsage: {...} }
  *
  * 所以一个会话只产出一条聚合记录，时间戳取首条消息。
- * `inputTokens` **含** cacheReadTokens，`outputTokens` **含** thinkingTokens。
+ * `inputTokens` 是非缓存输入，`outputTokens` **含** thinkingTokens。
  */
-export function createFileParser({ candidate } = {}) {
-  let firstTs = null;
-  let cwd = null;
+export function createFileParser({ candidate, state } = {}) {
+  let firstTs = state?.firstTs ?? null;
+  let cwd = state?.cwd ?? null;
 
   return {
     onObject(obj) {
@@ -52,7 +80,8 @@ export function createFileParser({ candidate } = {}) {
         settings = JSON.parse(
           readFileSync(join(dirname(candidate.path), `${sessionId}.settings.json`), 'utf-8'),
         );
-      } catch {
+      } catch (error) {
+        if (error.code !== 'ENOENT') throw error;
         // 没有设置文件就没有用量可算
         return { records: [], state: null };
       }
@@ -66,8 +95,8 @@ export function createFileParser({ candidate } = {}) {
       const rawInput = pickCount(usage, 'inputTokens', 'input_tokens');
       const output = pickCount(usage, 'outputTokens', 'output_tokens');
 
-      // input 含缓存读，减掉后互斥（不变量 1）；output 含思考，原样保留（不变量 2）
-      const input = Math.max(0, rawInput - cacheRead - cacheWrite);
+      // Vibe #105 + tokenleak fd38fa29 independently keep sidecar input uncached.
+      const input = rawInput;
       if (input + output + cacheRead + cacheWrite === 0) return { records: [], state: null };
 
       return {
@@ -79,7 +108,7 @@ export function createFileParser({ candidate } = {}) {
           write5m: cacheWrite,
           write1h: 0,
           reasoning: Math.min(thinking, toCount(output)),
-          model: String(settings.model ?? UNKNOWN_MODEL).trim() || UNKNOWN_MODEL,
+          model: resolveModel(settings.model),
           cwd,
           ts: firstTs,
           // 一个会话一条记录，用会话 id 当键。
@@ -88,7 +117,8 @@ export function createFileParser({ candidate } = {}) {
           uuid: null,
           sidechain: false,
         }],
-        state: null,
+        state: { firstTs, cwd },
+        resetRecords: true,
       };
     },
   };
