@@ -5,6 +5,7 @@ const hosts = {
   Cursor: 'Cursor', Windsurf: 'Windsurf', Trae: 'Trae（海外版）', 'Trae CN': 'Trae（国内版）',
 };
 export const ATTRIBUTION_LABELS = {
+  'kimi-code:desktop': 'Kimi Code 桌面', 'kimi-code:cli': 'Kimi Code CLI',
   'claude-code:cowork': 'Claude Cowork',
   'claude-code:local': 'Claude Code（CLI／Code，未区分）',
   'codex:cli': 'Codex CLI', 'codex:desktop': 'Codex 桌面',
@@ -20,6 +21,7 @@ export function displaySource(record) {
 }
 export function pathAttribution(source, path) {
   const parts = String(path ?? '').split(/[\\/]/);
+  if (source === 'kimi-code') return parts.includes('daimon-share') ? 'kimi-code:desktop' : 'kimi-code:cli';
   if (source === 'claude-code') {
     return parts.includes('local-agent-mode-sessions') ? 'claude-code:cowork' : 'claude-code:local';
   }

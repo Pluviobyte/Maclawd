@@ -1,5 +1,6 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { readFileSync, realpathSync, statSync } from 'node:fs';
 import { toCount, UNKNOWN_MODEL } from '../usage-record.js';
 import { statelessParser } from '../parser-kit.js';
 
@@ -17,12 +18,21 @@ export const label = 'Kimi Code';
 export const lineFilter = '"usage.record"';
 
 /** 数据根解析顺序与 Kimi CLI 自身一致。 */
-export function dataRoots() {
-  const override = process.env.MACLAWD_KIMI_CODE_DIR?.trim();
-  const current = override || process.env.KIMI_CODE_HOME?.trim() || join(homedir(), '.kimi-code');
+export function dataRoots({ env = process.env, home = homedir() } = {}) {
+  const override = env.MACLAWD_KIMI_CODE_DIR?.trim();
+  const current = override || env.KIMI_CODE_HOME?.trim() || join(home, '.kimi-code');
   // `kimi migrate` 不搬用量记录，所以新旧两个库要一起读，不是二选一。
-  const legacy = process.env.MACLAWD_KIMI_LEGACY_DIR?.trim() || join(homedir(), '.kimi');
-  return [current, legacy];
+  const legacy = env.MACLAWD_KIMI_LEGACY_DIR?.trim() || env.KIMI_SHARE_DIR?.trim() || join(home, '.kimi');
+  const desktop = join(env.MACLAWD_KIMI_DESKTOP_DIR || join(home, 'Library/Application Support/kimi-desktop'),
+    'daimon-share/daimon/runtime/kimi-code/home');
+  const roots = [current, legacy, ...(!override || env.MACLAWD_KIMI_DESKTOP_DIR ? [desktop] : [])];
+  const seen = new Set();
+  return roots.filter(root => {
+    let identity;
+    try { identity = realpathSync(root); } catch (error) { if (error.code !== 'ENOENT') throw error; identity = root; }
+    if (seen.has(identity)) return false;
+    seen.add(identity); return true;
+  });
 }
 
 export function dataDirs() {
@@ -38,18 +48,39 @@ function projectFromWorkdirSlug(relative) {
 
 export function discover({ listJsonl }) {
   const candidates = [];
+  const seen = new Set();
   for (const dir of dataDirs()) {
+    const indexPath = join(dir, '..', 'session_index.jsonl');
+    const projects = new Map();
+    let indexSignature = null;
+    try {
+      const stat = statSync(indexPath); indexSignature = [stat.size, stat.mtimeMs];
+      for (const line of readFileSync(indexPath, 'utf8').split('\n')) {
+        if (!line.trim()) continue;
+        let item; try { item = JSON.parse(line); } catch { continue; }
+        if (typeof item.sessionDir === 'string' && typeof item.workDir === 'string') {
+          let dir = item.sessionDir;
+          try { dir = realpathSync(dir); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+          projects.set(dir, item.workDir);
+        }
+      }
+    } catch (error) { if (error.code !== 'ENOENT') throw error; }
     for (const { path, size, mtimeMs, ino, relative } of listJsonl(dir)) {
       if (!path.endsWith('wire.jsonl')) continue;
+      const identity = realpathSync(path);
+      if (seen.has(identity)) continue;
+      seen.add(identity);
+      const cwd = [...projects].find(([sessionDir]) => path.startsWith(sessionDir + '/') || identity.startsWith(sessionDir + '/'))?.[1] || null;
       candidates.push({
-        path,
+        path: identity,
         size,
         mtimeMs,
         ino,
         // 同一 session 目录下主 wire 与各 subagent wire 是不同文件，都要计入，
         // 所以用完整路径做 key——用 session 目录会让 scan.js 只保留其中一个。
-        sessionId: path,
+        sessionId: identity,
         fallbackProject: projectFromWorkdirSlug(relative),
+        cacheKey: JSON.stringify([indexSignature, cwd]), cwd, identity,
       });
     }
   }
@@ -96,4 +127,11 @@ export function parseObject(obj) {
   };
 }
 
-export const createFileParser = statelessParser(parseObject);
+export function createFileParser({ candidate } = {}) {
+  return statelessParser(obj => {
+    const record = parseObject(obj);
+    if (record && candidate?.cwd) record.cwd = candidate.cwd;
+    if (record && candidate?.path) record.messageId = JSON.stringify([candidate.identity || candidate.path, record.messageId]);
+    return record;
+  })();
+}
