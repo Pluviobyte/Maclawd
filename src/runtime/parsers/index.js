@@ -33,6 +33,9 @@ import * as cindy from './cindy.js';
 import * as cindyGlobal from './cindy-global.js';
 import * as cola from './cola.js';
 import * as dsh from './dsh.js';
+import * as codebuddy from './codebuddy.js';
+import * as codeartsAgent from './codearts-agent.js';
+import * as devin from './devin.js';
 
 /**
  * 解析器注册表。新增工具只需实现同一组导出并在这里登记：
@@ -86,6 +89,9 @@ export const parsers = [
   cindyGlobal,
   cola,
   dsh,
+  codebuddy,
+  codeartsAgent,
+  devin,
   // 本地 hook 日志默认读取；云端历史由 cursorCloud 显式开启
   cursor,
 ];
